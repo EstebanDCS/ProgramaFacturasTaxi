@@ -1,135 +1,185 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Taxi - Facturación</title>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Taxi - Facturación Completa</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style> .hidden-field { display: none; } </style>
 </head>
 <body class="bg-light">
-    <div class="container mt-4 mb-5" style="max-width: 800px;">
-        <h2 class="text-center mb-4">Crear Factura Taxi</h2>
-        
+    <div class="container mt-3 mb-5" style="max-width: 900px;">
+        <h2 class="text-center mb-3">Crear Factura Taxi</h2>
         <form id="formTaxi">
-            <div class="card p-3 mb-4 shadow-sm border-primary">
-                <h5 class="text-primary border-bottom pb-2">Datos de Factura</h5>
-                <div class="row g-2 mt-2">
-                    <div class="col-sm-6">
-                        <label class="form-label fw-bold">Nº Factura</label>
-                        <input type="text" id="factura_numero" class="form-control" placeholder="Ej: 2026-001" required>
-                    </div>
-                    <div class="col-sm-6">
-                        <label class="form-label fw-bold">Barco</label>
-                        <input type="text" id="barco" class="form-control" required>
-                    </div>
-                    <div class="col-12 mt-3">
-                        <label class="form-label fw-bold">Cliente / Empresa</label>
-                        <input type="text" id="cliente" class="form-control" placeholder="Nombre del cliente" required>
-                    </div>
+            <div class="card p-3 mb-3 shadow-sm border-primary">
+                <h6 class="text-primary border-bottom pb-2">Datos generales</h6>
+                <div class="row g-2 mt-1">
+                    <div class="col-sm-6"><label class="form-label fw-bold">Nº Factura</label><input type="text" id="factura_numero" class="form-control" required></div>
+                    <div class="col-sm-6"><label class="form-label fw-bold">Nombre del Barco</label><input type="text" id="barco" class="form-control" required></div>
+                    <div class="col-12 mt-2"><label class="form-label fw-bold">Cliente / Empresa</label><input type="text" id="cliente" class="form-control" required></div>
                 </div>
             </div>
 
-            <div class="card p-3 mb-4 shadow-sm border-success">
-                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                    <h5 class="text-success m-0">Tickets del Viaje</h5>
-                    <button type="button" class="btn btn-sm btn-outline-success fw-bold" onclick="agregarTicket()">+ Añadir Ticket</button>
-                </div>
-                
-                <div id="contenedor-tickets">
-                    </div>
-            </div>
+            <div id="contenedor-tickets"></div>
 
-            <button type="submit" class="btn btn-primary w-100 py-3 fw-bold shadow fs-5">GENERAR FACTURA FINAL</button>
+            <button type="button" class="btn btn-outline-success fw-bold w-100 mb-3" onclick="agregarTicket()">+ Añadir Nuevo Ticket</button>
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow fs-5">GENERAR FACTURA (.XLSM)</button>
         </form>
     </div>
     
     <script>
         let ticketCount = 0;
 
-        // Función para crear una nueva tarjeta de ticket en la pantalla
+        function checkRadio(radioName, ticketId, extraInputId) {
+            const radios = document.getElementsByName(radioName);
+            const extraInput = document.getElementById(extraInputId);
+            let showExtra = false;
+            for(let i=0; i<radios.length; i++){
+                if(radios[i].checked && (radios[i].value === 'hotel' || radios[i].value === 'hospital' || radios[i].value === 'clinica' || radios[i].value === 'otros')) {
+                    showExtra = true;
+                    extraInput.placeholder = "Escribe el nombre del " + radios[i].value + "...";
+                }
+            }
+            extraInput.style.display = showExtra ? 'block' : 'none';
+        }
+
         function agregarTicket() {
             ticketCount++;
+            const tId = ticketCount;
             const div = document.createElement('div');
-            div.className = 'border p-3 mb-3 bg-white rounded shadow-sm ticket-item';
+            div.className = 'card p-3 mb-3 bg-white rounded shadow-sm ticket-item border-success';
             div.innerHTML = `
-                <div class="d-flex justify-content-between">
-                    <h6 class="text-secondary fw-bold">Ticket #${ticketCount}</h6>
-                    ${ticketCount > 1 ? `<button type="button" class="btn-close btn-sm" onclick="this.parentElement.parentElement.remove()"></button>` : ''}
+                <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                    <h6 class="text-success m-0">Ticket Detallado #${tId}</h6>
+                    ${tId > 1 ? `<button type="button" class="btn-close btn-sm" onclick="this.parentElement.parentElement.remove()"></button>` : ''}
                 </div>
-                <div class="row g-2 mt-1">
-                    <div class="col-6">
-                        <label class="form-label text-muted small mb-1">Nº Ticket</label>
-                        <input type="text" class="form-control form-control-sm t-numero" required>
+                
+                <div class="row g-2">
+                    <div class="col-sm-4">
+                        <label class="form-label text-muted small mb-1">Contacto</label>
+                        <select class="form-select form-select-sm t-contacto" required>
+                            <option value="whatsapp">Whatsapp</option>
+                            <option value="telefono">Teléfono</option>
+                            <option value="whatsapp y telefono">Whatsapp y Teléfono</option>
+                        </select>
                     </div>
-                    <div class="col-6">
-                        <label class="form-label text-muted small mb-1">Importe (€)</label>
+                    <div class="col-sm-5">
+                        <label class="form-label text-muted small mb-1">Nombre Pasajeros</label>
+                        <input type="text" class="form-control form-control-sm t-pasajeros" required>
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="form-label text-muted small mb-1 fw-bold text-success">Importe (€)</label>
                         <input type="number" step="0.01" class="form-control form-control-sm t-importe" required>
                     </div>
-                    <div class="col-12 mt-2">
-                        <label class="form-label text-muted small mb-1">Fechas de solicitud (Texto libre, ej: 12/04 y 13/04)</label>
-                        <input type="text" class="form-control form-control-sm t-solicitud" required>
+
+                    <div class="col-sm-6 mt-2">
+                        <label class="form-label text-muted small mb-1">Fechas Solicitud (ej: 12/04, 13/04)</label>
+                        <input type="text" class="form-control form-control-sm t-fechas-solicitud" required>
                     </div>
-                    <div class="col-12 mt-2">
-                        <label class="form-label text-muted small mb-1">Fecha de fin de servicio (Para calcular la mayor)</label>
-                        <input type="date" class="form-control form-control-sm t-fecha-principal" required>
+                    <div class="col-sm-6 mt-2">
+                        <label class="form-label text-muted small mb-1 fw-bold">Fecha del Servicio</label>
+                        <input type="date" class="form-control form-control-sm t-fecha-servicio" required>
+                    </div>
+
+                    <div class="col-sm-6 mt-3 border rounded p-2 bg-light">
+                        <label class="form-label fw-bold small mb-1 text-primary">RECOGIDA</label><br>
+                        <input type="radio" name="origen_${tId}" value="aeropuerto" onchange="checkRadio('origen_${tId}', ${tId}, 'origen_extra_${tId}')" required> Aeropuerto <br>
+                        <input type="radio" name="origen_${tId}" value="buque" onchange="checkRadio('origen_${tId}', ${tId}, 'origen_extra_${tId}')"> Buque <br>
+                        <input type="radio" name="origen_${tId}" value="hotel" onchange="checkRadio('origen_${tId}', ${tId}, 'origen_extra_${tId}')"> Hotel <br>
+                        <input type="radio" name="origen_${tId}" value="otros" onchange="checkRadio('origen_${tId}', ${tId}, 'origen_extra_${tId}')"> Otros <br>
+                        <input type="text" id="origen_extra_${tId}" class="form-control form-control-sm mt-2 hidden-field t-origen-extra">
+                    </div>
+
+                    <div class="col-sm-6 mt-3 border rounded p-2 bg-light">
+                        <label class="form-label fw-bold small mb-1 text-primary">DESTINO</label><br>
+                        <div class="row">
+                            <div class="col-6">
+                                <input type="radio" name="destino_${tId}" value="aeropuerto" onchange="checkRadio('destino_${tId}', ${tId}, 'destino_extra_${tId}')" required> Aerop. <br>
+                                <input type="radio" name="destino_${tId}" value="buque" onchange="checkRadio('destino_${tId}', ${tId}, 'destino_extra_${tId}')"> Buque <br>
+                                <input type="radio" name="destino_${tId}" value="hotel" onchange="checkRadio('destino_${tId}', ${tId}, 'destino_extra_${tId}')"> Hotel <br>
+                                <input type="radio" name="destino_${tId}" value="inmigracion" onchange="checkRadio('destino_${tId}', ${tId}, 'destino_extra_${tId}')"> Inmig.
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" name="destino_${tId}" value="hospital" onchange="checkRadio('destino_${tId}', ${tId}, 'destino_extra_${tId}')"> Hospital <br>
+                                <input type="radio" name="destino_${tId}" value="clinica" onchange="checkRadio('destino_${tId}', ${tId}, 'destino_extra_${tId}')"> Clínica <br>
+                                <input type="radio" name="destino_${tId}" value="otros" onchange="checkRadio('destino_${tId}', ${tId}, 'destino_extra_${tId}')"> Otros
+                            </div>
+                        </div>
+                        <input type="text" id="destino_extra_${tId}" class="form-control form-control-sm mt-2 hidden-field t-destino-extra">
+                    </div>
+
+                    <div class="col-12 mt-3">
+                        <div class="form-check form-switch fs-6">
+                            <input class="form-check-input t-ida-vuelta" type="checkbox">
+                            <label class="form-check-label fw-bold small">¿Servicio de Ida y Vuelta?</label>
+                        </div>
+                        <label class="form-label text-muted small mt-2 mb-1">Comentarios / Observaciones</label>
+                        <textarea class="form-control form-control-sm t-comentarios" rows="1"></textarea>
                     </div>
                 </div>
             `;
             document.getElementById('contenedor-tickets').appendChild(div);
         }
 
-        // Mostrar un ticket vacío al cargar la página
         window.onload = agregarTicket;
 
-        // Enviar datos al servidor
         document.getElementById('formTaxi').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const tickets = [];
-            document.querySelectorAll('.ticket-item').forEach(item => {
-                tickets.push({
-                    numero: item.querySelector('.t-numero').value,
-                    importe: parseFloat(item.querySelector('.t-importe').value),
-                    fechas_solicitud: item.querySelector('.t-solicitud').value,
-                    fecha_principal: item.querySelector('.t-fecha-principal').value
-                });
-            });
+            const ticketsData = [];
+            const ticketsCards = document.querySelectorAll('.ticket-item');
+            
+            for (let i = 0; i < ticketsCards.length; i++) {
+                const item = ticketsCards[i];
+                const tId = i + 1;
+                
+                // Obtener radio buttons marcados
+                let origenTipo = "";
+                document.getElementsByName('origen_' + tId).forEach(r => { if(r.checked) origenTipo = r.value; });
+                let destinoTipo = "";
+                document.getElementsByName('destino_' + tId).forEach(r => { if(r.checked) destinoTipo = r.value; });
 
-            const datos = {
+                ticketsData.push({
+                    contacto_metodo: item.querySelector('.t-contacto').value,
+                    fechas_solicitud: item.querySelector('.t-fechas-solicitud').value,
+                    fecha_servicio: item.querySelector('.t-fecha-servicio').value,
+                    pasajeros: item.querySelector('.t-pasajeros').value,
+                    
+                    origen_tipo: origenTipo,
+                    origen_texto_extra: item.querySelector('.t-origen-extra').value,
+                    
+                    destino_tipo: destinoTipo,
+                    destino_texto_extra: item.querySelector('.t-destino-extra').value,
+                    
+                    ida_vuelta: item.querySelector('.t-ida-vuelta').checked,
+                    comentarios: item.querySelector('.t-comentarios').value,
+                    importe: parseFloat(item.querySelector('.t-importe').value)
+                });
+            }
+
+            const datos_totales = {
                 factura_numero: document.getElementById('factura_numero').value,
                 barco: document.getElementById('barco').value,
                 cliente: document.getElementById('cliente').value,
-                tickets: tickets
+                tickets: ticketsData
             };
 
             const boton = e.target.querySelector('button[type="submit"]');
-            boton.innerText = "Calculando y Generando Excel...";
+            boton.innerText = "Clonando y Generando Documento Detallado...";
             boton.disabled = true;
 
             try {
-                // TU ENLACE REAL DE RENDER
                 const URL_RENDER = 'https://programafacturastaxi.onrender.com/generar'; 
-                
-                const res = await fetch(URL_RENDER, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(datos)
-                });
-                
+                const res = await fetch(URL_RENDER, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos_totales) });
                 if(res.ok) {
                     const blob = await res.blob();
-                    const a = document.createElement('a');
-                    a.href = window.URL.createObjectURL(blob);
-                    a.download = 'Factura_' + datos.factura_numero + '.xlsm';
-                    a.click();
+                    const a = document.createElement('a'); a.href = window.URL.createObjectURL(blob);
+                    a.download = 'Factura_Detallada_' + datos_totales.factura_numero + '.xlsm'; a.click();
                 } else {
-                    alert("Error en el servidor. Revisa si Render está encendido.");
+                    const err = await res.json(); alert("Error en el servidor: " + err.error);
                 }
-            } catch (err) {
-                alert("Error de conexión. Render suele tardar 30 segundos en arrancar si lleva rato apagado. Vuelve a pulsar el botón.");
-            }
+            } catch (err) { alert("Error de conexión. Render puede estar iniciando."); }
             
-            boton.innerText = "GENERAR FACTURA FINAL";
+            boton.innerText = "GENERAR FACTURA (.XLSM)";
             boton.disabled = false;
         });
     </script>
