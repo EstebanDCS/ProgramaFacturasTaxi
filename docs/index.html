@@ -11,11 +11,10 @@
         <h2 class="text-center mb-3">Crear Factura Taxi</h2>
         <form id="formTaxi">
             <div class="card p-3 mb-3 shadow-sm border-primary">
-                <h6 class="text-primary border-bottom pb-2">Datos generales</h6>
+                <h6 class="text-primary border-bottom pb-2">Datos generales (Hoja Principal)</h6>
                 <div class="row g-2 mt-1">
                     <div class="col-sm-6"><label class="form-label fw-bold">Nº Factura</label><input type="text" id="factura_numero" class="form-control" required></div>
                     <div class="col-sm-6"><label class="form-label fw-bold">Nombre del Barco</label><input type="text" id="barco" class="form-control" required></div>
-                    <div class="col-12 mt-2"><label class="form-label fw-bold">Cliente / Empresa</label><input type="text" id="cliente" class="form-control" required></div>
                 </div>
             </div>
 
@@ -132,24 +131,18 @@
                 const item = ticketsCards[i];
                 const tId = i + 1;
                 
-                // Obtener radio buttons marcados
-                let origenTipo = "";
-                document.getElementsByName('origen_' + tId).forEach(r => { if(r.checked) origenTipo = r.value; });
-                let destinoTipo = "";
-                document.getElementsByName('destino_' + tId).forEach(r => { if(r.checked) destinoTipo = r.value; });
+                let origenTipo = ""; document.getElementsByName('origen_' + tId).forEach(r => { if(r.checked) origenTipo = r.value; });
+                let destinoTipo = ""; document.getElementsByName('destino_' + tId).forEach(r => { if(r.checked) destinoTipo = r.value; });
 
                 ticketsData.push({
                     contacto_metodo: item.querySelector('.t-contacto').value,
                     fechas_solicitud: item.querySelector('.t-fechas-solicitud').value,
                     fecha_servicio: item.querySelector('.t-fecha-servicio').value,
                     pasajeros: item.querySelector('.t-pasajeros').value,
-                    
                     origen_tipo: origenTipo,
                     origen_texto_extra: item.querySelector('.t-origen-extra').value,
-                    
                     destino_tipo: destinoTipo,
                     destino_texto_extra: item.querySelector('.t-destino-extra').value,
-                    
                     ida_vuelta: item.querySelector('.t-ida-vuelta').checked,
                     comentarios: item.querySelector('.t-comentarios').value,
                     importe: parseFloat(item.querySelector('.t-importe').value)
@@ -159,12 +152,11 @@
             const datos_totales = {
                 factura_numero: document.getElementById('factura_numero').value,
                 barco: document.getElementById('barco').value,
-                cliente: document.getElementById('cliente').value,
                 tickets: ticketsData
             };
 
             const boton = e.target.querySelector('button[type="submit"]');
-            boton.innerText = "Clonando y Generando Documento Detallado...";
+            boton.innerText = "Generando Documento...";
             boton.disabled = true;
 
             try {
@@ -173,11 +165,11 @@
                 if(res.ok) {
                     const blob = await res.blob();
                     const a = document.createElement('a'); a.href = window.URL.createObjectURL(blob);
-                    a.download = 'Factura_Detallada_' + datos_totales.factura_numero + '.xlsm'; a.click();
+                    a.download = 'Factura_' + datos_totales.factura_numero + '.xlsm'; a.click();
                 } else {
-                    const err = await res.json(); alert("Error en el servidor: " + err.error);
+                    const err = await res.json(); alert("Error: " + err.error);
                 }
-            } catch (err) { alert("Error de conexión. Render puede estar iniciando."); }
+            } catch (err) { alert("Error de conexión. Vuelve a pulsar."); }
             
             boton.innerText = "GENERAR FACTURA (.XLSM)";
             boton.disabled = false;
