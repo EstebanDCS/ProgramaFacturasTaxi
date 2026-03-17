@@ -45,9 +45,8 @@
             <div class="card p-3 mb-3 shadow-sm border-primary">
                 <h6 class="text-primary border-bottom pb-2">Datos generales (Hoja Principal)</h6>
                 <div class="row g-2 mt-1">
-                    <div class="col-sm-4"><label class="form-label fw-bold">Nº Factura / Servicio</label><input type="text" id="factura_numero" class="form-control" required></div>
-                    <div class="col-sm-4"><label class="form-label fw-bold">Nombre del Barco</label><input type="text" id="barco" class="form-control" required></div>
-                    <div class="col-sm-4"><label class="form-label fw-bold">Fecha de Factura</label><input type="date" id="fecha_factura" class="form-control" required></div>
+                    <div class="col-sm-6"><label class="form-label fw-bold">Nº Factura / Servicio</label><input type="text" id="factura_numero" class="form-control" required></div>
+                    <div class="col-sm-6"><label class="form-label fw-bold">Nombre del Barco</label><input type="text" id="barco" class="form-control" required></div>
                 </div>
             </div>
 
@@ -327,7 +326,6 @@
             const datos_totales = {
                 factura_numero: document.getElementById('factura_numero').value,
                 barco: document.getElementById('barco').value,
-                fecha_factura: document.getElementById('fecha_factura').value, // <-- Se envía la fecha que tú elijas manualmente
                 tickets: ticketsData
             };
 

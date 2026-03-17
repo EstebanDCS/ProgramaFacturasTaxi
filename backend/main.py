@@ -61,7 +61,6 @@ class DatosTicket(BaseModel):
 class DatosFactura(BaseModel):
     factura_numero: str
     barco: str
-    fecha_factura: str # <--- NUEVO DATO DE FECHA MANUAL
     tickets: List[DatosTicket]
 
 def obtener_ws_or_exception(wb, name):
@@ -109,16 +108,8 @@ async def generar_documento(datos: DatosFactura):
         escribir(hoja_invoice, 'E15', datos.factura_numero, shrink=True, h_align='center', v_align='center') 
         escribir(hoja_invoice, 'C17', barco_mayusculas, shrink=True)          
         
-        # Fecha Manual
-        fecha_final_str = ""
-        if datos.fecha_factura:
-            try:
-                dt_fac = datetime.strptime(datos.fecha_factura, "%Y-%m-%d")
-                escribir(hoja_invoice, 'F17', dt_fac.strftime("%d/%m/%Y"), h_align='center')
-                fecha_final_str = "_" + dt_fac.strftime("%d-%m-%Y")
-            except: pass
-
         total_importe = 0.0
+        fechas_servicio_obj = [] # Lista para calcular la fecha mayor automáticamente
         numeros_de_ticket = [] 
         
         for i, t in enumerate(datos.tickets):
@@ -140,6 +131,7 @@ async def generar_documento(datos: DatosFactura):
                     try: 
                         dt = datetime.strptime(f, "%Y-%m-%d")
                         fechas_serv_list.append(dt.strftime("%d/%m/%Y"))
+                        fechas_servicio_obj.append(dt) # Guardamos la fecha para luego sacar la mayor
                     except: pass
 
             fechas_sol_str = ", ".join(fechas_sol_list)
@@ -188,7 +180,16 @@ async def generar_documento(datos: DatosFactura):
         escribir(hoja_invoice, 'F38', round(base_imponible, 2))     
         escribir(hoja_invoice, 'F39', round(iva, 2))                
 
-        # Nombre de archivo dinámico
+        # --- CÁLCULO DE LA FECHA MAYOR Y NOMBRE AUTOMÁTICO ---
+        fecha_final_str = ""
+        if fechas_servicio_obj:
+            max_fecha = max(fechas_servicio_obj)
+            # 1. La escribimos en la hoja general (F17)
+            escribir(hoja_invoice, 'F17', max_fecha.strftime("%d/%m/%Y"), h_align='center') 
+            # 2. La preparamos para el nombre del archivo (con guiones)
+            fecha_final_str = "_" + max_fecha.strftime("%d-%m-%Y")
+            
+        # Creamos el nombre combinando Barco + Fecha Mayor
         nombre_descarga = f"{barco_mayusculas}{fecha_final_str}.xlsm".replace(" ", "_")
             
         ruta_salida = "/tmp/factura_completa.xlsm"
