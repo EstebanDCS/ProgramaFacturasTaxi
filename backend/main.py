@@ -6,31 +6,29 @@ from typing import List
 import openpyxl
 from openpyxl.styles import Alignment
 from datetime import datetime
+import os
 
 app = FastAPI()
 
+# BLOQUEO CORS: Solo tu página de GitHub podrá comunicarse con este servidor
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=["https://EstebanDCS.github.io"], # <--- ¡CAMBIA 'TU_USUARIO' POR TU NOMBRE REAL EN GITHUB!
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ==========================================
-# 🔐 CONFIGURACIÓN DE SEGURIDAD
-# Cambia esta contraseña por la que tú quieras
-PASSWORD_SECRETA = "TaxiSeguro2026" 
-# ==========================================
+# La contraseña se lee de forma segura desde Render
+PASSWORD_SECRETA = os.environ.get("TAXI_PASSWORD") 
 
 def verificar_seguridad(x_password: str = Header(default=None)):
-    if x_password != PASSWORD_SECRETA:
-        raise HTTPException(status_code=401, detail="Acceso denegado. Contraseña incorrecta o ausente.")
+    if not PASSWORD_SECRETA or x_password != PASSWORD_SECRETA:
+        raise HTTPException(status_code=401, detail="Acceso denegado. Contraseña incorrecta.")
 
-# Ruta para que la web compruebe si la contraseña es correcta al hacer Login
 @app.post("/login")
 async def login(x_password: str = Header(default=None)):
-    if x_password != PASSWORD_SECRETA:
+    if not PASSWORD_SECRETA or x_password != PASSWORD_SECRETA:
         raise HTTPException(status_code=401, detail="Contraseña incorrecta")
     return {"status": "ok"}
 
@@ -93,7 +91,6 @@ def escribir(ws, celda, valor, shrink=False, h_align=None, v_align=None):
         )
     except AttributeError: pass
 
-# Protegemos la ruta principal exigiendo que pase por 'verificar_seguridad'
 @app.post("/generar", dependencies=[Depends(verificar_seguridad)])
 async def generar_documento(datos: DatosFactura):
     try:

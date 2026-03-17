@@ -28,7 +28,7 @@
             <div class="card p-3 mb-3 shadow-sm border-primary">
                 <h6 class="text-primary border-bottom pb-2">Datos generales (Hoja Principal)</h6>
                 <div class="row g-2 mt-1">
-                    <div class="col-sm-6"><label class="form-label fw-bold">Nº Factura</label><input type="text" id="factura_numero" class="form-control" required></div>
+                    <div class="col-sm-6"><label class="form-label fw-bold">Nº Factura / Servicio</label><input type="text" id="factura_numero" class="form-control" required></div>
                     <div class="col-sm-6"><label class="form-label fw-bold">Nombre del Barco</label><input type="text" id="barco" class="form-control" required></div>
                 </div>
             </div>
@@ -42,9 +42,8 @@
     
     <script>
         let ticketCount = 0;
-        let tokenSeguridad = ""; // Aquí guardaremos la contraseña mientras dure la sesión
+        let tokenSeguridad = ""; 
 
-        // --- SISTEMA DE SEGURIDAD ---
         async function iniciarSesion() {
             const pwd = document.getElementById("input-password").value;
             const btn = document.getElementById("btn-login");
@@ -57,23 +56,21 @@
             msjError.style.display = "none";
 
             try {
-                // Comprobamos la contraseña con el servidor
                 const res = await fetch('https://programafacturastaxi.onrender.com/login', {
                     method: 'POST',
                     headers: { 'x-password': pwd }
                 });
                 
                 if (res.ok) {
-                    // ¡Contraseña correcta! Guardamos el token y mostramos la app
                     tokenSeguridad = pwd;
                     document.getElementById("pantalla-login").style.display = "none";
                     document.getElementById("pantalla-app").style.display = "block";
-                    if(ticketCount === 0) agregarTicket(); // Cargamos el primer ticket
+                    if(ticketCount === 0) agregarTicket(); 
                 } else {
                     msjError.style.display = "block";
                 }
             } catch(e) {
-                alert("Error al conectar con el servidor. ¿Está Render encendido?");
+                alert("Error al conectar. ¿Está Render encendido?");
             }
             btn.innerText = "ENTRAR";
             btn.disabled = false;
@@ -86,7 +83,6 @@
             document.getElementById("pantalla-login").style.display = "block";
         }
 
-        // --- FUNCIONES DE LA APP ---
         function toggleInput(checkbox, inputId) {
             document.getElementById(inputId).style.display = checkbox.checked ? 'block' : 'none';
         }
@@ -233,7 +229,7 @@
                     contacto_metodo: item.querySelector('.t-contacto').value,
                     fechas_solicitud: Array.from(item.querySelectorAll('.t-fechas-solicitud')).map(inp => inp.value).filter(v => v),
                     fechas_servicio: Array.from(item.querySelectorAll('.t-fechas-servicio')).map(inp => inp.value).filter(v => v),
-                    pasajeros: Array.from(item.querySelectorAll('.t-pasajeros')).map(inp => inp.value).filter(v => v), // Ya no es obligatorio
+                    pasajeros: Array.from(item.querySelectorAll('.t-pasajeros')).map(inp => inp.value).filter(v => v), 
                     
                     o_aeropuerto: item.querySelector('.t-o-aero').checked,
                     o_buque: item.querySelector('.t-o-buque').checked,
@@ -271,7 +267,6 @@
             boton.disabled = true;
 
             try {
-                // AQUÍ ENVIAMOS LA CONTRASEÑA EN LA CABECERA PARA PASAR EL CONTROL DE SEGURIDAD
                 const URL_RENDER = 'https://programafacturastaxi.onrender.com/generar'; 
                 const res = await fetch(URL_RENDER, { 
                     method: 'POST', 
