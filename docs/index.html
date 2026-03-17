@@ -21,24 +21,16 @@
             <div id="contenedor-tickets"></div>
 
             <button type="button" class="btn btn-outline-success fw-bold w-100 mb-3" onclick="agregarTicket()">+ Añadir Nuevo Ticket</button>
-            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow fs-5">GENERAR FACTURA (.XLSM)</button>
+            <button type="submit" class="btn btn-primary w-100 py-3 fw-bold shadow fs-5">GENERAR FACTURA (.XLSM)</button>
         </form>
     </div>
     
     <script>
         let ticketCount = 0;
 
-        function checkRadio(radioName, ticketId, extraInputId) {
-            const radios = document.getElementsByName(radioName);
-            const extraInput = document.getElementById(extraInputId);
-            let showExtra = false;
-            for(let i=0; i<radios.length; i++){
-                if(radios[i].checked && (radios[i].value === 'hotel' || radios[i].value === 'hospital' || radios[i].value === 'clinica' || radios[i].value === 'otros')) {
-                    showExtra = true;
-                    extraInput.placeholder = "Escribe el nombre del " + radios[i].value + "...";
-                }
-            }
-            extraInput.style.display = showExtra ? 'block' : 'none';
+        // Función para mostrar/ocultar los inputs de texto cuando marcas un checkbox
+        function toggleInput(checkbox, inputId) {
+            document.getElementById(inputId).style.display = checkbox.checked ? 'block' : 'none';
         }
 
         function agregarTicket() {
@@ -53,66 +45,90 @@
                 </div>
                 
                 <div class="row g-2">
-                    <div class="col-sm-4">
+                    <div class="col-sm-6">
                         <label class="form-label text-muted small mb-1">Contacto</label>
-                        <select class="form-select form-select-sm t-contacto" required>
+                        <select class="form-select t-contacto" required>
                             <option value="whatsapp">Whatsapp</option>
                             <option value="telefono">Teléfono</option>
                             <option value="whatsapp y telefono">Whatsapp y Teléfono</option>
                         </select>
                     </div>
-                    <div class="col-sm-5">
-                        <label class="form-label text-muted small mb-1">Nombre Pasajeros</label>
-                        <input type="text" class="form-control form-control-sm t-pasajeros" required>
+                    <div class="col-sm-6">
+                        <label class="form-label text-muted small mb-1 fw-bold text-success">Importe Total del Ticket (€)</label>
+                        <input type="number" step="0.01" class="form-control t-importe" required>
                     </div>
-                    <div class="col-sm-3">
-                        <label class="form-label text-muted small mb-1 fw-bold text-success">Importe (€)</label>
-                        <input type="number" step="0.01" class="form-control form-control-sm t-importe" required>
+
+                    <div class="col-12 mt-2">
+                        <label class="form-label text-muted small mb-1">Nombre Pasajeros (Puedes pulsar Enter para lista)</label>
+                        <textarea class="form-control t-pasajeros" rows="3" placeholder="Ej: Juan Pérez\nMaría Gómez" required></textarea>
                     </div>
 
                     <div class="col-sm-6 mt-2">
                         <label class="form-label text-muted small mb-1">Fechas Solicitud (ej: 12/04, 13/04)</label>
-                        <input type="text" class="form-control form-control-sm t-fechas-solicitud" required>
+                        <input type="text" class="form-control t-fechas-solicitud" required>
                     </div>
                     <div class="col-sm-6 mt-2">
-                        <label class="form-label text-muted small mb-1 fw-bold">Fecha del Servicio</label>
-                        <input type="date" class="form-control form-control-sm t-fecha-servicio" required>
+                        <label class="form-label text-muted small mb-1 fw-bold">Fecha Principal del Servicio</label>
+                        <input type="date" class="form-control t-fecha-servicio" required>
                     </div>
 
-                    <div class="col-sm-6 mt-3 border rounded p-2 bg-light">
-                        <label class="form-label fw-bold small mb-1 text-primary">RECOGIDA</label><br>
-                        <input type="radio" name="origen_${tId}" value="aeropuerto" onchange="checkRadio('origen_${tId}', ${tId}, 'origen_extra_${tId}')" required> Aeropuerto <br>
-                        <input type="radio" name="origen_${tId}" value="buque" onchange="checkRadio('origen_${tId}', ${tId}, 'origen_extra_${tId}')"> Buque <br>
-                        <input type="radio" name="origen_${tId}" value="hotel" onchange="checkRadio('origen_${tId}', ${tId}, 'origen_extra_${tId}')"> Hotel <br>
-                        <input type="radio" name="origen_${tId}" value="otros" onchange="checkRadio('origen_${tId}', ${tId}, 'origen_extra_${tId}')"> Otros <br>
-                        <input type="text" id="origen_extra_${tId}" class="form-control form-control-sm mt-2 hidden-field t-origen-extra">
+                    <div class="col-sm-6 mt-3 border rounded p-3 bg-light">
+                        <label class="form-label fw-bold small mb-2 text-primary">RECOGIDA (Puedes marcar varias)</label>
+                        <div class="form-check"><input class="form-check-input t-o-aero" type="checkbox"><label class="form-check-label">Aeropuerto</label></div>
+                        <div class="form-check"><input class="form-check-input t-o-buque" type="checkbox"><label class="form-check-label">Buque</label></div>
+                        
+                        <div class="form-check mt-1">
+                            <input class="form-check-input t-o-hotel" type="checkbox" onchange="toggleInput(this, 'o_hotel_ext_${tId}')">
+                            <label class="form-check-label">Hotel</label>
+                        </div>
+                        <input type="text" id="o_hotel_ext_${tId}" class="form-control form-control-sm mb-2 hidden-field t-o-hotel-texto" placeholder="Nombre del hotel...">
+                        
+                        <div class="form-check mt-1">
+                            <input class="form-check-input t-o-otros" type="checkbox" onchange="toggleInput(this, 'o_otros_ext_${tId}')">
+                            <label class="form-check-label">Otros</label>
+                        </div>
+                        <input type="text" id="o_otros_ext_${tId}" class="form-control form-control-sm hidden-field t-o-otros-texto" placeholder="¿Dónde?">
                     </div>
 
-                    <div class="col-sm-6 mt-3 border rounded p-2 bg-light">
-                        <label class="form-label fw-bold small mb-1 text-primary">DESTINO</label><br>
+                    <div class="col-sm-6 mt-3 border rounded p-3 bg-light">
+                        <label class="form-label fw-bold small mb-2 text-primary">DESTINO (Puedes marcar varias)</label>
                         <div class="row">
                             <div class="col-6">
-                                <input type="radio" name="destino_${tId}" value="aeropuerto" onchange="checkRadio('destino_${tId}', ${tId}, 'destino_extra_${tId}')" required> Aerop. <br>
-                                <input type="radio" name="destino_${tId}" value="buque" onchange="checkRadio('destino_${tId}', ${tId}, 'destino_extra_${tId}')"> Buque <br>
-                                <input type="radio" name="destino_${tId}" value="hotel" onchange="checkRadio('destino_${tId}', ${tId}, 'destino_extra_${tId}')"> Hotel <br>
-                                <input type="radio" name="destino_${tId}" value="inmigracion" onchange="checkRadio('destino_${tId}', ${tId}, 'destino_extra_${tId}')"> Inmig.
+                                <div class="form-check"><input class="form-check-input t-d-aero" type="checkbox"><label class="form-check-label">Aeropuerto</label></div>
+                                <div class="form-check"><input class="form-check-input t-d-buque" type="checkbox"><label class="form-check-label">Buque</label></div>
+                                <div class="form-check"><input class="form-check-input t-d-inmigracion" type="checkbox"><label class="form-check-label">Inmigración</label></div>
                             </div>
                             <div class="col-6">
-                                <input type="radio" name="destino_${tId}" value="hospital" onchange="checkRadio('destino_${tId}', ${tId}, 'destino_extra_${tId}')"> Hospital <br>
-                                <input type="radio" name="destino_${tId}" value="clinica" onchange="checkRadio('destino_${tId}', ${tId}, 'destino_extra_${tId}')"> Clínica <br>
-                                <input type="radio" name="destino_${tId}" value="otros" onchange="checkRadio('destino_${tId}', ${tId}, 'destino_extra_${tId}')"> Otros
+                                <div class="form-check">
+                                    <input class="form-check-input t-d-hotel" type="checkbox" onchange="toggleInput(this, 'd_hotel_ext_${tId}')"><label class="form-check-label">Hotel</label>
+                                </div>
+                                <input type="text" id="d_hotel_ext_${tId}" class="form-control form-control-sm mb-1 hidden-field t-d-hotel-texto" placeholder="¿Qué hotel?">
+                                
+                                <div class="form-check">
+                                    <input class="form-check-input t-d-hospital" type="checkbox" onchange="toggleInput(this, 'd_hosp_ext_${tId}')"><label class="form-check-label">Hospital</label>
+                                </div>
+                                <input type="text" id="d_hosp_ext_${tId}" class="form-control form-control-sm mb-1 hidden-field t-d-hosp-texto" placeholder="¿Qué hospital?">
+                                
+                                <div class="form-check">
+                                    <input class="form-check-input t-d-clinica" type="checkbox" onchange="toggleInput(this, 'd_clin_ext_${tId}')"><label class="form-check-label">Clínica</label>
+                                </div>
+                                <input type="text" id="d_clin_ext_${tId}" class="form-control form-control-sm mb-1 hidden-field t-d-clin-texto" placeholder="¿Qué clínica?">
+                                
+                                <div class="form-check">
+                                    <input class="form-check-input t-d-otros" type="checkbox" onchange="toggleInput(this, 'd_otros_ext_${tId}')"><label class="form-check-label">Otros</label>
+                                </div>
+                                <input type="text" id="d_otros_ext_${tId}" class="form-control form-control-sm hidden-field t-d-otros-texto" placeholder="¿Dónde?">
                             </div>
                         </div>
-                        <input type="text" id="destino_extra_${tId}" class="form-control form-control-sm mt-2 hidden-field t-destino-extra">
                     </div>
 
                     <div class="col-12 mt-3">
-                        <div class="form-check form-switch fs-6">
+                        <div class="form-check form-switch fs-6 mb-2">
                             <input class="form-check-input t-ida-vuelta" type="checkbox">
                             <label class="form-check-label fw-bold small">¿Servicio de Ida y Vuelta?</label>
                         </div>
-                        <label class="form-label text-muted small mt-2 mb-1">Comentarios / Observaciones</label>
-                        <textarea class="form-control form-control-sm t-comentarios" rows="1"></textarea>
+                        <label class="form-label text-muted small mb-1">Comentarios / Observaciones</label>
+                        <textarea class="form-control t-comentarios" rows="2"></textarea>
                     </div>
                 </div>
             `;
@@ -129,20 +145,32 @@
             
             for (let i = 0; i < ticketsCards.length; i++) {
                 const item = ticketsCards[i];
-                const tId = i + 1;
-                
-                let origenTipo = ""; document.getElementsByName('origen_' + tId).forEach(r => { if(r.checked) origenTipo = r.value; });
-                let destinoTipo = ""; document.getElementsByName('destino_' + tId).forEach(r => { if(r.checked) destinoTipo = r.value; });
 
                 ticketsData.push({
                     contacto_metodo: item.querySelector('.t-contacto').value,
                     fechas_solicitud: item.querySelector('.t-fechas-solicitud').value,
                     fecha_servicio: item.querySelector('.t-fecha-servicio').value,
                     pasajeros: item.querySelector('.t-pasajeros').value,
-                    origen_tipo: origenTipo,
-                    origen_texto_extra: item.querySelector('.t-origen-extra').value,
-                    destino_tipo: destinoTipo,
-                    destino_texto_extra: item.querySelector('.t-destino-extra').value,
+                    
+                    o_aeropuerto: item.querySelector('.t-o-aero').checked,
+                    o_buque: item.querySelector('.t-o-buque').checked,
+                    o_hotel: item.querySelector('.t-o-hotel').checked,
+                    o_hotel_texto: item.querySelector('.t-o-hotel-texto').value,
+                    o_otros: item.querySelector('.t-o-otros').checked,
+                    o_otros_texto: item.querySelector('.t-o-otros-texto').value,
+                    
+                    d_aeropuerto: item.querySelector('.t-d-aero').checked,
+                    d_buque: item.querySelector('.t-d-buque').checked,
+                    d_hotel: item.querySelector('.t-d-hotel').checked,
+                    d_hotel_texto: item.querySelector('.t-d-hotel-texto').value,
+                    d_hospital: item.querySelector('.t-d-hospital').checked,
+                    d_hospital_texto: item.querySelector('.t-d-hosp-texto').value,
+                    d_clinica: item.querySelector('.t-d-clinica').checked,
+                    d_clinica_texto: item.querySelector('.t-d-clin-texto').value,
+                    d_inmigracion: item.querySelector('.t-d-inmigracion').checked,
+                    d_otros: item.querySelector('.t-d-otros').checked,
+                    d_otros_texto: item.querySelector('.t-d-otros-texto').value,
+                    
                     ida_vuelta: item.querySelector('.t-ida-vuelta').checked,
                     comentarios: item.querySelector('.t-comentarios').value,
                     importe: parseFloat(item.querySelector('.t-importe').value)

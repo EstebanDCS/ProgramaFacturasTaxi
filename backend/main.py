@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
 import openpyxl
 from datetime import datetime
 
@@ -21,10 +21,28 @@ class DatosTicket(BaseModel):
     fechas_solicitud: str
     fecha_servicio: str
     pasajeros: str
-    origen_tipo: str 
-    origen_texto_extra: str 
-    destino_tipo: str 
-    destino_texto_extra: str 
+    
+    # Orígenes múltiples
+    o_aeropuerto: bool
+    o_buque: bool
+    o_hotel: bool
+    o_hotel_texto: str
+    o_otros: bool
+    o_otros_texto: str
+    
+    # Destinos múltiples
+    d_aeropuerto: bool
+    d_buque: bool
+    d_hotel: bool
+    d_hotel_texto: str
+    d_hospital: bool
+    d_hospital_texto: str
+    d_clinica: bool
+    d_clinica_texto: str
+    d_inmigracion: bool
+    d_otros: bool
+    d_otros_texto: str
+    
     ida_vuelta: bool
     comentarios: str
     importe: float
@@ -38,7 +56,6 @@ def obtener_ws_or_exception(wb, name):
     try: return wb[name]
     except KeyError: raise Exception(f"La hoja '{name}' no existe en la plantilla.")
 
-# Función ultra-segura para escribir
 def escribir(ws, celda, valor):
     if valor is None: return
     c = ws[celda]
@@ -60,14 +77,11 @@ async def generar_documento(datos: DatosFactura):
         ws_ticket_template = obtener_ws_or_exception(workbook, "ticket")
         ws_ticket_template.sheet_state = 'visible'
 
-        # --- PREPARAR LAS HOJAS (TRUCO PARA NO DEJAR HOJAS VACÍAS) ---
-        # 1. Metemos la hoja original en nuestra lista
         hojas_tickets = [ws_ticket_template]
-        # 2. Si hay más de 1 ticket, creamos las copias necesarias ANTES de rellenar
         for _ in range(1, len(datos.tickets)):
             hojas_tickets.append(workbook.copy_worksheet(ws_ticket_template))
 
-        # --- A. DATOS GENERALES HOJA 1 ---
+        # --- DATOS GENERALES ---
         escribir(hoja_invoice, 'E15', datos.factura_numero) 
         escribir(hoja_invoice, 'C17', datos.barco)          
 
@@ -77,7 +91,6 @@ async def generar_documento(datos: DatosFactura):
         
         for i, t in enumerate(datos.tickets):
             ticket_num = i + 1
-            # Cogemos la hoja correspondiente (la original para el 1, las copias para el resto)
             ws_ticket = hojas_tickets[i]
             ws_ticket.title = f"Ticket_{ticket_num:02d}"
             
@@ -90,39 +103,39 @@ async def generar_documento(datos: DatosFactura):
             escribir(ws_ticket, 'B46', t.comentarios)      
             escribir(ws_ticket, 'E51', t.importe)
             
-            # --- ORIGEN (Ajustado a la columna C) ---
-            escribir(ws_ticket, 'C26', '☑' if t.origen_tipo == 'aeropuerto' else '☐')
-            escribir(ws_ticket, 'C27', '☑' if t.origen_tipo == 'buque' else '☐')
+            # --- ORIGEN (Múltiple) ---
+            escribir(ws_ticket, 'C26', '☑' if t.o_aeropuerto else '☐')
+            escribir(ws_ticket, 'C27', '☑' if t.o_buque else '☐')
             
-            escribir(ws_ticket, 'C28', '☑' if t.origen_tipo == 'hotel' else '☐')
-            if t.origen_tipo == 'hotel': escribir(ws_ticket, 'E28', t.origen_texto_extra) 
+            escribir(ws_ticket, 'C28', '☑' if t.o_hotel else '☐')
+            if t.o_hotel: escribir(ws_ticket, 'E28', t.o_hotel_texto) 
             
-            escribir(ws_ticket, 'C29', '☑' if t.origen_tipo == 'otros' else '☐')
-            if t.origen_tipo == 'otros': escribir(ws_ticket, 'D30', t.origen_texto_extra) 
+            escribir(ws_ticket, 'C29', '☑' if t.o_otros else '☐')
+            if t.o_otros: escribir(ws_ticket, 'D30', t.o_otros_texto) 
             
-            # --- DESTINO (Ajustado a la columna C) ---
-            escribir(ws_ticket, 'C33', '☑' if t.destino_tipo == 'aeropuerto' else '☐')
-            escribir(ws_ticket, 'C34', '☑' if t.destino_tipo == 'buque' else '☐')
+            # --- DESTINO (Múltiple) ---
+            escribir(ws_ticket, 'C33', '☑' if t.d_aeropuerto else '☐')
+            escribir(ws_ticket, 'C34', '☑' if t.d_buque else '☐')
             
-            escribir(ws_ticket, 'C35', '☑' if t.destino_tipo == 'hotel' else '☐')
-            if t.destino_tipo == 'hotel': escribir(ws_ticket, 'E35', t.destino_texto_extra) 
+            escribir(ws_ticket, 'C35', '☑' if t.d_hotel else '☐')
+            if t.d_hotel: escribir(ws_ticket, 'E35', t.d_hotel_texto) 
             
-            escribir(ws_ticket, 'C36', '☑' if t.destino_tipo == 'hospital' else '☐')
-            if t.destino_tipo == 'hospital': escribir(ws_ticket, 'E36', t.destino_texto_extra) 
+            escribir(ws_ticket, 'C36', '☑' if t.d_hospital else '☐')
+            if t.d_hospital: escribir(ws_ticket, 'E36', t.d_hospital_texto) 
             
-            escribir(ws_ticket, 'C37', '☑' if t.destino_tipo == 'clinica' else '☐')
-            if t.destino_tipo == 'clinica': escribir(ws_ticket, 'E37', t.destino_texto_extra) 
+            escribir(ws_ticket, 'C37', '☑' if t.d_clinica else '☐')
+            if t.d_clinica: escribir(ws_ticket, 'E37', t.d_clinica_texto) 
             
-            escribir(ws_ticket, 'C38', '☑' if t.destino_tipo == 'inmigracion' else '☐')
+            escribir(ws_ticket, 'C38', '☑' if t.d_inmigracion else '☐')
             
-            escribir(ws_ticket, 'C39', '☑' if t.destino_tipo == 'otros' else '☐')
-            if t.destino_tipo == 'otros': escribir(ws_ticket, 'D40', t.destino_texto_extra) 
+            escribir(ws_ticket, 'C39', '☑' if t.d_otros else '☐')
+            if t.d_otros: escribir(ws_ticket, 'D40', t.d_otros_texto) 
             
             # --- IDA Y VUELTA ---
             escribir(ws_ticket, 'C43', '☑' if t.ida_vuelta else '☐') 
             escribir(ws_ticket, 'D43', '☐' if t.ida_vuelta else '☑') 
 
-            # Fechas para la Hoja1
+            # Fechas y suma para la principal
             if t.fecha_servicio:
                 try:
                     dt_serv = datetime.strptime(t.fecha_servicio, "%Y-%m-%d")
@@ -130,7 +143,6 @@ async def generar_documento(datos: DatosFactura):
                     fechas_servicio_obj.append(dt_serv)
                 except: pass
 
-            # Escribir resumen en Hoja1
             escribir(hoja_invoice, f'B{fila_actual_invoice}', f"Ticket Nº {ticket_num:02d} (Solicitudes: {t.fechas_solicitud})")
             escribir(hoja_invoice, f'E{fila_actual_invoice}', t.importe)
             
