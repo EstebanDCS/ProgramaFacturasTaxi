@@ -21,7 +21,7 @@ class DatosTicket(BaseModel):
     contacto_metodo: str
     fechas_solicitud: List[str] 
     fechas_servicio: List[str]  
-    pasajeros: str
+    pasajeros: List[str] # Ahora los pasajeros son una lista como las fechas
     o_aeropuerto: bool
     o_buque: bool
     o_hotel: bool
@@ -52,8 +52,8 @@ def obtener_ws_or_exception(wb, name):
     try: return wb[name]
     except KeyError: raise Exception(f"La hoja '{name}' no existe en la plantilla.")
 
-# Función con reducción automática de letra (shrinkToFit)
-def escribir(ws, celda, valor, shrink=False):
+# Función ultra avanzada con Alineación de texto y tamaño automático
+def escribir(ws, celda, valor, shrink=False, h_align=None, v_align=None):
     if valor is None or valor == "": return
     c = ws[celda]
     fila = c.row
@@ -67,9 +67,15 @@ def escribir(ws, celda, valor, shrink=False):
             
     try:
         target_cell.value = valor
-        if shrink:
-            # Hace la letra pequeña si no cabe, sin agrandar la celda
-            target_cell.alignment = Alignment(shrinkToFit=True, wrapText=False)
+        
+        # Mantenemos la alineación original salvo que le pidamos cambiarla
+        current_align = target_cell.alignment
+        target_cell.alignment = Alignment(
+            horizontal=h_align if h_align else current_align.horizontal,
+            vertical=v_align if v_align else current_align.vertical,
+            shrinkToFit=shrink if shrink else current_align.shrinkToFit,
+            wrapText=current_align.wrapText
+        )
     except AttributeError: pass
 
 @app.post("/generar")
@@ -96,7 +102,7 @@ async def generar_documento(datos: DatosFactura):
             ws_ticket = hojas_tickets[i]
             ws_ticket.title = f"Ticket_{ticket_num:02d}"
             
-            # --- FORMATEAR MÚLTIPLES FECHAS ---
+            # --- FORMATEAR FECHAS ---
             fechas_sol_list = []
             for f in t.fechas_solicitud:
                 if f:
@@ -115,13 +121,22 @@ async def generar_documento(datos: DatosFactura):
             fechas_sol_str = ", ".join(fechas_sol_list)
             fechas_serv_str = ", ".join(fechas_serv_list)
             
-            # --- DATOS DEL TICKET ---
-            escribir(ws_ticket, 'E2', ticket_num) # NUMERO DE TICKET EN E2
+            # --- FORMATEAR TRIPULANTES (Separados por coma y espacio) ---
+            pasajeros_str = ", ".join([p for p in t.pasajeros if p.strip()])
+            
+            # --- DATOS DEL TICKET (Con alineaciones personalizadas) ---
+            escribir(ws_ticket, 'E2', ticket_num) 
             escribir(ws_ticket, 'E9', t.contacto_metodo)
             escribir(ws_ticket, 'C12', fechas_sol_str, shrink=True) 
-            escribir(ws_ticket, 'B14', fechas_serv_str, shrink=True)
+            
+            # Fecha de servicio CENTRADA en ambos ejes
+            escribir(ws_ticket, 'B14', fechas_serv_str, shrink=True, h_align='center', v_align='center')
+            
             escribir(ws_ticket, 'C16', datos.barco, shrink=True)
-            escribir(ws_ticket, 'B19', t.pasajeros, shrink=True)        
+            
+            # Pasajeros a la IZQUIERDA y ARRIBA del todo
+            escribir(ws_ticket, 'B19', pasajeros_str, shrink=True, h_align='left', v_align='top')
+            
             escribir(ws_ticket, 'B46', t.comentarios, shrink=True)      
             escribir(ws_ticket, 'E51', t.importe)
             
