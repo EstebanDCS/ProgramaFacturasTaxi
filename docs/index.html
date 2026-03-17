@@ -12,6 +12,8 @@
 </head>
 <body class="bg-light">
 
+    <datalist id="sugerencias-pasajeros"></datalist>
+
     <div id="pantalla-login" class="container mt-5" style="max-width: 400px;">
         <div class="card p-4 shadow-lg border-primary text-center mt-5">
             <h3 class="mb-4 text-primary fw-bold">Acceso Privado</h3>
@@ -52,8 +54,23 @@
     <script>
         let ticketCount = 0;
         let tokenSeguridad = ""; 
+        
+        // Memoria para el autocompletado de pasajeros
+        let nombresGuardados = new Set(); 
 
-        // Función para mostrar/ocultar contraseña
+        // Función que atrapa el nombre escrito y lo añade a las sugerencias
+        function registrarNombre(nombre) {
+            if (!nombre) return;
+            const nombreLimpio = nombre.trim();
+            if (nombreLimpio !== "" && !nombresGuardados.has(nombreLimpio)) {
+                nombresGuardados.add(nombreLimpio);
+                const datalist = document.getElementById('sugerencias-pasajeros');
+                const option = document.createElement('option');
+                option.value = nombreLimpio;
+                datalist.appendChild(option);
+            }
+        }
+
         function togglePassword() {
             const pwdInput = document.getElementById("input-password");
             if (pwdInput.type === "password") {
@@ -98,7 +115,7 @@
         function cerrarSesion() {
             tokenSeguridad = "";
             document.getElementById("input-password").value = "";
-            document.getElementById("input-password").type = "password"; // Resetea el ojito
+            document.getElementById("input-password").type = "password"; 
             document.getElementById("pantalla-app").style.display = "none";
             document.getElementById("pantalla-login").style.display = "block";
         }
@@ -107,19 +124,23 @@
             document.getElementById(inputId).style.display = checkbox.checked ? 'block' : 'none';
         }
 
-        function addDynamicField(containerId, className, inputType, placeholderTxt = "", isRequired = true) {
+        // Función dinámica modificada para conectar con el autocompletado
+        function addDynamicField(containerId, className, inputType, placeholderTxt = "", isRequired = true, listId = "") {
             const container = document.getElementById(containerId);
             const div = document.createElement('div');
             div.className = 'd-flex mb-1 mt-1';
             const req = isRequired ? "required" : "";
+            
+            // Si el campo es de pasajeros, le conectamos la memoria y la función de aprender
+            const listAttr = listId ? `list="${listId}" onchange="registrarNombre(this.value)"` : "";
+            
             div.innerHTML = `
-                <input type="${inputType}" class="form-control form-control-sm ${className}" placeholder="${placeholderTxt}" ${req}>
+                <input type="${inputType}" class="form-control form-control-sm ${className}" placeholder="${placeholderTxt}" ${req} ${listAttr}>
                 <button type="button" class="btn btn-sm btn-outline-danger ms-1" onclick="this.parentElement.remove()">X</button>
             `;
             container.appendChild(div);
         }
 
-        // Función para minimizar o maximizar un ticket al hacer clic en su cabecera
         function toggleTicketDisplay(id) {
             const body = document.getElementById(`ticket_body_${id}`);
             const icon = document.getElementById(`toggle_icon_${id}`);
@@ -133,13 +154,11 @@
         }
 
         function agregarTicket() {
-            // 1. ANTES de añadir uno nuevo, cerramos todos los que ya existen
             const allBodies = document.querySelectorAll('.ticket-body');
             const allIcons = document.querySelectorAll('.toggle-icon');
             allBodies.forEach(b => b.style.display = 'none');
             allIcons.forEach(i => i.innerText = '▶️');
 
-            // 2. Creamos el nuevo ticket (que nacerá desplegado)
             ticketCount++;
             const tId = ticketCount;
             const div = document.createElement('div');
@@ -176,9 +195,11 @@
                         <div class="col-12 mt-2 border rounded p-2 bg-light">
                             <label class="form-label text-muted small mb-1 fw-bold">Nombre Pasajeros / Tripulantes (Opcional)</label>
                             <div id="pasajeros_${tId}">
-                                <div class="d-flex mb-1"><input type="text" class="form-control form-control-sm t-pasajeros" placeholder="Nombre del tripulante"></div>
+                                <div class="d-flex mb-1">
+                                    <input type="text" class="form-control form-control-sm t-pasajeros" placeholder="Nombre del tripulante" list="sugerencias-pasajeros" onchange="registrarNombre(this.value)">
+                                </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addDynamicField('pasajeros_${tId}', 't-pasajeros', 'text', 'Nombre del tripulante', false)">+ Añadir Tripulante</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addDynamicField('pasajeros_${tId}', 't-pasajeros', 'text', 'Nombre del tripulante', false, 'sugerencias-pasajeros')">+ Añadir Tripulante</button>
                         </div>
 
                         <div class="col-sm-6 mt-2 border rounded p-2 bg-light">
