@@ -13,7 +13,7 @@ app = FastAPI()
 # BLOQUEO CORS: Solo tu página de GitHub podrá comunicarse con este servidor
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://EstebanDCS.github.io"], # <--- ¡CAMBIA 'TU_USUARIO' POR TU NOMBRE REAL EN GITHUB!
+    allow_origins=["https://estebandcs.github.io"], # <--- ¡CAMBIA 'TU_USUARIO' POR TU NOMBRE REAL EN GITHUB!
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
