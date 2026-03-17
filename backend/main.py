@@ -18,7 +18,7 @@ app.add_middleware(
 )
 
 class DatosTicket(BaseModel):
-    numero_ticket: str   # <-- NUEVO CAMPO AÑADIDO
+    numero_ticket: str  
     contacto_metodo: str
     fechas_solicitud: List[str] 
     fechas_servicio: List[str]  
@@ -88,19 +88,22 @@ async def generar_documento(datos: DatosFactura):
         for _ in range(1, len(datos.tickets)):
             hojas_tickets.append(workbook.copy_worksheet(ws_ticket_template))
 
+        # --- DATOS GENERALES HOJA PRINCIPAL ---
         escribir(hoja_invoice, 'E15', datos.factura_numero) 
         escribir(hoja_invoice, 'C17', datos.barco)          
 
         total_importe = 0.0
         fechas_servicio_obj = []
-        fila_actual_invoice = 21 
+        numeros_de_ticket = [] # Lista para guardar los números y juntarlos luego
         
         for i, t in enumerate(datos.tickets):
             ws_ticket = hojas_tickets[i]
-            # Usamos el número de ticket que introduzcas para nombrar la hoja
-            ws_ticket.title = f"T_{t.numero_ticket}"[:31] # Excel limita a 31 letras
+            ws_ticket.title = f"T_{t.numero_ticket}"[:31]
             
-            # --- FORMATEAR FECHAS ---
+            numeros_de_ticket.append(t.numero_ticket)
+            total_importe += t.importe
+            
+            # Formatear Fechas
             fechas_sol_list = []
             for f in t.fechas_solicitud:
                 if f:
@@ -119,23 +122,19 @@ async def generar_documento(datos: DatosFactura):
             fechas_sol_str = ", ".join(fechas_sol_list)
             fechas_serv_str = ", ".join(fechas_serv_list)
             
-            # --- FORMATEAR TRIPULANTES ---
+            # Formatear Tripulantes
             pasajeros_str = ", ".join([p for p in t.pasajeros if p.strip()])
             
-            # --- DATOS DEL TICKET ---
-            escribir(ws_ticket, 'E2', t.numero_ticket, h_align='center') # <-- Número de ticket manual en la E2
+            # --- ESCRIBIR EN LA HOJA DEL TICKET ---
+            escribir(ws_ticket, 'E2', t.numero_ticket, h_align='center') 
             escribir(ws_ticket, 'E9', t.contacto_metodo)
             escribir(ws_ticket, 'C12', fechas_sol_str, shrink=True) 
-            
-            # <-- Cambio de B14 a C14
             escribir(ws_ticket, 'C14', fechas_serv_str, shrink=True, h_align='center', v_align='center') 
-            
             escribir(ws_ticket, 'C16', datos.barco, shrink=True)
             escribir(ws_ticket, 'B19', pasajeros_str, shrink=True, h_align='left', v_align='top')
             escribir(ws_ticket, 'B46', t.comentarios, shrink=True)      
             escribir(ws_ticket, 'E51', t.importe)
             
-            # --- ORIGEN ---
             escribir(ws_ticket, 'C26', '☑' if t.o_aeropuerto else '☐')
             escribir(ws_ticket, 'C27', '☑' if t.o_buque else '☐')
             escribir(ws_ticket, 'C28', '☑' if t.o_hotel else '☐')
@@ -143,7 +142,6 @@ async def generar_documento(datos: DatosFactura):
             escribir(ws_ticket, 'C29', '☑' if t.o_otros else '☐')
             if t.o_otros: escribir(ws_ticket, 'D30', t.o_otros_texto, shrink=True) 
             
-            # --- DESTINO ---
             escribir(ws_ticket, 'C33', '☑' if t.d_aeropuerto else '☐')
             escribir(ws_ticket, 'C34', '☑' if t.d_buque else '☐')
             escribir(ws_ticket, 'C35', '☑' if t.d_hotel else '☐')
@@ -156,19 +154,25 @@ async def generar_documento(datos: DatosFactura):
             escribir(ws_ticket, 'C39', '☑' if t.d_otros else '☐')
             if t.d_otros: escribir(ws_ticket, 'D40', t.d_otros_texto, shrink=True) 
             
-            # --- IDA Y VUELTA ---
             escribir(ws_ticket, 'C43', '☑' if t.ida_vuelta else '☐') 
             escribir(ws_ticket, 'D43', '☐' if t.ida_vuelta else '☑') 
 
-            # --- HOJA PRINCIPAL ---
-            # Usamos el número de ticket manual para la hoja principal también
-            escribir(hoja_invoice, f'B{fila_actual_invoice}', f"Ticket Nº {t.numero_ticket} (Solicitudes: {fechas_sol_str})")
-            escribir(hoja_invoice, f'E{fila_actual_invoice}', t.importe)
-            
-            total_importe += t.importe
-            fila_actual_invoice += 1
+        # --- RESUMEN Y CÁLCULOS MATEMÁTICOS (HOJA PRINCIPAL) ---
+        
+        # 1. B21: Todos los números de ticket separados por coma
+        tickets_unidos = ", ".join(numeros_de_ticket)
+        escribir(hoja_invoice, 'B21', tickets_unidos, shrink=True, h_align='left', v_align='top')
+        
+        # 2. Cálculos de Importes
+        base_imponible = total_importe / 1.1
+        iva = total_importe - base_imponible
+        
+        # 3. Escribir resultados redondeados a 2 decimales
+        escribir(hoja_invoice, 'F40', round(total_importe, 2))      # Total Importe
+        escribir(hoja_invoice, 'F38', round(base_imponible, 2))     # Base Imponible (Total / 1.1)
+        escribir(hoja_invoice, 'F39', round(iva, 2))                # IVA (Total - Base Imponible)
 
-        escribir(hoja_invoice, 'E38', total_importe)
+        # 4. Fecha de la hoja principal
         if fechas_servicio_obj:
             escribir(hoja_invoice, 'F17', max(fechas_servicio_obj).strftime("%d/%m/%Y")) 
             
