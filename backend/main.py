@@ -88,13 +88,17 @@ async def generar_documento(datos: DatosFactura):
         for _ in range(1, len(datos.tickets)):
             hojas_tickets.append(workbook.copy_worksheet(ws_ticket_template))
 
+        # Forzamos el nombre del barco a MAYÚSCULAS
+        barco_mayusculas = datos.barco.upper() if datos.barco else ""
+
         # --- DATOS GENERALES HOJA PRINCIPAL ---
-        escribir(hoja_invoice, 'E15', datos.factura_numero) 
-        escribir(hoja_invoice, 'C17', datos.barco)          
+        # Añadido shrink=True a la E15 para que no descuadre si es muy largo
+        escribir(hoja_invoice, 'E15', datos.factura_numero, shrink=True, h_align='center', v_align='center') 
+        escribir(hoja_invoice, 'C17', barco_mayusculas, shrink=True)          
 
         total_importe = 0.0
         fechas_servicio_obj = []
-        numeros_de_ticket = [] # Lista para guardar los números y juntarlos luego
+        numeros_de_ticket = [] 
         
         for i, t in enumerate(datos.tickets):
             ws_ticket = hojas_tickets[i]
@@ -130,7 +134,7 @@ async def generar_documento(datos: DatosFactura):
             escribir(ws_ticket, 'E9', t.contacto_metodo)
             escribir(ws_ticket, 'C12', fechas_sol_str, shrink=True) 
             escribir(ws_ticket, 'C14', fechas_serv_str, shrink=True, h_align='center', v_align='center') 
-            escribir(ws_ticket, 'C16', datos.barco, shrink=True)
+            escribir(ws_ticket, 'C16', barco_mayusculas, shrink=True) # Barco en mayúsculas también aquí
             escribir(ws_ticket, 'B19', pasajeros_str, shrink=True, h_align='left', v_align='top')
             escribir(ws_ticket, 'B46', t.comentarios, shrink=True)      
             escribir(ws_ticket, 'E51', t.importe)
@@ -158,21 +162,16 @@ async def generar_documento(datos: DatosFactura):
             escribir(ws_ticket, 'D43', '☐' if t.ida_vuelta else '☑') 
 
         # --- RESUMEN Y CÁLCULOS MATEMÁTICOS (HOJA PRINCIPAL) ---
-        
-        # 1. B21: Todos los números de ticket separados por coma
         tickets_unidos = ", ".join(numeros_de_ticket)
         escribir(hoja_invoice, 'B21', tickets_unidos, shrink=True, h_align='left', v_align='top')
         
-        # 2. Cálculos de Importes
         base_imponible = total_importe / 1.1
         iva = total_importe - base_imponible
         
-        # 3. Escribir resultados redondeados a 2 decimales
-        escribir(hoja_invoice, 'F40', round(total_importe, 2))      # Total Importe
-        escribir(hoja_invoice, 'F38', round(base_imponible, 2))     # Base Imponible (Total / 1.1)
-        escribir(hoja_invoice, 'F39', round(iva, 2))                # IVA (Total - Base Imponible)
+        escribir(hoja_invoice, 'F40', round(total_importe, 2))      
+        escribir(hoja_invoice, 'F38', round(base_imponible, 2))     
+        escribir(hoja_invoice, 'F39', round(iva, 2))                
 
-        # 4. Fecha de la hoja principal
         if fechas_servicio_obj:
             escribir(hoja_invoice, 'F17', max(fechas_servicio_obj).strftime("%d/%m/%Y")) 
             
