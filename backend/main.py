@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
@@ -16,6 +16,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ==========================================
+# 🔐 CONFIGURACIÓN DE SEGURIDAD
+# Cambia esta contraseña por la que tú quieras
+PASSWORD_SECRETA = "TaxiSeguro2026" 
+# ==========================================
+
+def verificar_seguridad(x_password: str = Header(default=None)):
+    if x_password != PASSWORD_SECRETA:
+        raise HTTPException(status_code=401, detail="Acceso denegado. Contraseña incorrecta o ausente.")
+
+# Ruta para que la web compruebe si la contraseña es correcta al hacer Login
+@app.post("/login")
+async def login(x_password: str = Header(default=None)):
+    if x_password != PASSWORD_SECRETA:
+        raise HTTPException(status_code=401, detail="Contraseña incorrecta")
+    return {"status": "ok"}
 
 class DatosTicket(BaseModel):
     numero_ticket: str  
@@ -76,7 +93,8 @@ def escribir(ws, celda, valor, shrink=False, h_align=None, v_align=None):
         )
     except AttributeError: pass
 
-@app.post("/generar")
+# Protegemos la ruta principal exigiendo que pase por 'verificar_seguridad'
+@app.post("/generar", dependencies=[Depends(verificar_seguridad)])
 async def generar_documento(datos: DatosFactura):
     try:
         workbook = openpyxl.load_workbook("plantilla.xlsm", keep_vba=True)
@@ -88,11 +106,8 @@ async def generar_documento(datos: DatosFactura):
         for _ in range(1, len(datos.tickets)):
             hojas_tickets.append(workbook.copy_worksheet(ws_ticket_template))
 
-        # Forzamos el nombre del barco a MAYÚSCULAS
         barco_mayusculas = datos.barco.upper() if datos.barco else ""
 
-        # --- DATOS GENERALES HOJA PRINCIPAL ---
-        # Añadido shrink=True a la E15 para que no descuadre si es muy largo
         escribir(hoja_invoice, 'E15', datos.factura_numero, shrink=True, h_align='center', v_align='center') 
         escribir(hoja_invoice, 'C17', barco_mayusculas, shrink=True)          
 
@@ -107,7 +122,6 @@ async def generar_documento(datos: DatosFactura):
             numeros_de_ticket.append(t.numero_ticket)
             total_importe += t.importe
             
-            # Formatear Fechas
             fechas_sol_list = []
             for f in t.fechas_solicitud:
                 if f:
@@ -126,15 +140,13 @@ async def generar_documento(datos: DatosFactura):
             fechas_sol_str = ", ".join(fechas_sol_list)
             fechas_serv_str = ", ".join(fechas_serv_list)
             
-            # Formatear Tripulantes
             pasajeros_str = ", ".join([p for p in t.pasajeros if p.strip()])
             
-            # --- ESCRIBIR EN LA HOJA DEL TICKET ---
             escribir(ws_ticket, 'E2', t.numero_ticket, h_align='center') 
             escribir(ws_ticket, 'E9', t.contacto_metodo)
             escribir(ws_ticket, 'C12', fechas_sol_str, shrink=True) 
             escribir(ws_ticket, 'C14', fechas_serv_str, shrink=True, h_align='center', v_align='center') 
-            escribir(ws_ticket, 'C16', barco_mayusculas, shrink=True) # Barco en mayúsculas también aquí
+            escribir(ws_ticket, 'C16', barco_mayusculas, shrink=True) 
             escribir(ws_ticket, 'B19', pasajeros_str, shrink=True, h_align='left', v_align='top')
             escribir(ws_ticket, 'B46', t.comentarios, shrink=True)      
             escribir(ws_ticket, 'E51', t.importe)
@@ -161,7 +173,6 @@ async def generar_documento(datos: DatosFactura):
             escribir(ws_ticket, 'C43', '☑' if t.ida_vuelta else '☐') 
             escribir(ws_ticket, 'D43', '☐' if t.ida_vuelta else '☑') 
 
-        # --- RESUMEN Y CÁLCULOS MATEMÁTICOS (HOJA PRINCIPAL) ---
         tickets_unidos = ", ".join(numeros_de_ticket)
         escribir(hoja_invoice, 'B21', tickets_unidos, shrink=True, h_align='left', v_align='top')
         
