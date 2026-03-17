@@ -32,7 +32,6 @@
             document.getElementById(inputId).style.display = checkbox.checked ? 'block' : 'none';
         }
 
-        // Función dinámica universal para añadir inputs (fechas o textos)
         function addDynamicField(containerId, className, inputType, placeholderTxt = "") {
             const container = document.getElementById(containerId);
             const div = document.createElement('div');
@@ -51,22 +50,26 @@
             div.className = 'card p-3 mb-3 bg-white rounded shadow-sm ticket-item border-success';
             div.innerHTML = `
                 <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
-                    <h6 class="text-success m-0">Ticket Detallado #${tId}</h6>
+                    <h6 class="text-success m-0">Datos del Ticket #${tId}</h6>
                     ${tId > 1 ? `<button type="button" class="btn-close btn-sm" onclick="this.parentElement.parentElement.remove()"></button>` : ''}
                 </div>
                 
                 <div class="row g-2">
-                    <div class="col-sm-6">
+                    <div class="col-sm-4">
+                        <label class="form-label text-muted small mb-1 fw-bold text-danger">Nº de Ticket Físico</label>
+                        <input type="text" class="form-control form-control-sm border-danger t-numero-ticket" placeholder="Ej: 0045" required>
+                    </div>
+                    <div class="col-sm-4">
                         <label class="form-label text-muted small mb-1">Contacto</label>
-                        <select class="form-select t-contacto" required>
+                        <select class="form-select form-select-sm t-contacto" required>
                             <option value="whatsapp">Whatsapp</option>
                             <option value="telefono">Teléfono</option>
                             <option value="whatsapp y telefono">Whatsapp y Teléfono</option>
                         </select>
                     </div>
-                    <div class="col-sm-6">
-                        <label class="form-label text-muted small mb-1 fw-bold text-success">Importe Total del Ticket (€)</label>
-                        <input type="number" step="0.01" class="form-control t-importe" required>
+                    <div class="col-sm-4">
+                        <label class="form-label text-muted small mb-1 fw-bold text-success">Importe Total (€)</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm t-importe" required>
                     </div>
 
                     <div class="col-12 mt-2 border rounded p-2 bg-light">
@@ -168,10 +171,10 @@
                 const item = ticketsCards[i];
 
                 ticketsData.push({
+                    numero_ticket: item.querySelector('.t-numero-ticket').value, // <-- Se envía el número de ticket
                     contacto_metodo: item.querySelector('.t-contacto').value,
                     fechas_solicitud: Array.from(item.querySelectorAll('.t-fechas-solicitud')).map(inp => inp.value).filter(v => v),
                     fechas_servicio: Array.from(item.querySelectorAll('.t-fechas-servicio')).map(inp => inp.value).filter(v => v),
-                    // Ahora captura todos los tripulantes como una lista
                     pasajeros: Array.from(item.querySelectorAll('.t-pasajeros')).map(inp => inp.value).filter(v => v),
                     
                     o_aeropuerto: item.querySelector('.t-o-aero').checked,

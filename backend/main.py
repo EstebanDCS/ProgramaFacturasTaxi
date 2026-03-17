@@ -18,10 +18,11 @@ app.add_middleware(
 )
 
 class DatosTicket(BaseModel):
+    numero_ticket: str   # <-- NUEVO CAMPO AÑADIDO
     contacto_metodo: str
     fechas_solicitud: List[str] 
     fechas_servicio: List[str]  
-    pasajeros: List[str] # Ahora los pasajeros son una lista como las fechas
+    pasajeros: List[str] 
     o_aeropuerto: bool
     o_buque: bool
     o_hotel: bool
@@ -52,7 +53,6 @@ def obtener_ws_or_exception(wb, name):
     try: return wb[name]
     except KeyError: raise Exception(f"La hoja '{name}' no existe en la plantilla.")
 
-# Función ultra avanzada con Alineación de texto y tamaño automático
 def escribir(ws, celda, valor, shrink=False, h_align=None, v_align=None):
     if valor is None or valor == "": return
     c = ws[celda]
@@ -67,8 +67,6 @@ def escribir(ws, celda, valor, shrink=False, h_align=None, v_align=None):
             
     try:
         target_cell.value = valor
-        
-        # Mantenemos la alineación original salvo que le pidamos cambiarla
         current_align = target_cell.alignment
         target_cell.alignment = Alignment(
             horizontal=h_align if h_align else current_align.horizontal,
@@ -98,9 +96,9 @@ async def generar_documento(datos: DatosFactura):
         fila_actual_invoice = 21 
         
         for i, t in enumerate(datos.tickets):
-            ticket_num = i + 1
             ws_ticket = hojas_tickets[i]
-            ws_ticket.title = f"Ticket_{ticket_num:02d}"
+            # Usamos el número de ticket que introduzcas para nombrar la hoja
+            ws_ticket.title = f"T_{t.numero_ticket}"[:31] # Excel limita a 31 letras
             
             # --- FORMATEAR FECHAS ---
             fechas_sol_list = []
@@ -121,22 +119,19 @@ async def generar_documento(datos: DatosFactura):
             fechas_sol_str = ", ".join(fechas_sol_list)
             fechas_serv_str = ", ".join(fechas_serv_list)
             
-            # --- FORMATEAR TRIPULANTES (Separados por coma y espacio) ---
+            # --- FORMATEAR TRIPULANTES ---
             pasajeros_str = ", ".join([p for p in t.pasajeros if p.strip()])
             
-            # --- DATOS DEL TICKET (Con alineaciones personalizadas) ---
-            escribir(ws_ticket, 'E2', ticket_num) 
+            # --- DATOS DEL TICKET ---
+            escribir(ws_ticket, 'E2', t.numero_ticket, h_align='center') # <-- Número de ticket manual en la E2
             escribir(ws_ticket, 'E9', t.contacto_metodo)
             escribir(ws_ticket, 'C12', fechas_sol_str, shrink=True) 
             
-            # Fecha de servicio CENTRADA en ambos ejes
-            escribir(ws_ticket, 'B14', fechas_serv_str, shrink=True, h_align='center', v_align='center')
+            # <-- Cambio de B14 a C14
+            escribir(ws_ticket, 'C14', fechas_serv_str, shrink=True, h_align='center', v_align='center') 
             
             escribir(ws_ticket, 'C16', datos.barco, shrink=True)
-            
-            # Pasajeros a la IZQUIERDA y ARRIBA del todo
             escribir(ws_ticket, 'B19', pasajeros_str, shrink=True, h_align='left', v_align='top')
-            
             escribir(ws_ticket, 'B46', t.comentarios, shrink=True)      
             escribir(ws_ticket, 'E51', t.importe)
             
@@ -166,7 +161,8 @@ async def generar_documento(datos: DatosFactura):
             escribir(ws_ticket, 'D43', '☐' if t.ida_vuelta else '☑') 
 
             # --- HOJA PRINCIPAL ---
-            escribir(hoja_invoice, f'B{fila_actual_invoice}', f"Ticket Nº {ticket_num:02d} (Solicitudes: {fechas_sol_str})")
+            # Usamos el número de ticket manual para la hoja principal también
+            escribir(hoja_invoice, f'B{fila_actual_invoice}', f"Ticket Nº {t.numero_ticket} (Solicitudes: {fechas_sol_str})")
             escribir(hoja_invoice, f'E{fila_actual_invoice}', t.importe)
             
             total_importe += t.importe
