@@ -10,16 +10,15 @@ import os
 
 app = FastAPI()
 
-# BLOQUEO CORS: Solo tu página de GitHub podrá comunicarse con este servidor
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://estebandcs.github.io"], # <--- ¡CAMBIA 'TU_USUARIO' POR TU NOMBRE REAL EN GITHUB!
+    allow_origins=["https://estebandcs.github.io"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"] 
 )
 
-# La contraseña se lee de forma segura desde Render
 PASSWORD_SECRETA = os.environ.get("TAXI_PASSWORD") 
 
 def verificar_seguridad(x_password: str = Header(default=None)):
@@ -62,6 +61,7 @@ class DatosTicket(BaseModel):
 class DatosFactura(BaseModel):
     factura_numero: str
     barco: str
+    fecha_factura: str # <--- NUEVO DATO DE FECHA MANUAL
     tickets: List[DatosTicket]
 
 def obtener_ws_or_exception(wb, name):
@@ -103,13 +103,22 @@ async def generar_documento(datos: DatosFactura):
         for _ in range(1, len(datos.tickets)):
             hojas_tickets.append(workbook.copy_worksheet(ws_ticket_template))
 
-        barco_mayusculas = datos.barco.upper() if datos.barco else ""
+        barco_mayusculas = datos.barco.upper() if datos.barco else "SIN_BARCO"
 
+        # --- DATOS HOJA PRINCIPAL ---
         escribir(hoja_invoice, 'E15', datos.factura_numero, shrink=True, h_align='center', v_align='center') 
         escribir(hoja_invoice, 'C17', barco_mayusculas, shrink=True)          
+        
+        # Fecha Manual
+        fecha_final_str = ""
+        if datos.fecha_factura:
+            try:
+                dt_fac = datetime.strptime(datos.fecha_factura, "%Y-%m-%d")
+                escribir(hoja_invoice, 'F17', dt_fac.strftime("%d/%m/%Y"), h_align='center')
+                fecha_final_str = "_" + dt_fac.strftime("%d-%m-%Y")
+            except: pass
 
         total_importe = 0.0
-        fechas_servicio_obj = []
         numeros_de_ticket = [] 
         
         for i, t in enumerate(datos.tickets):
@@ -131,7 +140,6 @@ async def generar_documento(datos: DatosFactura):
                     try: 
                         dt = datetime.strptime(f, "%Y-%m-%d")
                         fechas_serv_list.append(dt.strftime("%d/%m/%Y"))
-                        fechas_servicio_obj.append(dt)
                     except: pass
 
             fechas_sol_str = ", ".join(fechas_sol_list)
@@ -180,12 +188,12 @@ async def generar_documento(datos: DatosFactura):
         escribir(hoja_invoice, 'F38', round(base_imponible, 2))     
         escribir(hoja_invoice, 'F39', round(iva, 2))                
 
-        if fechas_servicio_obj:
-            escribir(hoja_invoice, 'F17', max(fechas_servicio_obj).strftime("%d/%m/%Y")) 
+        # Nombre de archivo dinámico
+        nombre_descarga = f"{barco_mayusculas}{fecha_final_str}.xlsm".replace(" ", "_")
             
         ruta_salida = "/tmp/factura_completa.xlsm"
         workbook.save(ruta_salida)
         
-        return FileResponse(ruta_salida, filename=f"Factura_{datos.factura_numero}.xlsm", media_type='application/vnd.ms-excel.sheet.macroEnabled.12')
+        return FileResponse(ruta_salida, filename=nombre_descarga, media_type='application/vnd.ms-excel.sheet.macroEnabled.12')
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
