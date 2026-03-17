@@ -1,8 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>App Taxi - Facturación Segura</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d6efd">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1048/1048313.png">
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style> 
         .hidden-field { display: none; } 
@@ -58,7 +64,6 @@
         // Memoria para el autocompletado de pasajeros
         let nombresGuardados = new Set(); 
 
-        // Función que atrapa el nombre escrito y lo añade a las sugerencias
         function registrarNombre(nombre) {
             if (!nombre) return;
             const nombreLimpio = nombre.trim();
@@ -124,14 +129,11 @@
             document.getElementById(inputId).style.display = checkbox.checked ? 'block' : 'none';
         }
 
-        // Función dinámica modificada para conectar con el autocompletado
         function addDynamicField(containerId, className, inputType, placeholderTxt = "", isRequired = true, listId = "") {
             const container = document.getElementById(containerId);
             const div = document.createElement('div');
             div.className = 'd-flex mb-1 mt-1';
             const req = isRequired ? "required" : "";
-            
-            // Si el campo es de pasajeros, le conectamos la memoria y la función de aprender
             const listAttr = listId ? `list="${listId}" onchange="registrarNombre(this.value)"` : "";
             
             div.innerHTML = `
@@ -359,6 +361,12 @@
             boton.innerText = "GENERAR FACTURA (.XLSM)";
             boton.disabled = false;
         });
+
+        // ARRANCADOR DE LA PWA (Para poder instalarlo en móvil y PC)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+            .then(() => console.log('Service Worker Registrado correctamente.'));
+        }
     </script>
 </body>
 </html>
