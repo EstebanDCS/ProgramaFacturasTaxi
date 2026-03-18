@@ -391,7 +391,8 @@
                             <div class="flex flex-col gap-2">
                                 <label class="text-sm font-bold text-slate-600 uppercase tracking-tight">Contacto</label>
                                 <select class="t-contacto rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary font-medium">
-                                    <option value="whatsapp">WhatsApp</option>
+                                    <option value="" disabled>Seleccionar contacto...</option>
+                                    <option value="whatsapp" selected>WhatsApp</option>
                                     <option value="telefono">Teléfono</option>
                                 </select>
                             </div>
@@ -617,7 +618,9 @@
                         document.body.appendChild(a); a.click(); document.body.removeChild(a);
                         window.URL.revokeObjectURL(url);
                     }
-                    limpiarBorrador(false);
+                    // Colapsar todos los tickets tras guardar
+                    document.querySelectorAll('.ticket-card details').forEach(d => d.open = false);
+                    guardarProgreso();
                     alert(editId
                         ? (modo === 'nube' ? "☁️ Factura actualizada en la nube" : "✅ Archivo descargado")
                         : (modo === 'nube' ? "☁️ Guardado en la nube" : "✅ Archivo descargado")
@@ -795,6 +798,7 @@
                         else input.value = p.data[index].value;
                     }
                 });
+                cargarSugerenciasPasajeros();
                 return true;
             } catch(e) { return false; }
         }

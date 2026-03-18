@@ -136,8 +136,9 @@ def crear_excel(datos_dict, nombre_base):
     total_importe = 0.0
     for t in tickets:
         pasajeros = ", ".join(t.get('pasajeros', []))
-        desc = f"Ticket #{t.get('numero_ticket', '')}"
-        if pasajeros: desc += f" - Pax: {pasajeros}"
+        num_ticket = t.get('numero_ticket', '')
+        desc = f"Nº {num_ticket}" if num_ticket else "Ticket"
+        if pasajeros: desc += f" — {pasajeros}"
         
         escribir(ws_factura, f"B{fila_ticket}", desc)
         escribir(ws_factura, f"F{fila_ticket}", float(t.get('importe', 0)))
