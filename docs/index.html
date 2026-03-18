@@ -1,185 +1,396 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Taxi App Pro</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Taxi App Pro - Administrador</title>
+    
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d6dfd",
+                        "background-light": "#f5f7fb",
+                        "background-dark": "#0f1723",
+                        "sidebar-dark": "#1e1e2d",
+                    },
+                    fontFamily: { "display": ["Inter", "sans-serif"] },
+                },
+            },
+        }
+    </script>
+    
     <style>
-        :root { --sidebar-w: 260px; --dark: #1e1e2d; --primary: #0d6efd; }
-        body { background: #f4f7f6; margin: 0; display: flex; min-height: 100vh; font-family: 'Segoe UI', sans-serif; }
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .fill-1 { font-variation-settings: 'FILL' 1; }
         
-        /* Sidebar Fija y Moderna */
-        #sidebar { 
-            width: var(--sidebar-w); background: var(--dark); color: #a2a3b7; 
-            height: 100vh; position: fixed; left: 0; top: 0; display: none; flex-direction: column;
-            z-index: 1000; box-shadow: 2px 0 10px rgba(0,0,0,0.3);
-        }
-        .sidebar-brand { padding: 25px; text-align: center; border-bottom: 1px solid #2c2c3e; color: white; font-weight: bold; font-size: 1.2rem; }
-        .nav-link { 
-            color: #a2a3b7; padding: 18px 25px; cursor: pointer; border-left: 4px solid transparent; 
-            transition: 0.3s; text-decoration: none; display: block; font-weight: 500;
-        }
-        .nav-link:hover, .nav-link.active { color: white; background: #2c2c3e; border-left-color: var(--primary); }
-        
-        /* Contenedor Principal (Con margen para no pisarse) */
-        #main-content { flex: 1; padding: 40px; width: 100%; transition: 0.3s; }
-        body.logged-in #sidebar { display: flex; }
-        body.logged-in #main-content { margin-left: var(--sidebar-w); }
-
-        /* Secciones */
-        .seccion { display: none; max-width: 900px; margin: 0 auto; }
-        .seccion.activa { display: block; animation: fadeIn 0.3s; }
+        /* Lógica de Secciones (SPA) */
+        .seccion { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .seccion.activa { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Tickets Detallados */
-        .ticket-card { border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; background: white; overflow: hidden; }
-        .ticket-header { padding: 15px 20px; background: #198754; color: white; cursor: pointer; font-weight: bold; display: flex; justify-content: space-between; }
-        .hidden-field { display: none; }
         
-        /* Login */
-        #sec-login { max-width: 400px; margin: 100px auto; width: 100%; }
-        body.modo-pruebas #sidebar { background: #4a1414; }
+        /* Estado Login vs App */
+        #app-layout { display: none; }
+        body.logged-in #sec-login-container { display: none; }
+        body.logged-in #app-layout { display: flex; }
+
+        /* Aviso Guardado Flotante */
+        #aviso-guardado {
+            position: fixed; bottom: 24px; right: 24px; z-index: 5000;
+            background-color: #1e293b; color: white; padding: 12px 24px;
+            border-radius: 9999px; font-weight: 500; font-size: 0.875rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); display: none;
+        }
+
+        /* Modo Pruebas */
+        body.modo-pruebas aside { background-color: #3b0909 !important; border-right: 2px solid #ef4444; }
     </style>
 </head>
-<body id="cuerpo-app">
+<body class="bg-background-light text-slate-900 font-display min-h-screen flex flex-col">
 
+    <div id="aviso-guardado" class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-sm">save</span> Cambios guardados
+    </div>
     <datalist id="sugerencias-pasajeros"></datalist>
 
-    <nav id="sidebar">
-        <div class="sidebar-brand text-uppercase">Taxi Panel</div>
-        <div class="mt-4 flex-grow-1">
-            <div class="nav-link active" id="btn-nueva" onclick="verSec('sec-nueva', this)">📝 Nueva Factura</div>
-            <div class="nav-link" id="btn-historial" onclick="verSec('sec-historial', this); cargarHistorial();">📊 Historial Cloud</div>
-            <div class="nav-link text-danger mt-5 pt-5 border-top border-secondary" onclick="location.reload()">🚪 Cerrar Sesión</div>
-        </div>
-    </nav>
-
-    <main id="main-content">
-        <div id="sec-login">
-            <div class="card p-5 shadow-lg border-0 rounded-4 text-center">
-                <h3 class="fw-bold mb-4 text-primary">Acceso</h3>
-                <input type="password" id="pass-maestra" class="form-control mb-3 py-3 text-center" placeholder="Introduce contraseña">
-                <button class="btn btn-primary w-100 py-3 fw-bold shadow-sm" onclick="iniciarSesion()">ENTRAR AL PANEL</button>
+    <div id="sec-login-container" class="flex-1 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 max-w-md w-full text-center">
+            <div class="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <span class="material-symbols-outlined text-4xl fill-1">local_taxi</span>
+            </div>
+            <h2 class="text-2xl font-black tracking-tight text-slate-900 mb-2">Taxi App Pro</h2>
+            <p class="text-slate-500 font-medium text-sm mb-8">Acceso seguro al panel de gestión</p>
+            
+            <div class="space-y-4">
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">lock</span>
+                    <input type="password" id="pass-maestra" class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-center font-medium placeholder:text-slate-400 transition-all" placeholder="Contraseña maestra">
+                </div>
+                <button onclick="iniciarSesion()" class="w-full bg-primary hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-primary/30 transition-all flex items-center justify-center gap-2">
+                    Ingresar al Sistema <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                </button>
             </div>
         </div>
+    </div>
 
-        <div id="sec-nueva" class="seccion">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="fw-bold m-0 text-dark">Generar Factura</h2>
-                <button class="btn btn-sm btn-outline-warning" onclick="limpiarBorrador(true)">🗑️ Limpiar Borrador</button>
+    <div id="app-layout" class="w-full min-h-screen">
+        
+        <aside class="fixed inset-y-0 left-0 w-64 bg-sidebar-dark text-slate-300 flex flex-col shadow-xl z-50 transition-colors">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="bg-primary p-2.5 rounded-xl shadow-inner">
+                        <span class="material-symbols-outlined text-white fill-1">local_taxi</span>
+                    </div>
+                    <div>
+                        <h1 class="text-white text-lg font-bold leading-none tracking-tight">Taxi App Pro</h1>
+                        <p class="text-slate-500 text-[10px] mt-1.5 uppercase tracking-[0.15em] font-bold">Admin Dashboard</p>
+                    </div>
+                </div>
+                
+                <nav class="flex flex-col gap-2">
+                    <a id="btn-nueva" onclick="verSec('sec-nueva', this)" class="nav-btn flex items-center gap-3 px-4 py-3.5 rounded-xl bg-primary text-white transition-all shadow-lg shadow-primary/20 cursor-pointer">
+                        <span class="material-symbols-outlined fill-1">description</span>
+                        <span class="text-sm font-semibold tracking-wide">Nueva Factura</span>
+                    </a>
+                    <a id="btn-historial" onclick="verSec('sec-historial', this); cargarHistorial();" class="nav-btn flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-white/5 text-slate-400 hover:text-white transition-all cursor-pointer group">
+                        <span class="material-symbols-outlined group-hover:fill-1 transition-all">cloud_done</span>
+                        <span class="text-sm font-semibold tracking-wide">Historial Cloud</span>
+                    </a>
+                </nav>
             </div>
             
-            <form id="formTaxi">
-                <div class="card p-4 mb-4 border-0 shadow-sm rounded-4 bg-white">
-                    <div class="row g-3">
-                        <div class="col-md-6"><label class="small fw-bold text-muted">Nº FACTURA / SERVICIO</label><input type="text" id="factura_numero" class="form-control" required></div>
-                        <div class="col-md-6"><label class="small fw-bold text-muted">NOMBRE DEL BARCO</label><input type="text" id="barco" class="form-control" required></div>
+            <div class="mt-auto p-6 border-t border-slate-800/50">
+                <a onclick="location.reload()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-all cursor-pointer">
+                    <span class="material-symbols-outlined">logout</span>
+                    <span class="text-sm font-semibold">Cerrar Sesión</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="flex-1 ml-64 flex flex-col bg-background-light min-h-screen">
+            
+            <div id="sec-nueva" class="seccion flex-1 p-8">
+                <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
+                    <div class="flex items-center gap-4">
+                        <div class="p-2.5 bg-primary/10 rounded-xl text-primary">
+                            <span class="material-symbols-outlined fill-1">receipt_long</span>
+                        </div>
+                        <h2 class="text-2xl font-black tracking-tight text-slate-900">Generar Factura</h2>
+                    </div>
+                    <button onclick="limpiarBorrador(true)" class="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-2.5 rounded-xl text-sm font-bold transition-all">
+                        <span class="material-symbols-outlined text-[20px]">delete_sweep</span> Limpiar Borrador
+                    </button>
+                </header>
+
+                <form id="formTaxi" class="max-w-5xl mx-auto space-y-6 pb-12">
+                    
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex items-center gap-2 mb-6 text-primary font-bold">
+                            <span class="material-symbols-outlined text-xl">info</span>
+                            <h3 class="text-lg">Detalles de Factura</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="flex flex-col gap-2">
+                                <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Nº Factura / Servicio</label>
+                                <input type="text" id="factura_numero" required class="w-full rounded-xl border-slate-200 bg-slate-50 focus:ring-primary focus:border-primary px-4 py-3 font-medium">
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Nombre del Barco</label>
+                                <input type="text" id="barco" required class="w-full rounded-xl border-slate-200 bg-slate-50 focus:ring-primary focus:border-primary px-4 py-3 font-medium">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="contenedor-tickets" class="space-y-6"></div>
+
+                    <div class="pt-4 space-y-6">
+                        <button type="button" onclick="agregarTicket()" class="w-full flex items-center justify-center gap-2 px-6 py-4 border-2 border-dashed border-primary/50 text-primary font-bold rounded-2xl hover:bg-primary/5 transition-all bg-white">
+                            <span class="material-symbols-outlined font-bold">add_circle</span> AÑADIR NUEVO TICKET DETALLADO
+                        </button>
+                        
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <button type="button" onclick="enviarProceso('nube')" class="flex-1 flex items-center justify-center gap-2 px-8 py-4 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-900 shadow-lg shadow-slate-900/20 transition-all text-sm tracking-wide">
+                                <span class="material-symbols-outlined">cloud_upload</span> SOLO GUARDAR EN NUBE
+                            </button>
+                            <button type="button" onclick="enviarProceso('excel')" class="flex-1 flex items-center justify-center gap-2 px-8 py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all text-sm tracking-wide">
+                                <span class="material-symbols-outlined">table_view</span> GENERAR Y DESCARGAR EXCEL
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div id="sec-historial" class="seccion flex-1 flex flex-col">
+                <header class="bg-white px-8 py-8 border-b border-slate-200">
+                    <div class="flex flex-wrap justify-between items-start gap-4">
+                        <div>
+                            <h2 class="text-2xl font-black text-slate-900 tracking-tight">Historial en la Nube</h2>
+                            <p class="text-slate-500 text-sm mt-1 font-medium">Gestione sus facturas almacenadas en Frankfurt</p>
+                        </div>
+                        <button onclick="vaciarHistorial()" class="bg-[#f04444] hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-sm shadow-red-500/20">
+                            <span class="material-symbols-outlined text-lg">delete_sweep</span> Vaciar Base de Datos
+                        </button>
+                    </div>
+                </header>
+
+                <div class="p-8 flex-1">
+                    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="bg-slate-50/50 border-b border-slate-100">
+                                        <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Fecha</th>
+                                        <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Barco</th>
+                                        <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Nº Fra.</th>
+                                        <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Importe</th>
+                                        <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em] text-right">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla-historial" class="divide-y divide-slate-50">
+                                    </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-
-                <div id="contenedor-tickets"></div>
-
-                <button type="button" class="btn btn-outline-primary w-100 py-3 mb-4 fw-bold rounded-3" onclick="agregarTicket()">+ AÑADIR TICKET DETALLADO</button>
-                
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <button type="button" class="btn btn-info w-100 py-3 fw-bold text-white rounded-4 shadow" onclick="enviarProceso('nube')">☁️ SOLO GUARDAR EN NUBE</button>
-                    </div>
-                    <div class="col-md-6">
-                        <button type="button" class="btn btn-success w-100 py-3 fw-bold rounded-4 shadow" onclick="enviarProceso('excel')">📥 DESCARGAR EXCEL</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-        <div id="sec-historial" class="seccion">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="fw-bold m-0">Historial en la Nube</h2>
-                <button class="btn btn-sm btn-danger" onclick="vaciarHistorial()">🗑️ Vaciar Historial</button>
             </div>
-            <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead class="table-dark">
-                        <tr><th>Fecha</th><th>Barco</th><th>Nº Fra.</th><th>Importe</th><th>Acción</th></tr>
-                    </thead>
-                    <tbody id="tabla-historial"></tbody>
-                </table>
-            </div>
-        </div>
-    </main>
+
+        </main>
+    </div>
 
     <script>
-        let ticketCount = 0; let tokenSeguridad = "";
+        let ticketCount = 0; 
+        let tokenSeguridad = "";
         let URL_BASE = 'https://programafacturastaxi.onrender.com';
+        
+        // Radar de Entorno
         if (window.location.hostname !== "programa-facturas-taxi.vercel.app") {
             URL_BASE = 'https://programafacturastaxi-dev.onrender.com';
             document.body.classList.add('modo-pruebas');
         }
 
+        // Navegación Sidebar Tailwind
         function verSec(id, btn) {
             document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
             document.getElementById(id).classList.add('activa');
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            btn.classList.add('active');
+            
+            // Estilos inactivos para todos
+            document.querySelectorAll('.nav-btn').forEach(l => {
+                l.className = "nav-btn flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-white/5 text-slate-400 hover:text-white transition-all cursor-pointer group";
+                l.querySelector('span:first-child').classList.remove('fill-1');
+            });
+            
+            // Estilos activos para el clickado
+            btn.className = "nav-btn flex items-center gap-3 px-4 py-3.5 rounded-xl bg-primary text-white transition-all shadow-lg shadow-primary/20 cursor-pointer";
+            btn.querySelector('span:first-child').classList.add('fill-1');
         }
 
         async function iniciarSesion() {
             const p = document.getElementById('pass-maestra').value;
-            const res = await fetch(`${URL_BASE}/login`, { headers: {'x-password': p} });
-            if(res.ok) {
-                tokenSeguridad = p; document.body.classList.add('logged-in');
-                document.getElementById('sec-login').style.display='none';
-                verSec('sec-nueva', document.getElementById('btn-nueva'));
-                if(!cargarProgreso()) agregarTicket();
-            } else { alert("Acceso denegado"); }
+            if(!p) return;
+            try {
+                const res = await fetch(`${URL_BASE}/login`, { headers: {'x-password': p} });
+                if(res.ok) {
+                    tokenSeguridad = p; 
+                    document.body.classList.add('logged-in');
+                    verSec('sec-nueva', document.getElementById('btn-nueva'));
+                    if(!cargarProgreso()) agregarTicket();
+                } else { alert("Contraseña incorrecta"); }
+            } catch(e) { alert("Error de conexión con el servidor"); }
         }
 
+        // DOM UI Tickets
+        function toggleI(cb, id) { 
+            const el = document.getElementById(id);
+            if(cb.checked) { el.classList.remove('hidden'); el.classList.add('block'); } 
+            else { el.classList.add('hidden'); el.classList.remove('block'); el.value = ''; }
+        }
+        
+        function addP(id) { 
+            const i = document.createElement('input'); 
+            i.className = 'w-full rounded-lg border-slate-200 bg-white px-4 py-2 mt-2 focus:ring-primary focus:border-primary shadow-sm text-sm t-pasajeros'; 
+            i.list = "sugerencias-pasajeros"; 
+            i.placeholder = "Nombre pasajero adicional";
+            document.getElementById(`pax_${id}`).appendChild(i); 
+        }
+
+        // Generador de HTML Tailwind para Tickets
         function agregarTicket() {
             ticketCount++; const id = ticketCount;
             const div = document.createElement('div');
-            div.className = 'ticket-card';
+            div.className = 'ticket-card bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden';
+            
             div.innerHTML = `
-                <div class="ticket-header" onclick="toggleT(${id})">
-                    <span>TICKET DETALLADO #${id}</span>
-                    <span id="icon_${id}">🔽</span>
-                </div>
-                <div class="p-4" id="body_${id}">
-                    <div class="row g-3">
-                        <div class="col-md-4"><label class="small fw-bold text-danger">Nº TICKET</label><input type="text" class="form-control t-numero-ticket" required></div>
-                        <div class="col-md-4"><label class="small fw-bold">CONTACTO</label><select class="form-select t-contacto"><option value="whatsapp">Whatsapp</option><option value="telefono">Teléfono</option></select></div>
-                        <div class="col-md-4"><label class="small fw-bold text-success">IMPORTE (€)</label><input type="number" step="0.01" class="form-control t-importe" required></div>
-                        
-                        <div class="col-12 p-3 bg-light rounded"><label class="small fw-bold mb-2 d-block">PASAJEROS</label><div id="pax_${id}"><input type="text" class="form-control t-pasajeros mb-1" list="sugerencias-pasajeros"></div><button type="button" class="btn btn-sm btn-link p-0" onclick="addP(${id})">+ Añadir pasajero</button></div>
-                        
-                        <div class="col-md-6"><label class="small fw-bold">FECHA SOLICITUD</label><input type="date" class="form-control t-fechas-solicitud" required></div>
-                        <div class="col-md-6"><label class="small fw-bold">FECHA SERVICIO</label><input type="date" class="form-control t-fechas-servicio" required></div>
+                <details class="group" open>
+                    <summary class="flex items-center justify-between p-6 cursor-pointer hover:bg-slate-50 transition-colors list-none select-none">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 flex items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                <span class="material-symbols-outlined fill-1">confirmation_number</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-900">Ticket #${id}</h3>
+                                <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-0.5">Detalles del servicio</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            ${id > 1 ? `<button type="button" onclick="this.closest('.ticket-card').remove(); guardarProgreso();" class="text-slate-400 hover:text-red-500"><span class="material-symbols-outlined">delete</span></button>` : ''}
+                            <span class="material-symbols-outlined group-open:rotate-180 transition-transform text-slate-400">expand_more</span>
+                        </div>
+                    </summary>
+                    
+                    <div class="p-6 border-t border-slate-100 space-y-8 bg-slate-50/30">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-bold text-red-500 uppercase tracking-widest">Nº Ticket</label>
+                                <input type="text" required class="t-numero-ticket rounded-xl border-slate-200 bg-white px-4 py-3 focus:ring-primary focus:border-primary shadow-sm font-medium">
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Contacto</label>
+                                <select class="t-contacto rounded-xl border-slate-200 bg-white px-4 py-3 focus:ring-primary focus:border-primary shadow-sm font-medium">
+                                    <option value="whatsapp">WhatsApp</option>
+                                    <option value="telefono">Teléfono</option>
+                                    <option value="whatsapp y telefono">Ambos</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-bold text-emerald-600 uppercase tracking-widest">Importe (€)</label>
+                                <div class="relative">
+                                    <input type="number" step="0.01" required class="t-importe w-full rounded-xl border-slate-200 bg-white px-4 py-3 pr-10 focus:ring-primary focus:border-primary shadow-sm font-bold text-lg text-slate-900">
+                                    <span class="absolute right-4 top-3.5 text-slate-400 font-bold">€</span>
+                                </div>
+                            </div>
+                        </div>
 
-                        <div class="col-md-6 p-3 border rounded">
-                            <label class="small fw-bold text-primary">RECOGIDA</label>
-                            <div class="form-check"><input type="checkbox" class="form-check-input t-o-aero"><label>Aeropuerto</label></div>
-                            <div class="form-check"><input type="checkbox" class="form-check-input t-o-buque"><label>Buque</label></div>
-                            <div class="form-check"><input type="checkbox" class="form-check-input t-o-hotel" onchange="toggleI(this, 'oh_${id}')"><label>Hotel</label></div>
-                            <input type="text" id="oh_${id}" class="form-control form-control-sm mt-1 hidden-field t-o-hotel-texto" placeholder="¿Cuál?">
+                        <div class="space-y-3 bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <label class="text-[11px] font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">group</span> Pasajeros</label>
+                                <button type="button" onclick="addP(${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:text-blue-800 transition-colors bg-primary/10 px-3 py-1.5 rounded-lg">
+                                    <span class="material-symbols-outlined text-[14px]">add</span> Añadir
+                                </button>
+                            </div>
+                            <div id="pax_${id}">
+                                <input type="text" list="sugerencias-pasajeros" class="t-pasajeros w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-2.5 focus:ring-primary focus:border-primary text-sm font-medium" placeholder="Nombre completo">
+                            </div>
                         </div>
-                        <div class="col-md-6 p-3 border rounded">
-                            <label class="small fw-bold text-primary">DESTINO</label>
-                            <div class="form-check"><input type="checkbox" class="form-check-input t-d-aero"><label>Aeropuerto</label></div>
-                            <div class="form-check"><input type="checkbox" class="form-check-input t-d-buque"><label>Buque</label></div>
-                            <div class="form-check"><input type="checkbox" class="form-check-input t-d-hotel" onchange="toggleI(this, 'dh_${id}')"><label>Hotel</label></div>
-                            <input type="text" id="dh_${id}" class="form-control form-control-sm mt-1 hidden-field t-d-hotel-texto" placeholder="¿Cuál?">
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Fecha Solicitud</label>
+                                <input type="date" required class="t-fechas-solicitud rounded-xl border-slate-200 bg-white px-4 py-3 focus:ring-primary focus:border-primary shadow-sm text-sm font-medium">
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Fecha Servicio</label>
+                                <input type="date" required class="t-fechas-servicio rounded-xl border-slate-200 bg-white px-4 py-3 focus:ring-primary focus:border-primary shadow-sm text-sm font-medium">
+                            </div>
                         </div>
-                        <div class="col-12"><textarea class="form-control t-comentarios" placeholder="Observaciones..." rows="2"></textarea></div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-4 bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
+                                <label class="text-[11px] font-bold text-primary uppercase tracking-widest flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">flight_land</span> Origen / Recogida</label>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                                        <input type="checkbox" class="t-o-aero rounded border-slate-300 text-primary focus:ring-primary"> <span class="text-sm font-semibold text-slate-700">Aeropuerto</span>
+                                    </label>
+                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                                        <input type="checkbox" class="t-o-buque rounded border-slate-300 text-primary focus:ring-primary"> <span class="text-sm font-semibold text-slate-700">Buque</span>
+                                    </label>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                                            <input type="checkbox" class="t-o-hotel rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'oh_${id}')"> <span class="text-sm font-semibold text-slate-700">Hotel / Otros</span>
+                                        </label>
+                                        <input type="text" id="oh_${id}" class="t-o-hotel-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="Especifique nombre o dirección...">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="space-y-4 bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
+                                <label class="text-[11px] font-bold text-primary uppercase tracking-widest flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">flight_takeoff</span> Destino</label>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                                        <input type="checkbox" class="t-d-aero rounded border-slate-300 text-primary focus:ring-primary"> <span class="text-sm font-semibold text-slate-700">Aeropuerto</span>
+                                    </label>
+                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                                        <input type="checkbox" class="t-d-buque rounded border-slate-300 text-primary focus:ring-primary"> <span class="text-sm font-semibold text-slate-700">Buque</span>
+                                    </label>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                                            <input type="checkbox" class="t-d-hotel rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dh_${id}')"> <span class="text-sm font-semibold text-slate-700">Hotel / Otros</span>
+                                        </label>
+                                        <input type="text" id="dh_${id}" class="t-d-hotel-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="Especifique nombre o dirección...">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-6 bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
+                            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                                <div>
+                                    <span class="text-sm font-bold text-slate-900">Servicio de Ida y Vuelta</span>
+                                    <p class="text-xs text-slate-500 font-medium">Marque si el servicio incluye trayecto de retorno</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="t-ida-vuelta sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                </label>
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Observaciones Generales</label>
+                                <textarea class="t-comentarios rounded-xl border-slate-200 bg-slate-50 focus:ring-primary focus:border-primary p-4 min-h-[80px] text-sm" placeholder="Detalles extra, equipaje especial..."></textarea>
+                            </div>
+                        </div>
                     </div>
-                </div>`;
+                </details>
+            `;
             document.getElementById('contenedor-tickets').appendChild(div);
             guardarProgreso();
         }
 
-        function toggleT(id) { const b = document.getElementById(`body_${id}`); b.style.display = b.style.display==='none'?'block':'none'; }
-        function toggleI(cb, id) { document.getElementById(id).style.display = cb.checked?'block':'none'; }
-        function addP(id) { const i = document.createElement('input'); i.className='form-control t-pasajeros mb-1'; i.list="sugerencias-pasajeros"; document.getElementById(`pax_${id}`).appendChild(i); }
-
+        // --- CORE COMUNICACIÓN BACKEND ---
         async function enviarProceso(modo) {
             const form = document.getElementById('formTaxi');
             if(!form.checkValidity()) { form.reportValidity(); return; }
@@ -187,7 +398,20 @@
             const tickets = Array.from(document.querySelectorAll('.ticket-card')).map(item => ({
                 numero_ticket: item.querySelector('.t-numero-ticket').value,
                 importe: parseFloat(item.querySelector('.t-importe').value),
-                pasajeros: Array.from(item.querySelectorAll('.t-pasajeros')).map(i => i.value).filter(v => v)
+                contacto_metodo: item.querySelector('.t-contacto').value,
+                pasajeros: Array.from(item.querySelectorAll('.t-pasajeros')).map(i => i.value).filter(v => v),
+                fechas_solicitud: [item.querySelector('.t-fechas-solicitud').value],
+                fechas_servicio: [item.querySelector('.t-fechas-servicio').value],
+                o_aeropuerto: item.querySelector('.t-o-aero').checked,
+                o_buque: item.querySelector('.t-o-buque').checked,
+                o_hotel: item.querySelector('.t-o-hotel').checked,
+                o_hotel_texto: item.querySelector('.t-o-hotel-texto').value,
+                d_aeropuerto: item.querySelector('.t-d-aero').checked,
+                d_buque: item.querySelector('.t-d-buque').checked,
+                d_hotel: item.querySelector('.t-d-hotel').checked,
+                d_hotel_texto: item.querySelector('.t-d-hotel-texto').value,
+                ida_vuelta: item.querySelector('.t-ida-vuelta').checked,
+                comentarios: item.querySelector('.t-comentarios').value
             }));
 
             const data = { factura_numero: document.getElementById('factura_numero').value, barco: document.getElementById('barco').value, tickets };
@@ -195,43 +419,64 @@
 
             try {
                 const res = await fetch(`${URL_BASE}${endpoint}`, { 
-                    method:'POST', 
-                    headers:{'Content-Type':'application/json','x-password':tokenSeguridad}, 
-                    body:JSON.stringify(data)
+                    method:'POST', headers:{'Content-Type':'application/json','x-password':tokenSeguridad}, body:JSON.stringify(data)
                 });
-                
                 if(res.ok) {
                     if(modo === 'excel') {
                         const blob = await res.blob();
-                        triggerDownload(blob, `${data.barco.replace(/ /g,"_")}.xlsm`);
+                        triggerDwn(blob, `${data.barco.replace(/ /g,"_")}.xlsm`);
                         limpiarBorrador(false);
                     }
-                    alert(modo === 'nube' ? "☁️ Guardado en la nube" : "✅ Excel descargado");
-                }
-            } catch(e) { alert("Error de conexión"); }
+                    alert(modo === 'nube' ? "☁️ Base de datos actualizada" : "✅ Excel generado con éxito");
+                } else alert("Error validando datos");
+            } catch(e) { alert("Error de servidor"); }
         }
 
         async function cargarHistorial() {
-            const res = await fetch(`${URL_BASE}/historial`, { headers: {'x-password':tokenSeguridad} });
-            const datos = await res.json();
-            const tb = document.getElementById('tabla-historial'); tb.innerHTML = "";
-            datos.forEach(f => {
-                tb.innerHTML += `<tr><td class="small">${new Date(f.fecha_creacion).toLocaleDateString()}</td><td><span class="badge bg-primary">${f.barco}</span></td><td>${f.numero_factura}</td><td class="fw-bold">${f.importe_total.toFixed(2)}€</td><td><button class="btn btn-sm btn-info text-white fw-bold" onclick="redescargar(${f.id})">🔄 RE-DESCARGAR</button></td></tr>`;
-            });
+            const tb = document.getElementById('tabla-historial');
+            tb.innerHTML = `<tr><td colspan="5" class="px-8 py-8 text-center text-slate-500 font-medium">Cargando registros...</td></tr>`;
+            try {
+                const res = await fetch(`${URL_BASE}/historial`, { headers: {'x-password':tokenSeguridad} });
+                const datos = await res.json();
+                tb.innerHTML = "";
+                
+                if(datos.length === 0) { tb.innerHTML = `<tr><td colspan="5" class="px-8 py-8 text-center text-slate-500 font-medium">No hay facturas en la nube</td></tr>`; return;}
+                
+                datos.forEach(f => {
+                    const d = new Date(f.fecha_creacion).toLocaleDateString('es-ES', {year: 'numeric', month: '2-digit', day: '2-digit'});
+                    tb.innerHTML += `
+                        <tr class="hover:bg-slate-50/80 transition-colors group">
+                            <td class="px-8 py-5 text-sm font-medium text-slate-600">${d}</td>
+                            <td class="px-8 py-5">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-primary uppercase tracking-wider border border-blue-100">
+                                    ${f.barco}
+                                </span>
+                            </td>
+                            <td class="px-8 py-5 text-sm font-semibold text-slate-900">${f.numero_factura}</td>
+                            <td class="px-8 py-5 text-sm font-black text-emerald-600">${f.importe_total.toFixed(2)}€</td>
+                            <td class="px-8 py-5 text-right">
+                                <button onclick="redescargar(${f.id})" class="inline-flex items-center gap-1.5 text-primary hover:text-blue-800 font-black text-[11px] uppercase tracking-widest transition-colors bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm hover:shadow">
+                                    <span class="material-symbols-outlined text-[16px]">download</span> RE-DESCARGAR
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+            } catch(e) { tb.innerHTML = `<tr><td colspan="5" class="px-8 py-8 text-center text-red-500 font-bold">Error de red</td></tr>`; }
         }
 
         async function redescargar(id) {
-            const res = await fetch(`${URL_BASE}/re-descargar/${id}`, { headers: {'x-password':tokenSeguridad} });
-            if(res.ok) {
-                const head = res.headers.get('Content-Disposition');
-                let name = `Factura_${id}.xlsm`;
-                if(head && head.includes('filename=')) name = head.split('filename=')[1].replace(/["']/g, '');
-                const blob = await res.blob();
-                triggerDownload(blob, name);
-            }
+            try {
+                const res = await fetch(`${URL_BASE}/re-descargar/${id}`, { headers: {'x-password':tokenSeguridad} });
+                if(res.ok) {
+                    const head = res.headers.get('Content-Disposition');
+                    let name = `Fra_Antigua_${id}.xlsm`;
+                    if(head && head.includes('filename=')) name = head.split('filename=')[1].replace(/["']/g, '');
+                    triggerDwn(await res.blob(), name);
+                }
+            } catch(e) { alert("Fallo al descargar copia"); }
         }
 
-        function triggerDownload(blob, filename) {
+        function triggerDwn(blob, filename) {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url; a.download = filename;
@@ -240,18 +485,58 @@
         }
 
         async function vaciarHistorial() {
-            if(!confirm("¿Borrar todo?")) return;
+            if(!confirm("⚠️ ATENCIÓN: Se borrarán todas las facturas de Frankfurt permanentemente. ¿Continuar?")) return;
             await fetch(`${URL_BASE}/limpiar-historial`, { method: 'DELETE', headers: {'x-password':tokenSeguridad} });
             cargarHistorial();
         }
 
-        function guardarProgreso() { localStorage.setItem('taxi_vfinal', JSON.stringify({html: document.getElementById('contenedor-tickets').innerHTML, count: ticketCount, b: document.getElementById('barco').value, f: document.getElementById('factura_numero').value})); }
-        function cargarProgreso() {
-            const s = localStorage.getItem('taxi_vfinal'); if(!s) return false;
-            const p = JSON.parse(s); document.getElementById('contenedor-tickets').innerHTML = p.html; ticketCount = p.count; document.getElementById('barco').value = p.b; document.getElementById('factura_numero').value = p.f;
-            return true;
+        // --- SISTEMA PERSISTENCIA LOCAL ---
+        // Se activa con cualquier cambio en el form
+        document.getElementById('formTaxi').addEventListener('input', triggerAutoSave);
+        document.getElementById('formTaxi').addEventListener('change', triggerAutoSave);
+        let tSave;
+        function triggerAutoSave() { clearTimeout(tSave); tSave = setTimeout(guardarProgreso, 500); }
+
+        function guardarProgreso() { 
+            const html = document.getElementById('contenedor-tickets').innerHTML;
+            
+            // Guardar valores de inputs
+            const inputs = document.querySelectorAll('#contenedor-tickets input, #contenedor-tickets select, #contenedor-tickets textarea');
+            const vals = Array.from(inputs).map(i => ({ type: i.type, value: i.value, checked: i.checked }));
+
+            localStorage.setItem('taxi_tailwind', JSON.stringify({
+                html: html, 
+                count: ticketCount, 
+                b: document.getElementById('barco').value, 
+                f: document.getElementById('factura_numero').value,
+                data: vals
+            })); 
+
+            const av = document.getElementById('aviso-guardado');
+            av.style.display = 'flex'; setTimeout(() => av.style.display = 'none', 1500);
         }
-        function limpiarBorrador(q) { if(q && !confirm("¿Borrar todo?")) return; localStorage.removeItem('taxi_vfinal'); location.reload(); }
+
+        function cargarProgreso() {
+            const s = localStorage.getItem('taxi_tailwind'); if(!s) return false;
+            try {
+                const p = JSON.parse(s); 
+                document.getElementById('contenedor-tickets').innerHTML = p.html; 
+                ticketCount = p.count; 
+                document.getElementById('barco').value = p.b; 
+                document.getElementById('factura_numero').value = p.f;
+                
+                // Restaurar valores
+                const inputs = document.querySelectorAll('#contenedor-tickets input, #contenedor-tickets select, #contenedor-tickets textarea');
+                inputs.forEach((input, index) => {
+                    if(p.data[index]) {
+                        if(input.type === 'checkbox' || input.type === 'radio') input.checked = p.data[index].checked;
+                        else input.value = p.data[index].value;
+                    }
+                });
+                return true;
+            } catch(e) { return false; }
+        }
+        function limpiarBorrador(q) { if(q && !confirm("¿Borrar todo el borrador en curso?")) return; localStorage.removeItem('taxi_tailwind'); location.reload(); }
     </script>
 </body>
 </html>
