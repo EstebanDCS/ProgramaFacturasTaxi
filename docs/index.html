@@ -74,17 +74,18 @@
         let nombresGuardados = new Set(); 
 
         // ==========================================
-        // 🌟 EL RADAR INTELIGENTE (VERCEL & RENDER)
+        // 🌟 EL RADAR INTELIGENTE (VERSIÓN BLINDADA)
         // ==========================================
-        // Servidor Oficial (Rama Main)
-        let URL_BASE = 'https://programafacturastaxi.onrender.com'; 
+        let URL_BASE = 'https://programafacturastaxi.onrender.com'; // Servidor Oficial
         
         const host = window.location.hostname;
         
-        // Servidor de Pruebas (Rama Development / Localhost)
-        if (host.includes("development") || host === "localhost" || window.location.search.includes('preview')) {
-            // Nota: Aquí pones el nombre de tu segundo servidor Render (staging) si lo creaste
+        // Si el enlace NO es el oficial, activamos el modo pruebas automáticamente
+        if (host !== "programa-facturas-taxi.vercel.app" && host !== "estebandcs.github.io") {
+            
+            // ⚠️ IMPORTANTE: Si le pusiste otro nombre a tu Render de pruebas, cámbialo aquí abajo:
             URL_BASE = 'https://programafacturastaxi-dev.onrender.com'; 
+            
             console.log("⚠️ MODO PRUEBAS ACTIVADO -> Conectando a: " + URL_BASE);
             
             // Pintar fondo rojo para avisarte visualmente
@@ -197,7 +198,7 @@
             msjError.style.display = "none";
 
             try {
-                // LLAMADA AL SERVIDOR CORRECTO
+                // LLAMADA AL SERVIDOR CORRECTO (Decidido por el radar)
                 const res = await fetch(URL_BASE + '/login', {
                     method: 'POST',
                     headers: { 'x-password': pwd }
