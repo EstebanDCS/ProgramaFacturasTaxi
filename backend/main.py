@@ -92,6 +92,14 @@ def crear_excel(datos_dict, nombre_base):
     path_salida = os.path.join(temp_dir, name_xlsm)
     
     wb = openpyxl.load_workbook(template_path, keep_vba=True)
+    
+    # FORZAR AJUSTE A4 EN TODAS LAS HOJAS PARA QUE EL PDF NO SE CORTE
+    for sheet in wb.worksheets:
+        sheet.page_setup.fitToPage = True
+        sheet.page_setup.fitToWidth = 1
+        sheet.page_setup.fitToHeight = 1
+        sheet.page_setup.paperSize = sheet.PAPERSIZE_A4
+        
     ws = wb.active
     ws["B2"] = datos_dict.get('factura_numero', '')
     ws["B3"] = datos_dict.get('barco', '').upper()
