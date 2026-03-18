@@ -50,7 +50,7 @@
         }
 
         /* Radar de pruebas */
-        body.modo-pruebas aside::after { content: 'DEV'; position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 800; color: #f87171; opacity: 0.5; }
+        body.modo-pruebas aside::after { content: "DEV"; position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 800; color: #f87171; opacity: 0.5; }
     </style>
 </head>
 <body class="bg-background-light text-slate-900 font-display min-h-screen flex flex-col">
@@ -258,6 +258,34 @@
             guardarProgreso();
         }
 
+        function addFecha(tipo, id) {
+            const container = document.getElementById(`fechas_${tipo}_${id}`);
+            const existing = container.querySelector('.fecha-input-temp');
+            if (existing) { existing.focus(); return; }
+            const i = document.createElement('input');
+            i.type = 'date';
+            i.className = 'fecha-input-temp rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none';
+            i.addEventListener('change', () => { if(i.value) confirmarFecha(tipo, id, i); });
+            i.addEventListener('keydown', (e) => { if (e.key === 'Escape') i.remove(); });
+            i.addEventListener('blur', () => { setTimeout(() => { if(!i.value) i.remove(); }, 200); });
+            container.appendChild(i);
+            i.focus();
+        }
+
+        function confirmarFecha(tipo, id, inputEl) {
+            const val = inputEl.value;
+            inputEl.remove();
+            if (!val) return;
+            const container = document.getElementById(`fechas_${tipo}_${id}`);
+            const [y, m, d] = val.split('-');
+            const label = `${d}/${m}/${y}`;
+            const tag = document.createElement('span');
+            tag.className = 'fecha-tag inline-flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg';
+            tag.innerHTML = `<input type="hidden" class="t-fechas-${tipo}" value="${val}">${label} <button type="button" onclick="this.closest('.fecha-tag').remove(); guardarProgreso();" class="text-slate-400 hover:text-red-500 ml-1 leading-none font-bold text-base transition-colors">&times;</button>`;
+            container.appendChild(tag);
+            guardarProgreso();
+        }
+
         function agregarTicket() {
             ticketCount++; const id = ticketCount;
             const div = document.createElement('div');
@@ -305,23 +333,35 @@
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div class="space-y-3">
+                            <div class="space-y-2">
                                 <div class="flex items-center justify-between">
                                     <label class="text-sm font-bold text-slate-600 uppercase tracking-tight">Pasajeros</label>
                                     <button type="button" onclick="addP(${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
-                                        <span class="material-symbols-outlined text-sm">person_add</span> Añadir Pasajero
+                                        <span class="material-symbols-outlined text-sm">person_add</span> Añadir
                                     </button>
                                 </div>
                                 <div id="pax_${id}" class="flex flex-wrap gap-2 items-center min-h-[50px] p-2 rounded-lg border border-slate-200 bg-slate-50">
                                 </div>
                             </div>
-                            <div class="flex flex-col gap-2">
-                                <label class="text-sm font-bold text-slate-600 uppercase tracking-tight">F. Solicitud</label>
-                                <input type="date" required class="t-fechas-solicitud rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary text-sm font-medium">
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-sm font-bold text-slate-600 uppercase tracking-tight">F. Solicitud</label>
+                                    <button type="button" onclick="addFecha('solicitud', ${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
+                                        <span class="material-symbols-outlined text-sm">add</span> Añadir
+                                    </button>
+                                </div>
+                                <div id="fechas_solicitud_${id}" class="flex flex-wrap gap-2 items-center min-h-[50px] p-2 rounded-lg border border-slate-200 bg-slate-50">
+                                </div>
                             </div>
-                            <div class="flex flex-col gap-2">
-                                <label class="text-sm font-bold text-slate-600 uppercase tracking-tight">F. Servicio</label>
-                                <input type="date" required class="t-fechas-servicio rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary text-sm font-medium">
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-sm font-bold text-slate-600 uppercase tracking-tight">F. Servicio</label>
+                                    <button type="button" onclick="addFecha('servicio', ${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
+                                        <span class="material-symbols-outlined text-sm">add</span> Añadir
+                                    </button>
+                                </div>
+                                <div id="fechas_servicio_${id}" class="flex flex-wrap gap-2 items-center min-h-[50px] p-2 rounded-lg border border-slate-200 bg-slate-50">
+                                </div>
                             </div>
                         </div>
 
@@ -434,8 +474,8 @@
                 importe: parseFloat(item.querySelector('.t-importe').value),
                 contacto_metodo: item.querySelector('.t-contacto').value,
                 pasajeros: Array.from(item.querySelectorAll('.t-pasajeros')).map(i => i.value).filter(v => v),
-                fechas_solicitud: [item.querySelector('.t-fechas-solicitud').value],
-                fechas_servicio: [item.querySelector('.t-fechas-servicio').value],
+                fechas_solicitud: Array.from(item.querySelectorAll('.t-fechas-solicitud')).map(i => i.value).filter(v => v),
+                fechas_servicio: Array.from(item.querySelectorAll('.t-fechas-servicio')).map(i => i.value).filter(v => v),
                 
                 o_aeropuerto: item.querySelector('.t-o-aero').checked,
                 o_buque: item.querySelector('.t-o-buque').checked,
@@ -449,9 +489,9 @@
                 d_hotel: item.querySelector('.t-d-hotel').checked,
                 d_hotel_texto: item.querySelector('.t-d-hotel-texto').value,
                 d_hospital: item.querySelector('.t-d-hosp').checked,
-                d_hospital_texto: item.querySelector('.t-d-hosp-texto').value,
+                d_hospital_texto: item.querySelector('.t-d-hosp-texto') ? item.querySelector('.t-d-hosp-texto').value : '',
                 d_clinica: item.querySelector('.t-d-clin').checked,
-                d_clinica_texto: item.querySelector('.t-d-clin-texto').value,
+                d_clinica_texto: item.querySelector('.t-d-clin-texto') ? item.querySelector('.t-d-clin-texto').value : '',
                 d_inmigracion: item.querySelector('.t-d-inmi').checked,
                 d_otros: item.querySelector('.t-d-otros').checked,
                 d_otros_texto: item.querySelector('.t-d-otros-texto').value,
