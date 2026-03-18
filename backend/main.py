@@ -94,13 +94,26 @@ def crear_excel(datos_dict, nombre_base):
     wb = openpyxl.load_workbook(template_path, keep_vba=True)
     ws_factura = wb.worksheets[0]
     ws_template_bono = wb.worksheets[1] if len(wb.worksheets) > 1 else None
+
+    # Función inteligente para escribir en celdas combinadas sin crashear
+    def escribir(ws, coord, valor):
+        try:
+            celda = ws[coord]
+            if type(celda).__name__ == 'MergedCell':
+                for rango in ws.merged_cells.ranges:
+                    if coord in rango:
+                        ws.cell(row=rango.min_row, column=rango.min_col).value = valor
+                        return
+            ws[coord] = valor
+        except Exception as e:
+            pass # Si falla una celda, ignora el error y sigue con el resto
     
     # ==========================================
     # --- 1. HOJA 1: FACTURA PRINCIPAL ---
     # ==========================================
-    ws_factura["E15"] = datos_dict.get('factura_numero', '')
+    escribir(ws_factura, "E15", datos_dict.get('factura_numero', ''))
     barco = datos_dict.get('barco', '').upper()
-    ws_factura["C17"] = barco
+    escribir(ws_factura, "C17", barco)
     
     tickets = datos_dict.get('tickets', [])
     
@@ -113,39 +126,37 @@ def crear_excel(datos_dict, nombre_base):
         try:
             fechas_obj = [datetime.strptime(f, "%Y-%m-%d") for f in todas_fechas if f]
             max_fecha = max(fechas_obj)
-            ws_factura["F17"] = max_fecha.strftime("%d/%m/%Y")
+            escribir(ws_factura, "F17", max_fecha.strftime("%d/%m/%Y"))
         except:
-            ws_factura["F17"] = datetime.now().strftime("%d/%m/%Y")
+            escribir(ws_factura, "F17", datetime.now().strftime("%d/%m/%Y"))
     else:
-        ws_factura["F17"] = datetime.now().strftime("%d/%m/%Y")
+        escribir(ws_factura, "F17", datetime.now().strftime("%d/%m/%Y"))
         
     fila_ticket = 21
     total_importe = 0.0
     for t in tickets:
-        # Columna B: Descripción (Número ticket y pasajeros)
         pasajeros = ", ".join(t.get('pasajeros', []))
         desc = f"Ticket #{t.get('numero_ticket', '')}"
         if pasajeros: desc += f" - Pax: {pasajeros}"
-        ws_factura[f"B{fila_ticket}"] = desc
         
-        # Columna F: Importe del ticket
-        ws_factura[f"F{fila_ticket}"] = float(t.get('importe', 0))
+        escribir(ws_factura, f"B{fila_ticket}", desc)
+        escribir(ws_factura, f"F{fila_ticket}", float(t.get('importe', 0)))
+        
         total_importe += float(t.get('importe', 0))
         fila_ticket += 1
         
-    # Totales (Filas 38, 39, 40) calculados directamente
+    # Totales (Filas 38, 39, 40)
     base_imponible = total_importe / 1.10
     iva = total_importe - base_imponible
-    ws_factura["F38"] = round(base_imponible, 2)
-    ws_factura["F39"] = round(iva, 2)
-    ws_factura["F40"] = round(total_importe, 2)
+    escribir(ws_factura, "F38", round(base_imponible, 2))
+    escribir(ws_factura, "F39", round(iva, 2))
+    escribir(ws_factura, "F40", round(total_importe, 2))
     
     # ==========================================
     # --- 2. HOJA 2: BONOS (1 POR TICKET) ---
     # ==========================================
     if ws_template_bono and tickets:
         for i, t in enumerate(tickets):
-            # Si es el primer ticket usamos la plantilla original, si no, la duplicamos
             if i == 0:
                 ws_bono = ws_template_bono
                 ws_bono.title = f"Bono_{t.get('numero_ticket', i+1)}"
@@ -153,55 +164,54 @@ def crear_excel(datos_dict, nombre_base):
                 ws_bono = wb.copy_worksheet(ws_template_bono)
                 ws_bono.title = f"Bono_{t.get('numero_ticket', i+1)}"
             
-            ws_bono["E2"] = t.get('numero_ticket', '')
-            ws_bono["E9"] = t.get('contacto_metodo', '').upper()
+            escribir(ws_bono, "E2", t.get('numero_ticket', ''))
+            escribir(ws_bono, "E9", t.get('contacto_metodo', '').upper())
             
-            # Formatear las fechas a formato Español DD/MM/YYYY
             f_sol = [datetime.strptime(f, "%Y-%m-%d").strftime("%d/%m/%Y") for f in t.get('fechas_solicitud', []) if f]
             f_ser = [datetime.strptime(f, "%Y-%m-%d").strftime("%d/%m/%Y") for f in t.get('fechas_servicio', []) if f]
-            ws_bono["C12"] = ", ".join(f_sol)
-            ws_bono["C14"] = ", ".join(f_ser)
             
-            ws_bono["C16"] = barco
-            ws_bono["B19"] = ", ".join(t.get('pasajeros', []))
+            escribir(ws_bono, "C12", ", ".join(f_sol))
+            escribir(ws_bono, "C14", ", ".join(f_ser))
+            escribir(ws_bono, "C16", barco)
+            escribir(ws_bono, "B19", ", ".join(t.get('pasajeros', [])))
             
             # Checkboxes Recogida
-            if t.get('o_aeropuerto'): ws_bono["C26"] = "X"
-            if t.get('o_buque'): ws_bono["C27"] = "X"
+            if t.get('o_aeropuerto'): escribir(ws_bono, "C26", "X")
+            if t.get('o_buque'): escribir(ws_bono, "C27", "X")
             if t.get('o_hotel'): 
-                ws_bono["C28"] = "X"
-                ws_bono["E28"] = t.get('o_hotel_texto', '')
+                escribir(ws_bono, "C28", "X")
+                escribir(ws_bono, "E28", t.get('o_hotel_texto', ''))
             if t.get('o_otros'):
-                ws_bono["C29"] = "X"
-                ws_bono["D30"] = t.get('o_otros_texto', '')
+                escribir(ws_bono, "C29", "X")
+                escribir(ws_bono, "D30", t.get('o_otros_texto', ''))
                 
             # Checkboxes Destino
-            if t.get('d_aeropuerto'): ws_bono["C33"] = "X"
-            if t.get('d_buque'): ws_bono["C34"] = "X"
+            if t.get('d_aeropuerto'): escribir(ws_bono, "C33", "X")
+            if t.get('d_buque'): escribir(ws_bono, "C34", "X")
             if t.get('d_hotel'): 
-                ws_bono["C35"] = "X"
-                ws_bono["E35"] = t.get('d_hotel_texto', '')
+                escribir(ws_bono, "C35", "X")
+                escribir(ws_bono, "E35", t.get('d_hotel_texto', ''))
             if t.get('d_hospital'):
-                ws_bono["C36"] = "X"
-                ws_bono["E36"] = t.get('d_hospital_texto', '')
+                escribir(ws_bono, "C36", "X")
+                escribir(ws_bono, "E36", t.get('d_hospital_texto', ''))
             if t.get('d_clinica'):
-                ws_bono["C37"] = "X"
-                ws_bono["E37"] = t.get('d_clinica_texto', '')
-            if t.get('d_inmigracion'): ws_bono["C38"] = "X"
+                escribir(ws_bono, "C37", "X")
+                escribir(ws_bono, "E37", t.get('d_clinica_texto', ''))
+            if t.get('d_inmigracion'): escribir(ws_bono, "C38", "X")
             if t.get('d_otros'):
-                ws_bono["C39"] = "X"
-                ws_bono["D40"] = t.get('d_otros_texto', '')
+                escribir(ws_bono, "C39", "X")
+                escribir(ws_bono, "D40", t.get('d_otros_texto', ''))
                 
             # Checkbox Ida y vuelta
             if t.get('ida_vuelta'):
-                ws_bono["C43"] = "X"
+                escribir(ws_bono, "C43", "X")
             else:
-                ws_bono["D43"] = "X"
+                escribir(ws_bono, "D43", "X")
                 
-            ws_bono["B46"] = t.get('comentarios', '')
-            ws_bono["E51"] = float(t.get('importe', 0))
+            escribir(ws_bono, "B46", t.get('comentarios', ''))
+            escribir(ws_bono, "E51", float(t.get('importe', 0)))
 
-    # FORZAR AJUSTE A4 EN TODAS LAS HOJAS (incluidas las duplicadas)
+    # FORZAR AJUSTE A4 EN TODAS LAS HOJAS
     for sheet in wb.worksheets:
         try:
             sheet.page_setup.fitToWidth = 1
@@ -209,7 +219,7 @@ def crear_excel(datos_dict, nombre_base):
             sheet.page_setup.paperSize = getattr(sheet, 'PAPERSIZE_A4', 9)
             if getattr(sheet, 'sheet_properties', None) and getattr(sheet.sheet_properties, 'pageSetUpPr', None):
                 sheet.sheet_properties.pageSetUpPr.fitToPage = True
-        except Exception as e:
+        except:
             pass
             
     wb.save(path_salida)
@@ -218,14 +228,12 @@ def crear_excel(datos_dict, nombre_base):
 def procesar_descarga(datos_dict, formato):
     nombre_base = f"{datos_dict.get('barco', 'Factura').replace(' ', '_').upper()}_{datetime.now().strftime('%d_%m_%Y')}"
     
-    # 1. Siempre creamos el Excel primero
     path_xlsm, name_xlsm = crear_excel(datos_dict, nombre_base)
     temp_dir = os.path.dirname(path_xlsm)
     
     if formato == "excel":
         return FileResponse(path_xlsm, filename=name_xlsm, headers={"Content-Disposition": f"attachment; filename={name_xlsm}"})
         
-    # 2. Si piden PDF o Ambos, convertimos el Excel usando LibreOffice
     pdf_name = f"{nombre_base}.pdf"
     pdf_path = os.path.join(temp_dir, pdf_name)
     
@@ -244,7 +252,7 @@ def procesar_descarga(datos_dict, formato):
         subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except Exception as e:
         print(f"Error LibreOffice: {e}")
-        raise HTTPException(status_code=500, detail="Error al generar el PDF. Revisa los logs de Render.")
+        raise HTTPException(status_code=500, detail="Error al generar el PDF.")
 
     if formato == "pdf":
         if os.path.exists(pdf_path):
