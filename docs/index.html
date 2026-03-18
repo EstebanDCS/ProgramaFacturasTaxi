@@ -268,6 +268,7 @@
                     document.body.classList.add('logged-in');
                     verSec('sec-nueva', document.getElementById('btn-nueva'));
                     cargarSugerenciasPasajeros();
+                    await poblarSugerenciasDesdeNube();
                     if(!cargarProgreso()) agregarTicket();
                 } else { 
                     alert("Contraseña incorrecta"); 
@@ -302,6 +303,27 @@
                 localStorage.setItem(PAX_KEY, JSON.stringify(nombres));
                 cargarSugerenciasPasajeros();
             }
+        }
+        async function poblarSugerenciasDesdeNube() {
+            // Descarga el historial y extrae todos los nombres de pasajeros usados
+            try {
+                const res = await fetch(`${URL_BASE}/historial`, { headers: {'x-password': tokenSeguridad} });
+                if (!res.ok) return;
+                const facturas = await res.json();
+                // Para cada factura obtenemos sus datos completos y extraemos pasajeros
+                for (const f of facturas.slice(0, 20)) { // máximo 20 facturas recientes
+                    try {
+                        const r2 = await fetch(`${URL_BASE}/factura/${f.id}`, { headers: {'x-password': tokenSeguridad} });
+                        if (!r2.ok) continue;
+                        const datos = await r2.json();
+                        for (const t of (datos.tickets || [])) {
+                            for (const nombre of (t.pasajeros || [])) {
+                                if (nombre) guardarNombreEnHistorial(nombre);
+                            }
+                        }
+                    } catch(e) {}
+                }
+            } catch(e) {}
         }
 
         // --- PASAJEROS (tags) ---
@@ -391,8 +413,7 @@
                             <div class="flex flex-col gap-2">
                                 <label class="text-sm font-bold text-slate-600 uppercase tracking-tight">Contacto</label>
                                 <select class="t-contacto rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary font-medium">
-                                    <option value="" disabled>Seleccionar contacto...</option>
-                                    <option value="whatsapp" selected>WhatsApp</option>
+                                    <option value="whatsapp">WhatsApp</option>
                                     <option value="telefono">Teléfono</option>
                                 </select>
                             </div>
@@ -618,9 +639,7 @@
                         document.body.appendChild(a); a.click(); document.body.removeChild(a);
                         window.URL.revokeObjectURL(url);
                     }
-                    // Colapsar todos los tickets tras guardar
-                    document.querySelectorAll('.ticket-card details').forEach(d => d.open = false);
-                    guardarProgreso();
+                    limpiarBorrador(false);
                     alert(editId
                         ? (modo === 'nube' ? "☁️ Factura actualizada en la nube" : "✅ Archivo descargado")
                         : (modo === 'nube' ? "☁️ Guardado en la nube" : "✅ Archivo descargado")

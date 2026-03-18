@@ -133,20 +133,13 @@ def crear_excel(datos_dict, nombre_base):
         escribir(ws_factura, "F17", datetime.now().strftime("%d/%m/%Y"))
         
     total_importe = 0.0
-    lineas_descripcion = []
+    numeros_ticket = []
     for t in tickets:
-        pasajeros = ", ".join(t.get('pasajeros', []))
-        num_ticket = t.get('numero_ticket', '')
-        linea = f"Nº {num_ticket}" if num_ticket else "Ticket"
-        if pasajeros:
-            linea += f" — {pasajeros}"
-        importe = float(t.get('importe', 0))
-        linea += f"  ·  {importe:.2f} €"
-        lineas_descripcion.append(linea)
-        total_importe += importe
+        numeros_ticket.append(str(t.get('numero_ticket', '')))
+        total_importe += float(t.get('importe', 0))
 
-    # B21:F35 es una celda combinada única → toda la descripción junta en B21
-    escribir(ws_factura, "B21", "\n".join(lineas_descripcion))
+    # B21:F35 es una celda combinada única → solo los nº de ticket separados por coma
+    escribir(ws_factura, "B21", ", ".join(numeros_ticket))
         
     # Totales (Filas 38, 39, 40)
     base_imponible = total_importe / 1.10
