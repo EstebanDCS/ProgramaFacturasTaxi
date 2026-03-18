@@ -14,7 +14,7 @@
         .hidden-field { display: none; } 
         .ticket-header { cursor: pointer; transition: background-color 0.2s; }
         .ticket-header:hover { background-color: #146c43 !important; }
-        /* Pequeño aviso de autoguardado */
+        /* Aviso visual de guardado automático */
         #aviso-guardado {
             position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); 
             color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.8rem;
@@ -74,18 +74,25 @@
         let nombresGuardados = new Set(); 
 
         // ==========================================
-        // 🔮 MAGIA PARA LOS PREVIEWS DE RENDER (Staging Automático)
+        // 🌟 EL RADAR INTELIGENTE (VERCEL & RENDER)
         // ==========================================
-        let URL_BASE = 'https://programafacturastaxi.onrender.com';
+        // Servidor Oficial (Rama Main)
+        let URL_BASE = 'https://programafacturastaxi.onrender.com'; 
         
-        const parametrosURL = new URLSearchParams(window.location.search);
-        const servidorPruebas = parametrosURL.get('preview');
+        const host = window.location.hostname;
         
-        if (servidorPruebas) {
-            URL_BASE = `https://${servidorPruebas}.onrender.com`;
+        // Servidor de Pruebas (Rama Development / Localhost)
+        if (host.includes("development") || host === "localhost" || window.location.search.includes('preview')) {
+            // Nota: Aquí pones el nombre de tu segundo servidor Render (staging) si lo creaste
+            URL_BASE = 'https://programafacturastaxi-dev.onrender.com'; 
             console.log("⚠️ MODO PRUEBAS ACTIVADO -> Conectando a: " + URL_BASE);
-            document.getElementById('cuerpo-app').style.backgroundColor = "#ffe6e6"; // Fondo rojizo para pruebas
-            document.getElementById('cuerpo-app').classList.remove('bg-light');
+            
+            // Pintar fondo rojo para avisarte visualmente
+            const cuerpo = document.getElementById('cuerpo-app');
+            if(cuerpo) {
+                cuerpo.style.backgroundColor = "#ffe6e6"; 
+                cuerpo.classList.remove('bg-light');
+            }
         }
 
         // ==========================================
@@ -190,7 +197,7 @@
             msjError.style.display = "none";
 
             try {
-                // USAMOS LA URL INTELIGENTE
+                // LLAMADA AL SERVIDOR CORRECTO
                 const res = await fetch(URL_BASE + '/login', {
                     method: 'POST',
                     headers: { 'x-password': pwd }
@@ -209,7 +216,7 @@
                     msjError.style.display = "block";
                 }
             } catch(e) {
-                alert("Error al conectar. ¿Está el servidor encendido o escribiste mal el enlace del Preview?");
+                alert("Error al conectar. ¿Está Render encendido?");
             }
             btn.innerText = "ENTRAR";
             btn.disabled = false;
@@ -436,7 +443,7 @@
             boton.disabled = true;
 
             try {
-                // USAMOS LA URL INTELIGENTE
+                // LLAMADA AL SERVIDOR CORRECTO
                 const res = await fetch(URL_BASE + '/generar', { 
                     method: 'POST', 
                     headers: { 

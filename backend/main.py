@@ -10,9 +10,16 @@ import os
 
 app = FastAPI()
 
+# 🛡️ SEGURIDAD BLINDADA (CORS) - VERSIÓN VERCEL
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://estebandcs.github.io"], 
+    allow_origins=[
+        "http://localhost:5500",      
+        "http://127.0.0.1:5500",
+        "https://programa-facturas-taxi.vercel.app", # <-- Tu enlace oficial de Vercel
+        "https://estebandcs.github.io" # Mantenemos el antiguo por si acaso
+    ], 
+    allow_origin_regex=r"https://.*\.vercel\.app", # Magia: Permite los enlaces de pruebas de Vercel
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -184,12 +191,9 @@ async def generar_documento(datos: DatosFactura):
         fecha_final_str = ""
         if fechas_servicio_obj:
             max_fecha = max(fechas_servicio_obj)
-            # 1. La escribimos en la hoja general (F17)
             escribir(hoja_invoice, 'F17', max_fecha.strftime("%d/%m/%Y"), h_align='center') 
-            # 2. La preparamos para el nombre del archivo (con guiones)
             fecha_final_str = "_" + max_fecha.strftime("%d-%m-%Y")
             
-        # Creamos el nombre combinando Barco + Fecha Mayor
         nombre_descarga = f"{barco_mayusculas}{fecha_final_str}.xlsm".replace(" ", "_")
             
         ruta_salida = "/tmp/factura_completa.xlsm"
