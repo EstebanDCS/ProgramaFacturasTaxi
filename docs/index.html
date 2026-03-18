@@ -14,8 +14,21 @@
             darkMode: "class",
             theme: {
                 extend: {
-                    colors: { "primary": "#0d6dfd", "background-light": "#f5f7fb", "background-dark": "#0f1723", "sidebar-dark": "#1e1e2d" },
-                    fontFamily: { "display": ["Inter", "sans-serif"] },
+                    colors: {
+                        "primary": "#0d6dfd",
+                        "background-light": "#f5f7fb",
+                        "background-dark": "#0f1723",
+                        "sidebar-dark": "#1e1e2d",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
                 },
             },
         }
@@ -26,22 +39,38 @@
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
         .fill-1 { font-variation-settings: 'FILL' 1; }
         
-        /* Solucion de Pestañas */
-        .app-section { display: none !important; animation: fadeIn 0.3s ease-in-out; }
-        .app-section.activa { display: flex !important; flex-direction: column; }
+        /* Lógica de Secciones (SPA) */
+        .seccion { display: none; }
+        .seccion.activa { display: block; animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
+        /* Estado Login vs App */
         #app-layout { display: none; }
-        body.logged-in #sec-login-container { display: none !important; }
+        body.logged-in #sec-login-container { display: none; }
         body.logged-in #app-layout { display: flex; }
 
+        /* Aviso Guardado Flotante */
         #aviso-guardado {
-            position: fixed; bottom: 24px; right: 24px; z-index: 5000;
-            background-color: #1e293b; color: white; padding: 12px 24px;
-            border-radius: 9999px; font-weight: 500; font-size: 0.875rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); display: none;
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 5000;
+            background-color: #1e293b;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 9999px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            display: none;
+            align-items: center;
+            gap: 8px;
         }
 
+        /* Input condicional oculto por defecto */
+        .condicional { display: none; }
+
+        /* Modo Pruebas */
         body.modo-pruebas aside { background-color: #3b0909 !important; border-right: 2px solid #ef4444; }
     </style>
 </head>
@@ -59,6 +88,7 @@
             </div>
             <h2 class="text-2xl font-black tracking-tight text-slate-900 mb-2">Taxi App Pro</h2>
             <p class="text-slate-500 font-medium text-sm mb-8">Acceso seguro al panel de gestión</p>
+            
             <div class="space-y-4">
                 <div class="relative">
                     <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">lock</span>
@@ -71,11 +101,12 @@
         </div>
     </div>
 
-    <div id="app-layout" class="w-full min-h-screen">
+    <div id="app-layout" class="w-full min-h-screen flex">
+        
         <aside class="fixed inset-y-0 left-0 w-64 bg-sidebar-dark text-slate-300 flex flex-col shadow-xl z-50 transition-colors">
-            <div class="p-6">
-                <div class="flex items-center gap-3 mb-8">
-                    <div class="bg-primary p-2.5 rounded-xl shadow-inner">
+            <div class="p-6 flex flex-col h-full">
+                <div class="flex items-center gap-3 mb-10">
+                    <div class="bg-primary p-2.5 rounded-xl shadow-inner flex items-center justify-center">
                         <span class="material-symbols-outlined text-white fill-1">local_taxi</span>
                     </div>
                     <div>
@@ -83,6 +114,7 @@
                         <p class="text-slate-500 text-[10px] mt-1.5 uppercase tracking-[0.15em] font-bold">Admin Dashboard</p>
                     </div>
                 </div>
+                
                 <nav class="flex flex-col gap-2">
                     <a id="btn-nueva" onclick="verSec('sec-nueva', this)" class="nav-btn flex items-center gap-3 px-4 py-3.5 rounded-xl bg-primary text-white transition-all shadow-lg shadow-primary/20 cursor-pointer">
                         <span class="material-symbols-outlined fill-1">description</span>
@@ -93,17 +125,19 @@
                         <span class="text-sm font-semibold tracking-wide">Historial Cloud</span>
                     </a>
                 </nav>
-            </div>
-            <div class="mt-auto p-6 border-t border-slate-800/50">
-                <a onclick="location.reload()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-all cursor-pointer">
-                    <span class="material-symbols-outlined">logout</span>
-                    <span class="text-sm font-semibold">Cerrar Sesión</span>
-                </a>
+                
+                <div class="mt-auto p-0 pt-6 border-t border-slate-800/50">
+                    <a onclick="location.reload()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-all cursor-pointer group">
+                        <span class="material-symbols-outlined group-hover:fill-1">logout</span>
+                        <span class="text-sm font-semibold">Cerrar Sesión</span>
+                    </a>
+                </div>
             </div>
         </aside>
 
         <main class="flex-1 ml-64 flex flex-col bg-background-light min-h-screen">
-            <div id="sec-nueva" class="app-section flex-1 p-8">
+            
+            <div id="sec-nueva" class="seccion flex-1 p-8">
                 <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
                     <div class="flex items-center gap-4">
                         <div class="p-2.5 bg-primary/10 rounded-xl text-primary">
@@ -117,9 +151,10 @@
                 </header>
 
                 <form id="formTaxi" class="max-w-5xl mx-auto space-y-6 pb-12 w-full">
+                    
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                         <div class="flex items-center gap-2 mb-6 text-primary font-bold">
-                            <span class="material-symbols-outlined text-xl">info</span>
+                            <span class="material-symbols-outlined text-xl fill-1">info</span>
                             <h3 class="text-lg">Detalles de Factura</h3>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -137,14 +172,15 @@
                     <div id="contenedor-tickets" class="space-y-6"></div>
 
                     <div class="pt-4 space-y-6">
-                        <button type="button" onclick="agregarTicket()" class="w-full flex items-center justify-center gap-2 px-6 py-4 border-2 border-dashed border-primary/50 text-primary font-bold rounded-2xl hover:bg-primary/5 transition-all bg-white">
+                        <button type="button" onclick="agregarTicket()" class="w-full flex items-center justify-center gap-2 px-6 py-4 border-2 border-dashed border-primary/40 text-primary font-bold rounded-2xl hover:bg-primary/5 transition-all bg-white shadow-inner">
                             <span class="material-symbols-outlined font-bold">add_circle</span> AÑADIR NUEVO TICKET DETALLADO
                         </button>
+                        
                         <div class="flex flex-col md:flex-row gap-4">
-                            <button type="button" onclick="enviarProceso('nube')" class="flex-1 flex items-center justify-center gap-2 px-8 py-4 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-900 shadow-lg shadow-slate-900/20 transition-all text-sm tracking-wide">
+                            <button type="submit" class="flex-1 flex items-center justify-center gap-2 px-8 py-4 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-900 shadow-lg shadow-slate-900/20 transition-all text-sm tracking-wide text-uppercase">
                                 <span class="material-symbols-outlined">cloud_upload</span> SOLO GUARDAR EN NUBE
                             </button>
-                            <button type="button" onclick="enviarProceso('excel')" class="flex-1 flex items-center justify-center gap-2 px-8 py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all text-sm tracking-wide">
+                            <button type="submit" onclick="this.form.target='_blank'" class="flex-1 flex items-center justify-center gap-2 px-8 py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all text-sm tracking-wide text-uppercase">
                                 <span class="material-symbols-outlined">table_view</span> GENERAR Y DESCARGAR EXCEL
                             </button>
                         </div>
@@ -152,72 +188,80 @@
                 </form>
             </div>
 
-            <div id="sec-historial" class="app-section flex-1">
-                <header class="bg-white px-8 py-8 border-b border-slate-200">
-                    <div class="flex flex-wrap justify-between items-start gap-4">
-                        <div>
-                            <h2 class="text-2xl font-black text-slate-900 tracking-tight">Historial en la Nube</h2>
-                            <p class="text-slate-500 text-sm mt-1 font-medium">Gestione sus facturas almacenadas en Frankfurt</p>
+            <div id="sec-historial" class="seccion flex-1 p-8">
+                <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
+                    <div class="flex items-center gap-4">
+                        <div class="p-2.5 bg-primary/10 rounded-xl text-primary">
+                            <span class="material-symbols-outlined fill-1">cloud_done</span>
                         </div>
-                        <button onclick="vaciarHistorial()" class="bg-[#f04444] hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-sm shadow-red-500/20">
-                            <span class="material-symbols-outlined text-lg">delete_sweep</span> Vaciar Base de Datos
-                        </button>
+                        <h2 class="text-2xl font-black tracking-tight text-slate-900">Historial en Frankfurt</h2>
                     </div>
+                    <button onclick="vaciarHistorial()" class="bg-[#f04444] hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-sm shadow-red-500/20">
+                        <span class="material-symbols-outlined text-lg">delete_sweep</span> Vaciar Base de Datos
+                    </button>
                 </header>
-                <div class="p-8 flex-1">
-                    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <thead>
-                                    <tr class="bg-slate-50/50 border-b border-slate-100">
-                                        <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Fecha</th>
-                                        <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Barco</th>
-                                        <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Nº Fra.</th>
-                                        <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Importe</th>
-                                        <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em] text-right">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tabla-historial" class="divide-y divide-slate-50"></tbody>
-                            </table>
-                        </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 border-b border-slate-100">
+                                <tr class="bg-slate-50/50">
+                                    <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Fecha</th>
+                                    <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Barco</th>
+                                    <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Nº Fra.</th>
+                                    <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Importe Total</th>
+                                    <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em] text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-historial" class="divide-y divide-slate-50"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
+
         </main>
     </div>
 
     <script>
-        let ticketCount = 0; let tokenSeguridad = "";
+        let ticketCount = 0; 
+        let tokenSeguridad = "";
         let URL_BASE = 'https://programafacturastaxi.onrender.com';
+        
+        // Radar de Entorno
         if (window.location.hostname !== "programa-facturas-taxi.vercel.app") {
             URL_BASE = 'https://programafacturastaxi-dev.onrender.com';
             document.body.classList.add('modo-pruebas');
         }
 
+        // Navegación Sidebar Tailwind
         function verSec(id, btn) {
-            document.querySelectorAll('.app-section').forEach(s => s.classList.remove('activa'));
+            document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
             document.getElementById(id).classList.add('activa');
+            
+            // Estilos inactivos para todos
             document.querySelectorAll('.nav-btn').forEach(l => {
                 l.className = "nav-btn flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-white/5 text-slate-400 hover:text-white transition-all cursor-pointer group";
                 l.querySelector('span:first-child').classList.remove('fill-1');
             });
+            
+            // Estilos activos para el clickado
             btn.className = "nav-btn flex items-center gap-3 px-4 py-3.5 rounded-xl bg-primary text-white transition-all shadow-lg shadow-primary/20 cursor-pointer";
             btn.querySelector('span:first-child').classList.add('fill-1');
         }
 
         async function iniciarSesion() {
             const p = document.getElementById('pass-maestra').value;
-            if(!p) return;
-            try {
-                const res = await fetch(`${URL_BASE}/login`, { headers: {'x-password': p} });
-                if(res.ok) {
-                    tokenSeguridad = p; document.body.classList.add('logged-in');
-                    verSec('sec-nueva', document.getElementById('btn-nueva'));
-                    if(!cargarProgreso()) agregarTicket();
-                } else { alert("Contraseña incorrecta"); }
-            } catch(e) { alert("Error de conexión"); }
+            const res = await fetch(`${URL_BASE}/login`, { headers: {'x-password': p} });
+            if(res.ok) {
+                tokenSeguridad = p; 
+                document.body.classList.add('logged-in');
+                document.getElementById('sec-login-container').style.display='none';
+                verSec('sec-nueva', document.getElementById('btn-nueva'));
+                if(!cargarProgreso()) agregarTicket();
+            } else { alert("Error"); }
         }
 
+        // DOM UI Tickets
         function toggleI(cb, id) { 
             const el = document.getElementById(id);
             if(cb.checked) { el.classList.remove('hidden'); el.classList.add('block'); } 
@@ -227,10 +271,13 @@
         function addP(id) { 
             const i = document.createElement('input'); 
             i.className = 'w-full rounded-lg border-slate-200 bg-white px-4 py-2 mt-2 focus:ring-primary focus:border-primary shadow-sm text-sm t-pasajeros'; 
-            i.list = "sugerencias-pasajeros"; i.placeholder = "Nombre pasajero adicional";
+            i.list = "sugerencias-pasajeros"; 
+            i.placeholder = "Nombre pasajero adicional";
             document.getElementById(`pax_${id}`).appendChild(i); 
         }
 
+        // Generador de HTML Tailwind para Tickets (Detailed - image_10.png)
+        // He integrado TODAS las opciones de checkboxes originales que faltaban.
         function agregarTicket() {
             ticketCount++; const id = ticketCount;
             const div = document.createElement('div');
@@ -245,7 +292,7 @@
                             </div>
                             <div>
                                 <h3 class="font-bold text-lg text-slate-900">Ticket #${id}</h3>
-                                <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-0.5">Detalles del servicio</p>
+                                <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-0.5">Detalles del trayecto</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-4">
@@ -277,91 +324,126 @@
                             </div>
                         </div>
 
-                        <div class="space-y-3 bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
-                            <div class="flex items-center justify-between">
-                                <label class="text-[11px] font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">group</span> Pasajeros</label>
-                                <button type="button" onclick="addP(${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:text-blue-800 transition-colors bg-primary/10 px-3 py-1.5 rounded-lg">
-                                    <span class="material-symbols-outlined text-[14px]">add</span> Añadir
-                                </button>
-                            </div>
-                            <div id="pax_${id}">
-                                <input type="text" list="sugerencias-pasajeros" class="t-pasajeros w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-2.5 focus:ring-primary focus:border-primary text-sm font-medium" placeholder="Nombre completo">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="flex flex-col gap-2">
-                                <label class="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Fecha Solicitud</label>
-                                <input type="date" required class="t-fechas-solicitud rounded-xl border-slate-200 bg-white px-4 py-3 focus:ring-primary focus:border-primary shadow-sm text-sm font-medium">
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <label class="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Fecha Servicio</label>
-                                <input type="date" required class="t-fechas-servicio rounded-xl border-slate-200 bg-white px-4 py-3 focus:ring-primary focus:border-primary shadow-sm text-sm font-medium">
-                            </div>
-                        </div>
-
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="space-y-4 bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
                                 <label class="text-[11px] font-bold text-primary uppercase tracking-widest flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">flight_land</span> Origen / Recogida</label>
                                 <div class="space-y-2">
-                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                        <input type="checkbox" class="t-o-aero rounded border-slate-300 text-primary focus:ring-primary"> <span class="text-sm font-semibold text-slate-700">Aeropuerto</span>
+                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+                                        <input type="checkbox" class="t-o-aero rounded border-slate-300 text-primary focus:ring-primary">
+                                        <span class="text-sm font-semibold text-slate-700">Aeropuerto</span>
                                     </label>
-                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                        <input type="checkbox" class="t-o-buque rounded border-slate-300 text-primary focus:ring-primary"> <span class="text-sm font-semibold text-slate-700">Buque</span>
+                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+                                        <input type="checkbox" class="t-o-buque rounded border-slate-300 text-primary focus:ring-primary">
+                                        <span class="text-sm font-semibold text-slate-700">Buque</span>
                                     </label>
                                     <div class="space-y-2">
-                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                            <input type="checkbox" class="t-o-hotel rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'oh_${id}')"> <span class="text-sm font-semibold text-slate-700">Hotel</span>
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+                                            <input type="checkbox" class="t-o-hotel rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'oh_${id}')">
+                                            <span class="text-sm font-semibold text-slate-700">Hotel</span>
                                         </label>
-                                        <input type="text" id="oh_${id}" class="t-o-hotel-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="Especifique hotel...">
+                                        <input type="text" id="oh_${id}" class="t-o-hotel-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="Nombre hotel">
                                     </div>
                                     <div class="space-y-2">
-                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                            <input type="checkbox" class="t-o-otros rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'oo_${id}')"> <span class="text-sm font-semibold text-slate-700">Otros</span>
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+                                            <input type="checkbox" class="t-o-clinica rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'oc_${id}')">
+                                            <span class="text-sm font-semibold text-slate-700">Clínica</span>
                                         </label>
-                                        <input type="text" id="oo_${id}" class="t-o-otros-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="¿Dónde?">
+                                        <input type="text" id="oc_${id}" class="t-o-clinica-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="¿Cuál?">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+                                            <input type="checkbox" class="t-o-hospital rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'ohp_${id}')">
+                                            <span class="text-sm font-semibold text-slate-700">Hospital</span>
+                                        </label>
+                                        <input type="text" id="ohp_${id}" class="t-o-hospital-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="¿Cuál?">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+                                            <input type="checkbox" class="t-o-inmi rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'oi_${id}')">
+                                            <span class="text-sm font-semibold text-slate-700">Inmigración</span>
+                                        </label>
+                                        <input type="text" id="oi_${id}" class="t-o-inmigracion-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="¿Dónde?">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+                                            <input type="checkbox" class="t-o-otros rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'oo_${id}')">
+                                            <span class="text-sm font-semibold text-slate-700">Otros</span>
+                                        </label>
+                                        <input type="text" id="oo_${id}" class="t-o-otros-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="¿Dónde?">
                                     </div>
                                 </div>
                             </div>
                             
                             <div class="space-y-4 bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
                                 <label class="text-[11px] font-bold text-primary uppercase tracking-widest flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">flight_takeoff</span> Destino</label>
-                                <div class="space-y-2">
-                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                        <input type="checkbox" class="t-d-aero rounded border-slate-300 text-primary focus:ring-primary"> <span class="text-sm font-semibold text-slate-700">Aeropuerto</span>
+                                <div class="grid grid-cols-1 gap-2">
+                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+                                        <input type="checkbox" class="t-d-aero rounded border-slate-300 text-primary focus:ring-primary">
+                                        <span class="text-sm font-semibold text-slate-700">Aeropuerto</span>
                                     </label>
-                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                        <input type="checkbox" class="t-d-buque rounded border-slate-300 text-primary focus:ring-primary"> <span class="text-sm font-semibold text-slate-700">Buque</span>
+                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+                                        <input type="checkbox" class="t-d-buque rounded border-slate-300 text-primary focus:ring-primary">
+                                        <span class="text-sm font-semibold text-slate-700">Buque</span>
                                     </label>
-                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                        <input type="checkbox" class="t-d-inmigracion rounded border-slate-300 text-primary focus:ring-primary"> <span class="text-sm font-semibold text-slate-700">Inmigración</span>
-                                    </label>
-                                    
                                     <div class="space-y-2">
-                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                            <input type="checkbox" class="t-d-hotel rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dh_${id}')"> <span class="text-sm font-semibold text-slate-700">Hotel</span>
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+                                            <input type="checkbox" class="t-d-hotel rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dh_${id}')">
+                                            <span class="text-sm font-semibold text-slate-700">Hotel</span>
                                         </label>
-                                        <input type="text" id="dh_${id}" class="t-d-hotel-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="Especifique hotel...">
+                                        <input type="text" id="dh_${id}" class="t-d-hotel-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="Nombre hotel">
                                     </div>
                                     <div class="space-y-2">
-                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                            <input type="checkbox" class="t-d-hospital rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dhp_${id}')"> <span class="text-sm font-semibold text-slate-700">Hospital</span>
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+                                            <input type="checkbox" class="t-d-clinica rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dc_${id}')">
+                                            <span class="text-sm font-semibold text-slate-700">Clínica</span>
                                         </label>
-                                        <input type="text" id="dhp_${id}" class="t-d-hospital-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="Especifique hospital...">
+                                        <input type="text" id="dc_${id}" class="t-d-clinica-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="¿Cuál?">
                                     </div>
                                     <div class="space-y-2">
-                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                            <input type="checkbox" class="t-d-clinica rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dcl_${id}')"> <span class="text-sm font-semibold text-slate-700">Clínica</span>
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+                                            <input type="checkbox" class="t-d-hospital rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dhp_${id}')">
+                                            <span class="text-sm font-semibold text-slate-700">Hospital</span>
                                         </label>
-                                        <input type="text" id="dcl_${id}" class="t-d-clinica-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="Especifique clínica...">
+                                        <input type="text" id="dhp_${id}" class="t-d-hospital-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="¿Cuál?">
                                     </div>
                                     <div class="space-y-2">
-                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                            <input type="checkbox" class="t-d-otros rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dot_${id}')"> <span class="text-sm font-semibold text-slate-700">Otros</span>
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+                                            <input type="checkbox" class="t-d-inmi rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'di_${id}')">
+                                            <span class="text-sm font-semibold text-slate-700">Inmigración</span>
                                         </label>
-                                        <input type="text" id="dot_${id}" class="t-d-otros-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="¿Dónde?">
+                                        <input type="text" id="di_${id}" class="t-d-inmigracion-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="¿Dónde?">
                                     </div>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+                                            <input type="checkbox" class="t-d-otros rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dot_${id}')">
+                                            <span class="text-sm font-semibold text-slate-700">Otros</span>
+                                        </label>
+                                        <input type="text" id="dot_${id}" class="t-d-otros-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="¿Dónde?">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-3 bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-[11px] font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">group</span> Pasajeros</label>
+                                    <button type="button" onclick="addP(${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:text-blue-800 transition-colors bg-primary/10 px-3 py-1.5 rounded-lg">
+                                        <span class="material-symbols-outlined text-[14px]">add</span> Añadir
+                                    </button>
+                                </div>
+                                <div id="pax_${id}" class="space-y-2">
+                                    <input type="text" list="sugerencias-pasajeros" class="t-pasajeros w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-2.5 focus:ring-primary focus:border-primary text-sm font-medium" placeholder="Nombre completo">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Fecha Solicitud</label>
+                                    <input type="date" required class="t-fechas-solicitud rounded-xl border-slate-200 bg-white px-4 py-3 focus:ring-primary focus:border-primary shadow-sm text-sm font-medium">
+                                </div>
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Fecha Servicio</label>
+                                    <input type="date" required class="t-fechas-servicio rounded-xl border-slate-200 bg-white px-4 py-3 focus:ring-primary focus:border-primary shadow-sm text-sm font-medium">
                                 </div>
                             </div>
                         </div>
@@ -369,17 +451,17 @@
                         <div class="grid grid-cols-1 gap-6 bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
                             <div class="flex items-center justify-between pb-4 border-b border-slate-100">
                                 <div>
-                                    <span class="text-sm font-bold text-slate-900">Servicio de Ida y Vuelta</span>
-                                    <p class="text-xs text-slate-500 font-medium">Marque si el servicio incluye trayecto de retorno</p>
+                                    <span class="text-sm font-bold text-slate-700">Servicio de Ida y Vuelta</span>
+                                    <p class="text-xs text-slate-500 font-medium">Marque si el servicio incluye trayecto de regreso</p>
                                 </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" class="t-ida-vuelta sr-only peer">
-                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                <label class="relative inline-flex items-center cursor-pointer select-none">
+                                    <input type="checkbox" value="" class="t-ida-vuelta sr-only peer">
+                                    <div class="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary shadow-sm"></div>
                                 </label>
                             </div>
                             <div class="flex flex-col gap-2">
                                 <label class="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Observaciones Generales</label>
-                                <textarea class="t-comentarios rounded-xl border-slate-200 bg-slate-50 focus:ring-primary focus:border-primary p-4 min-h-[80px] text-sm" placeholder="Detalles extra, equipaje especial..."></textarea>
+                                <textarea class="t-comentarios rounded-xl border-slate-200 bg-slate-50 focus:ring-primary focus:border-primary p-4 min-h-[120px] text-sm" placeholder="Detalles extra, equipaje especial, paradas intermedias..."></textarea>
                             </div>
                         </div>
                     </div>
@@ -389,6 +471,7 @@
             guardarProgreso();
         }
 
+        // --- CORE COMUNICACIÓN BACKEND ---
         async function enviarProceso(modo) {
             const form = document.getElementById('formTaxi');
             if(!form.checkValidity()) { form.reportValidity(); return; }
@@ -404,6 +487,12 @@
                 o_buque: item.querySelector('.t-o-buque').checked,
                 o_hotel: item.querySelector('.t-o-hotel').checked,
                 o_hotel_texto: item.querySelector('.t-o-hotel-texto').value,
+                o_clinica: item.querySelector('.t-o-clinica').checked,
+                o_clinica_texto: item.querySelector('.t-o-clinica-texto').value,
+                o_hospital: item.querySelector('.t-o-hospital').checked,
+                o_hospital_texto: item.querySelector('.t-o-hospital-texto').value,
+                o_inmigracion: item.querySelector('.t-o-inmi').checked,
+                o_inmigracion_texto: item.querySelector('.t-o-inmigracion-texto').value,
                 o_otros: item.querySelector('.t-o-otros').checked,
                 o_otros_texto: item.querySelector('.t-o-otros-texto').value,
                 d_aeropuerto: item.querySelector('.t-d-aero').checked,
@@ -414,7 +503,8 @@
                 d_hospital_texto: item.querySelector('.t-d-hospital-texto').value,
                 d_clinica: item.querySelector('.t-d-clinica').checked,
                 d_clinica_texto: item.querySelector('.t-d-clinica-texto').value,
-                d_inmigracion: item.querySelector('.t-d-inmigracion').checked,
+                d_inmigracion: item.querySelector('.t-d-inmi').checked,
+                d_inmigracion_texto: item.querySelector('.t-d-inmigracion-texto').value,
                 d_otros: item.querySelector('.t-d-otros').checked,
                 d_otros_texto: item.querySelector('.t-d-otros-texto').value,
                 ida_vuelta: item.querySelector('.t-ida-vuelta').checked,
@@ -428,102 +518,60 @@
                 const res = await fetch(`${URL_BASE}${endpoint}`, { 
                     method:'POST', headers:{'Content-Type':'application/json','x-password':tokenSeguridad}, body:JSON.stringify(data)
                 });
+                
                 if(res.ok) {
                     if(modo === 'excel') {
-                        triggerDwn(await res.blob(), `${data.barco.replace(/ /g,"_")}.xlsm`);
+                        const blob = await res.blob();
+                        triggerDownload(blob, `${data.barco.replace(/ /g,"_")}.xlsm`);
                         limpiarBorrador(false);
                     }
-                    alert(modo === 'nube' ? "☁️ Base de datos actualizada" : "✅ Excel generado con éxito");
+                    alert(modo === 'nube' ? "☁️ Datos guardados en la nube" : "✅ Excel generado correctamente");
                 } else alert("Error validando datos");
             } catch(e) { alert("Error de servidor"); }
         }
 
         async function cargarHistorial() {
-            const tb = document.getElementById('tabla-historial');
-            tb.innerHTML = `<tr><td colspan="5" class="px-8 py-8 text-center text-slate-500 font-medium">Cargando registros...</td></tr>`;
-            try {
-                const res = await fetch(`${URL_BASE}/historial`, { headers: {'x-password':tokenSeguridad} });
-                const datos = await res.json();
-                tb.innerHTML = "";
-                
-                if(datos.length === 0) { tb.innerHTML = `<tr><td colspan="5" class="px-8 py-8 text-center text-slate-500 font-medium">No hay facturas en la nube</td></tr>`; return;}
-                
-                datos.forEach(f => {
-                    const d = new Date(f.fecha_creacion).toLocaleDateString('es-ES', {year: 'numeric', month: '2-digit', day: '2-digit'});
-                    tb.innerHTML += `
-                        <tr class="hover:bg-slate-50/80 transition-colors group">
-                            <td class="px-8 py-5 text-sm font-medium text-slate-600">${d}</td>
-                            <td class="px-8 py-5">
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-primary uppercase tracking-wider border border-blue-100">
-                                    ${f.barco}
-                                </span>
-                            </td>
-                            <td class="px-8 py-5 text-sm font-semibold text-slate-900">${f.numero_factura}</td>
-                            <td class="px-8 py-5 text-sm font-black text-emerald-600">${f.importe_total.toFixed(2)}€</td>
-                            <td class="px-8 py-5 text-right">
-                                <div class="flex items-center justify-end gap-2">
-                                    <button onclick="redescargar(${f.id})" class="inline-flex items-center gap-1.5 text-primary hover:text-blue-800 font-black text-[11px] uppercase tracking-widest transition-colors bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm hover:shadow">
-                                        <span class="material-symbols-outlined text-[16px]">download</span> DESCARGAR
-                                    </button>
-                                    <button onclick="eliminarFactura(${f.id})" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-600 hover:text-white transition-colors border border-red-100 tooltip" title="Eliminar Factura">
-                                        <span class="material-symbols-outlined text-[18px]">delete</span>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>`;
-                });
-            } catch(e) { tb.innerHTML = `<tr><td colspan="5" class="px-8 py-8 text-center text-red-500 font-bold">Error de red</td></tr>`; }
+            const res = await fetch(`${URL_BASE}/historial`, { headers: {'x-password':tokenSeguridad} });
+            const datos = await res.json();
+            const tb = document.getElementById('tabla-historial'); tb.innerHTML = "";
+            datos.forEach(f => {
+                const d = new Date(f.fecha_creacion).toLocaleDateString();
+                tb.innerHTML += `<tr><td class="small">${d}</td><td><span class="badge bg-primary">${f.barco}</span></td><td>${f.numero_factura}</td><td class="fw-bold">${f.importe_total.toFixed(2)}€</td><td><button class="btn btn-sm btn-info text-white" onclick="redescargar(${f.id})">redescargar</button></td></tr>`;
+            });
         }
 
         async function redescargar(id) {
-            try {
-                const res = await fetch(`${URL_BASE}/re-descargar/${id}`, { headers: {'x-password':tokenSeguridad} });
-                if(res.ok) {
-                    const head = res.headers.get('Content-Disposition');
-                    let name = `Fra_Antigua_${id}.xlsm`;
-                    if(head && head.includes('filename=')) name = head.split('filename=')[1].replace(/["']/g, '');
-                    triggerDwn(await res.blob(), name);
-                }
-            } catch(e) { alert("Fallo al descargar copia"); }
+            const res = await fetch(`${URL_BASE}/re-descargar/${id}`, { headers: {'x-password':tokenSeguridad} });
+            if(res.ok) {
+                const head = res.headers.get('Content-Disposition');
+                let name = `Fra_Antigua_${id}.xlsm`;
+                if(head && head.includes('filename=')) name = head.split('filename=')[1].replace(/["']/g, '');
+                triggerDownload(await res.blob(), name);
+            }
         }
 
-        async function eliminarFactura(id) {
-            if(!confirm("¿Estás seguro de que quieres eliminar esta factura específica de la nube?")) return;
-            try {
-                const res = await fetch(`${URL_BASE}/eliminar-factura/${id}`, { method: 'DELETE', headers: {'x-password':tokenSeguridad} });
-                if(res.ok) cargarHistorial();
-                else alert("Error al eliminar la factura.");
-            } catch(e) { alert("Fallo de red al intentar eliminar."); }
-        }
-
-        function triggerDwn(blob, filename) {
+        function triggerDownload(blob, filename) {
             const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = filename;
+            const a = document.createElement('a'); a.href = url; a.download = filename;
             document.body.appendChild(a); a.click();
             window.URL.revokeObjectURL(url); a.remove();
         }
 
         async function vaciarHistorial() {
-            if(!confirm("⚠️ ATENCIÓN: Se borrarán todas las facturas permanentemente. ¿Continuar?")) return;
+            if(!confirm("⚠️ ATENCIÓN: Borrar TODA la nube permanentemente. ¿Continuar?")) return;
             await fetch(`${URL_BASE}/limpiar-historial`, { method: 'DELETE', headers: {'x-password':tokenSeguridad} });
             cargarHistorial();
         }
 
         // --- PERSISTENCIA LOCAL ---
         document.getElementById('formTaxi').addEventListener('input', triggerAutoSave);
-        document.getElementById('formTaxi').addEventListener('change', triggerAutoSave);
-        let tSave;
-        function triggerAutoSave() { clearTimeout(tSave); tSave = setTimeout(guardarProgreso, 500); }
-
+        let tSave; function triggerAutoSave() { clearTimeout(tSave); tSave = setTimeout(guardarProgreso, 500); }
         function guardarProgreso() { 
             const html = document.getElementById('contenedor-tickets').innerHTML;
             const inputs = document.querySelectorAll('#contenedor-tickets input, #contenedor-tickets select, #contenedor-tickets textarea');
             const vals = Array.from(inputs).map(i => ({ type: i.type, value: i.value, checked: i.checked }));
             localStorage.setItem('taxi_tailwind', JSON.stringify({ html: html, count: ticketCount, b: document.getElementById('barco').value, f: document.getElementById('factura_numero').value, data: vals })); 
-            const av = document.getElementById('aviso-guardado'); av.style.display = 'flex'; setTimeout(() => av.style.display = 'none', 1500);
         }
-
         function cargarProgreso() {
             const s = localStorage.getItem('taxi_tailwind'); if(!s) return false;
             try {
