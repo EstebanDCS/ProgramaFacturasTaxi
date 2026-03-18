@@ -17,7 +17,7 @@
                     colors: {
                         "primary": "#0d6dfd",
                         "background-light": "#f5f7fb",
-                        "sidebar-dark": "#1a2e4a", /* El azul pizarra/navy exacto del diseño */
+                        "sidebar-dark": "#181824", /* El azul pizarra/navy exacto del diseño */
                     },
                     fontFamily: { "display": ["Inter", "sans-serif"] },
                 },
@@ -50,7 +50,7 @@
         }
 
         /* Radar de pruebas */
-        body.modo-pruebas aside::after { content: "DEV"; position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 800; color: #f87171; opacity: 0.5; }
+        body.modo-pruebas aside { background-color: #2b0b0b !important; border-right: 3px solid #ef4444; }
     </style>
 </head>
 <body class="bg-background-light text-slate-900 font-display min-h-screen flex flex-col">
@@ -85,7 +85,7 @@
                     </div>
                     <div>
                         <h1 class="text-white text-lg font-bold leading-none tracking-tight">Taxi App Pro</h1>
-                        <p class="text-blue-300/50 text-xs mt-1 uppercase tracking-wider font-semibold">Admin Dashboard</p>
+                        <p class="text-slate-500 text-xs mt-1 uppercase tracking-wider font-semibold">Admin Dashboard</p>
                     </div>
                 </div>
                 <nav class="flex flex-col gap-2">
@@ -93,14 +93,14 @@
                         <span class="material-symbols-outlined fill-1">description</span>
                         <span class="text-sm font-medium">Nueva Factura</span>
                     </a>
-                    <a id="btn-historial" onclick="verSec('sec-historial', this); cargarHistorial();" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group">
+                    <a id="btn-historial" onclick="verSec('sec-historial', this); cargarHistorial();" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-all text-slate-400 hover:text-white cursor-pointer group">
                         <span class="material-symbols-outlined group-hover:fill-1 transition-colors">cloud_done</span>
                         <span class="text-sm font-medium">Historial Cloud</span>
                     </a>
                 </nav>
             </div>
-            <div class="mt-auto p-6 border-t border-white/10">
-                <a onclick="location.reload()" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-500/20 text-blue-200/60 hover:text-red-300 transition-all cursor-pointer">
+            <div class="mt-auto p-6 border-t border-slate-800/50">
+                <a onclick="location.reload()" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-all cursor-pointer">
                     <span class="material-symbols-outlined">logout</span>
                     <span class="text-sm font-medium">Cerrar Sesión</span>
                 </a>
@@ -121,16 +121,6 @@
                         <span class="material-symbols-outlined text-sm">delete_sweep</span> Limpiar Borrador
                     </button>
                 </header>
-
-                <div id="edit-banner" class="hidden mb-6 flex items-center justify-between gap-4 bg-amber-50 border border-amber-200 text-amber-800 px-5 py-3.5 rounded-xl">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined fill-1 text-amber-500">edit_note</span>
-                        <span id="edit-banner-texto" class="text-sm font-semibold"></span>
-                    </div>
-                    <button onclick="cancelarEdicion()" class="text-xs font-bold text-amber-600 hover:text-amber-900 flex items-center gap-1 transition-colors">
-                        <span class="material-symbols-outlined text-sm">close</span> Cancelar edición
-                    </button>
-                </div>
 
                 <form id="formTaxi" class="space-y-6 pb-12">
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
@@ -213,7 +203,7 @@
             document.getElementById(id).classList.add('activa');
             
             document.querySelectorAll('.nav-btn').forEach(l => {
-                l.className = "nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group";
+                l.className = "nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-all text-slate-400 hover:text-white cursor-pointer group";
                 l.querySelector('span:first-child').classList.remove('fill-1');
             });
             btn.className = "nav-btn flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white shadow-lg shadow-primary/20 transition-all cursor-pointer";
@@ -229,7 +219,6 @@
                     tokenSeguridad = p; 
                     document.body.classList.add('logged-in');
                     verSec('sec-nueva', document.getElementById('btn-nueva'));
-                    cargarSugerenciasPasajeros();
                     if(!cargarProgreso()) agregarTicket();
                 } else { alert("Contraseña incorrecta"); }
             } catch(e) { alert("Error de conexión"); }
@@ -242,79 +231,10 @@
         }
         
         function addP(id) { 
-            const container = document.getElementById(`pax_${id}`);
-            const existing = container.querySelector('.pax-input-temp');
-            if (existing) { existing.focus(); return; }
-            const i = document.createElement('input');
-            i.className = 'pax-input-temp flex-shrink-0 min-w-[140px] rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none';
-            i.list = "sugerencias-pasajeros"; i.placeholder = "Nombre...";
-            i.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); confirmarPax(id, i); }
-                if (e.key === 'Escape') { i.remove(); }
-            });
-            i.addEventListener('blur', () => { setTimeout(() => { if(i.value.trim()) confirmarPax(id, i); else i.remove(); }, 150); });
-            container.appendChild(i);
-            i.focus();
-        }
-
-        // --- HISTORIAL DE PASAJEROS ---
-        const PAX_KEY = 'taxi_pasajeros_historial';
-
-        function cargarSugerenciasPasajeros() {
-            const nombres = JSON.parse(localStorage.getItem(PAX_KEY) || '[]');
-            const dl = document.getElementById('sugerencias-pasajeros');
-            dl.innerHTML = nombres.map(n => `<option value="${n}">`).join('');
-        }
-
-        function guardarNombreEnHistorial(nombre) {
-            const nombres = JSON.parse(localStorage.getItem(PAX_KEY) || '[]');
-            if (!nombres.includes(nombre)) {
-                nombres.unshift(nombre); // más recientes primero
-                if (nombres.length > 200) nombres.pop(); // límite razonable
-                localStorage.setItem(PAX_KEY, JSON.stringify(nombres));
-                cargarSugerenciasPasajeros();
-            }
-        }
-
-        function confirmarPax(id, inputEl) {
-            const nombre = inputEl.value.trim();
-            inputEl.remove();
-            if (!nombre) return;
-            guardarNombreEnHistorial(nombre); // ← guarda para sugerencias futuras
-            const container = document.getElementById(`pax_${id}`);
-            const tag = document.createElement('span');
-            tag.className = 'pax-tag inline-flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-800 text-sm font-medium px-3 py-1.5 rounded-lg';
-            tag.innerHTML = `<input type="hidden" class="t-pasajeros" value="${nombre.replace(/"/g,'&quot;')}">${nombre} <button type="button" onclick="this.closest('.pax-tag').remove(); guardarProgreso();" class="text-blue-400 hover:text-red-500 ml-1 leading-none font-bold text-base transition-colors">&times;</button>`;
-            container.appendChild(tag);
-            guardarProgreso();
-        }
-
-        function addFecha(tipo, id) {
-            const container = document.getElementById(`fechas_${tipo}_${id}`);
-            const existing = container.querySelector('.fecha-input-temp');
-            if (existing) { existing.focus(); return; }
-            const i = document.createElement('input');
-            i.type = 'date';
-            i.className = 'fecha-input-temp rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none';
-            i.addEventListener('change', () => { if(i.value) confirmarFecha(tipo, id, i); });
-            i.addEventListener('keydown', (e) => { if (e.key === 'Escape') i.remove(); });
-            i.addEventListener('blur', () => { setTimeout(() => { if(!i.value) i.remove(); }, 200); });
-            container.appendChild(i);
-            i.focus();
-        }
-
-        function confirmarFecha(tipo, id, inputEl) {
-            const val = inputEl.value;
-            inputEl.remove();
-            if (!val) return;
-            const container = document.getElementById(`fechas_${tipo}_${id}`);
-            const [y, m, d] = val.split('-');
-            const label = `${d}/${m}/${y}`;
-            const tag = document.createElement('span');
-            tag.className = 'fecha-tag inline-flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg';
-            tag.innerHTML = `<input type="hidden" class="t-fechas-${tipo}" value="${val}">${label} <button type="button" onclick="this.closest('.fecha-tag').remove(); guardarProgreso();" class="text-slate-400 hover:text-red-500 ml-1 leading-none font-bold text-base transition-colors">&times;</button>`;
-            container.appendChild(tag);
-            guardarProgreso();
+            const i = document.createElement('input'); 
+            i.className = 'w-full rounded-lg border-slate-200 bg-white px-4 py-2 mt-2 focus:ring-primary focus:border-primary shadow-sm text-sm t-pasajeros'; 
+            i.list = "sugerencias-pasajeros"; i.placeholder = "Nombre del pasajero";
+            document.getElementById(`pax_${id}`).appendChild(i); 
         }
 
         function agregarTicket() {
@@ -363,35 +283,26 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div class="space-y-2">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-3">
                                 <div class="flex items-center justify-between">
                                     <label class="text-sm font-bold text-slate-600 uppercase tracking-tight">Pasajeros</label>
                                     <button type="button" onclick="addP(${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
-                                        <span class="material-symbols-outlined text-sm">person_add</span> Añadir
+                                        <span class="material-symbols-outlined text-sm">add</span> Añadir
                                     </button>
                                 </div>
-                                <div id="pax_${id}" class="flex flex-wrap gap-2 items-center min-h-[50px] p-2 rounded-lg border border-slate-200 bg-slate-50">
+                                <div id="pax_${id}">
+                                    <input type="text" list="sugerencias-pasajeros" class="t-pasajeros w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary text-sm font-medium" placeholder="Nombre completo">
                                 </div>
                             </div>
-                            <div class="space-y-2">
-                                <div class="flex items-center justify-between">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="flex flex-col gap-2">
                                     <label class="text-sm font-bold text-slate-600 uppercase tracking-tight">F. Solicitud</label>
-                                    <button type="button" onclick="addFecha('solicitud', ${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
-                                        <span class="material-symbols-outlined text-sm">add</span> Añadir
-                                    </button>
+                                    <input type="date" required class="t-fechas-solicitud rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary text-sm font-medium">
                                 </div>
-                                <div id="fechas_solicitud_${id}" class="flex flex-wrap gap-2 items-center min-h-[50px] p-2 rounded-lg border border-slate-200 bg-slate-50">
-                                </div>
-                            </div>
-                            <div class="space-y-2">
-                                <div class="flex items-center justify-between">
+                                <div class="flex flex-col gap-2">
                                     <label class="text-sm font-bold text-slate-600 uppercase tracking-tight">F. Servicio</label>
-                                    <button type="button" onclick="addFecha('servicio', ${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
-                                        <span class="material-symbols-outlined text-sm">add</span> Añadir
-                                    </button>
-                                </div>
-                                <div id="fechas_servicio_${id}" class="flex flex-wrap gap-2 items-center min-h-[50px] p-2 rounded-lg border border-slate-200 bg-slate-50">
+                                    <input type="date" required class="t-fechas-servicio rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary text-sm font-medium">
                                 </div>
                             </div>
                         </div>
@@ -444,20 +355,14 @@
                                         </label>
                                         <input type="text" id="dh_${id}" class="t-d-hotel-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 shadow-inner focus:ring-primary" placeholder="Especificar hotel...">
                                     </div>
-                                    <div class="space-y-2">
-                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                            <input type="checkbox" class="t-d-hosp rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dhosp_${id}')">
-                                            <span class="text-sm font-medium text-slate-700">Hospital</span>
-                                        </label>
-                                        <input type="text" id="dhosp_${id}" class="t-d-hosp-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 shadow-inner focus:ring-primary" placeholder="Especificar hospital...">
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                            <input type="checkbox" class="t-d-clin rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dclin_${id}')">
-                                            <span class="text-sm font-medium text-slate-700">Clínica</span>
-                                        </label>
-                                        <input type="text" id="dclin_${id}" class="t-d-clin-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 shadow-inner focus:ring-primary" placeholder="Especificar clínica...">
-                                    </div>
+                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                                        <input type="checkbox" class="t-d-hosp rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary">
+                                        <span class="text-sm font-medium text-slate-700">Hospital</span>
+                                    </label>
+                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                                        <input type="checkbox" class="t-d-clin rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary">
+                                        <span class="text-sm font-medium text-slate-700">Clínica</span>
+                                    </label>
                                     <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
                                         <input type="checkbox" class="t-d-inmi rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary">
                                         <span class="text-sm font-medium text-slate-700">Inmigración</span>
@@ -505,42 +410,35 @@
                 importe: parseFloat(item.querySelector('.t-importe').value),
                 contacto_metodo: item.querySelector('.t-contacto').value,
                 pasajeros: Array.from(item.querySelectorAll('.t-pasajeros')).map(i => i.value).filter(v => v),
-                fechas_solicitud: Array.from(item.querySelectorAll('.t-fechas-solicitud')).map(i => i.value).filter(v => v),
-                fechas_servicio: Array.from(item.querySelectorAll('.t-fechas-servicio')).map(i => i.value).filter(v => v),
+                fechas_solicitud: [item.querySelector('.t-fechas-solicitud').value],
+                fechas_servicio: [item.querySelector('.t-fechas-servicio').value],
+                
                 o_aeropuerto: item.querySelector('.t-o-aero').checked,
                 o_buque: item.querySelector('.t-o-buque').checked,
                 o_hotel: item.querySelector('.t-o-hotel').checked,
                 o_hotel_texto: item.querySelector('.t-o-hotel-texto').value,
                 o_otros: item.querySelector('.t-o-otros').checked,
                 o_otros_texto: item.querySelector('.t-o-otros-texto').value,
+                
                 d_aeropuerto: item.querySelector('.t-d-aero').checked,
                 d_buque: item.querySelector('.t-d-buque').checked,
                 d_hotel: item.querySelector('.t-d-hotel').checked,
                 d_hotel_texto: item.querySelector('.t-d-hotel-texto').value,
                 d_hospital: item.querySelector('.t-d-hosp').checked,
-                d_hospital_texto: item.querySelector('.t-d-hosp-texto') ? item.querySelector('.t-d-hosp-texto').value : '',
                 d_clinica: item.querySelector('.t-d-clin').checked,
-                d_clinica_texto: item.querySelector('.t-d-clin-texto') ? item.querySelector('.t-d-clin-texto').value : '',
                 d_inmigracion: item.querySelector('.t-d-inmi').checked,
                 d_otros: item.querySelector('.t-d-otros').checked,
                 d_otros_texto: item.querySelector('.t-d-otros-texto').value,
+                
                 ida_vuelta: item.querySelector('.t-ida-vuelta').checked,
                 comentarios: item.querySelector('.t-comentarios').value
             }));
 
             const data = { factura_numero: document.getElementById('factura_numero').value, barco: document.getElementById('barco').value, tickets };
-            const editId = document.getElementById('formTaxi').dataset.editId;
-            let endpoint, method;
-            if (editId) {
-                endpoint = modo === 'nube' ? `/actualizar/${editId}` : `/actualizar-generar/${editId}`;
-                method = 'PUT';
-            } else {
-                endpoint = modo === 'nube' ? '/solo-guardar' : '/generar';
-                method = 'POST';
-            }
+            const endpoint = modo === 'nube' ? '/solo-guardar' : '/generar';
 
             try {
-                const res = await fetch(`${URL_BASE}${endpoint}`, { method, headers:{'Content-Type':'application/json','x-password':tokenSeguridad}, body:JSON.stringify(data) });
+                const res = await fetch(`${URL_BASE}${endpoint}`, { method:'POST', headers:{'Content-Type':'application/json','x-password':tokenSeguridad}, body:JSON.stringify(data) });
                 if(res.ok) {
                     if(modo === 'excel') {
                         const blob = await res.blob();
@@ -548,13 +446,8 @@
                         const a = document.createElement('a'); a.href = url; a.download = `${data.barco.replace(/ /g,"_")}.xlsm`;
                         document.body.appendChild(a); a.click(); document.body.removeChild(a);
                         limpiarBorrador(false);
-                    } else {
-                        limpiarBorrador(false);
                     }
-                    alert(editId
-                        ? (modo === 'nube' ? "☁️ Factura actualizada en la nube" : "✅ Factura actualizada y Excel descargado")
-                        : (modo === 'nube' ? "☁️ Guardado en la nube" : "✅ Excel descargado")
-                    );
+                    alert(modo === 'nube' ? "☁️ Guardado en la nube" : "✅ Excel descargado");
                 } else alert("Error validando datos en el servidor");
             } catch(e) { alert("Error de servidor"); }
         }
@@ -578,9 +471,6 @@
                             <td class="px-6 py-4 text-sm font-bold text-slate-900">${f.importe_total.toFixed(2)}€</td>
                             <td class="px-6 py-4 text-right">
                                 <div class="flex items-center justify-end gap-3">
-                                    <button onclick="editarFactura(${f.id})" class="inline-flex items-center gap-1.5 text-amber-600 hover:text-amber-800 font-extrabold text-[11px] uppercase tracking-widest transition-colors">
-                                        <span class="material-symbols-outlined text-lg">edit</span> EDITAR
-                                    </button>
                                     <button onclick="redescargar(${f.id})" class="inline-flex items-center gap-1.5 text-primary hover:text-blue-800 font-extrabold text-[11px] uppercase tracking-widest transition-colors">
                                         <span class="material-symbols-outlined text-lg">download</span> RE-DESCARGAR
                                     </button>
@@ -594,92 +484,7 @@
             } catch(e) { tb.innerHTML = `<tr><td colspan="5" class="text-center text-red-500">Error</td></tr>`; }
         }
 
-        async function editarFactura(id) {
-            try {
-                const res = await fetch(`${URL_BASE}/factura/${id}`, { headers: {'x-password': tokenSeguridad} });
-                if (!res.ok) { alert("No se pudo cargar la factura"); return; }
-                const datos = await res.json();
-
-                localStorage.removeItem('taxi_t1');
-                document.getElementById('contenedor-tickets').innerHTML = '';
-                ticketCount = 0;
-
-                document.getElementById('factura_numero').value = datos.factura_numero || '';
-                document.getElementById('barco').value = datos.barco || '';
-                document.getElementById('formTaxi').dataset.editId = id;
-                document.getElementById('edit-banner').classList.remove('hidden');
-                document.getElementById('edit-banner-texto').textContent = `Editando: ${datos.barco} — ${datos.factura_numero || datos.numero_factura}`;
-
-                for (const t of (datos.tickets || [])) {
-                    agregarTicket();
-                    const card = document.querySelectorAll('.ticket-card')[ticketCount - 1];
-                    card.querySelector('.t-numero-ticket').value = t.numero_ticket || '';
-                    card.querySelector('.t-importe').value = t.importe || 0;
-                    card.querySelector('.t-contacto').value = t.contacto_metodo || 'whatsapp';
-
-                    (t.pasajeros || []).forEach(nombre => {
-                        guardarNombreEnHistorial(nombre); // nutre sugerencias al editar
-                        const container = card.querySelector('[id^="pax_"]');
-                        const tag = document.createElement('span');
-                        tag.className = 'pax-tag inline-flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-800 text-sm font-medium px-3 py-1.5 rounded-lg';
-                        tag.innerHTML = `<input type="hidden" class="t-pasajeros" value="${nombre.replace(/"/g,'&quot;')}">${nombre} <button type="button" onclick="this.closest('.pax-tag').remove();" class="text-blue-400 hover:text-red-500 ml-1 leading-none font-bold text-base">&times;</button>`;
-                        container.appendChild(tag);
-                    });
-
-                    (t.fechas_solicitud || []).forEach(val => {
-                        const container = card.querySelector('[id^="fechas_solicitud_"]');
-                        const [y, m, d] = val.split('-');
-                        const tag = document.createElement('span');
-                        tag.className = 'fecha-tag inline-flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg';
-                        tag.innerHTML = `<input type="hidden" class="t-fechas-solicitud" value="${val}">${d}/${m}/${y} <button type="button" onclick="this.closest('.fecha-tag').remove();" class="text-slate-400 hover:text-red-500 ml-1 leading-none font-bold text-base">&times;</button>`;
-                        container.appendChild(tag);
-                    });
-
-                    (t.fechas_servicio || []).forEach(val => {
-                        const container = card.querySelector('[id^="fechas_servicio_"]');
-                        const [y, m, d] = val.split('-');
-                        const tag = document.createElement('span');
-                        tag.className = 'fecha-tag inline-flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg';
-                        tag.innerHTML = `<input type="hidden" class="t-fechas-servicio" value="${val}">${d}/${m}/${y} <button type="button" onclick="this.closest('.fecha-tag').remove();" class="text-slate-400 hover:text-red-500 ml-1 leading-none font-bold text-base">&times;</button>`;
-                        container.appendChild(tag);
-                    });
-
-                    const campos = {
-                        '.t-o-aero': t.o_aeropuerto, '.t-o-buque': t.o_buque,
-                        '.t-o-hotel': t.o_hotel, '.t-o-otros': t.o_otros,
-                        '.t-d-aero': t.d_aeropuerto, '.t-d-buque': t.d_buque,
-                        '.t-d-hotel': t.d_hotel, '.t-d-hosp': t.d_hospital,
-                        '.t-d-clin': t.d_clinica, '.t-d-inmi': t.d_inmigracion,
-                        '.t-d-otros': t.d_otros, '.t-ida-vuelta': t.ida_vuelta
-                    };
-                    for (const [sel, val] of Object.entries(campos)) {
-                        const el = card.querySelector(sel);
-                        if (el && val) { el.checked = true; if (el.onchange) el.onchange.call(el); }
-                    }
-
-                    const textos = {
-                        '.t-o-hotel-texto': t.o_hotel_texto, '.t-o-otros-texto': t.o_otros_texto,
-                        '.t-d-hotel-texto': t.d_hotel_texto, '.t-d-hosp-texto': t.d_hospital_texto,
-                        '.t-d-clin-texto': t.d_clinica_texto, '.t-d-otros-texto': t.d_otros_texto
-                    };
-                    for (const [sel, val] of Object.entries(textos)) {
-                        const el = card.querySelector(sel);
-                        if (el && val) el.value = val;
-                    }
-
-                    if (t.comentarios) card.querySelector('.t-comentarios').value = t.comentarios;
-                }
-
-                verSec('sec-nueva', document.getElementById('btn-nueva'));
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            } catch(e) { alert("Error al cargar la factura para editar"); }
-        }
-
-        function cancelarEdicion() {
-            document.getElementById('formTaxi').removeAttribute('data-edit-id');
-            document.getElementById('edit-banner').classList.add('hidden');
-            limpiarBorrador(false);
-        }
+        async function redescargar(id) {
             try {
                 const res = await fetch(`${URL_BASE}/re-descargar/${id}`, { headers: {'x-password':tokenSeguridad} });
                 if(res.ok) {
