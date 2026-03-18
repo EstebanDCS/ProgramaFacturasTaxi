@@ -17,7 +17,7 @@
                     colors: {
                         "primary": "#0d6dfd",
                         "background-light": "#f5f7fb",
-                        "sidebar-dark": "#1a2e4a", /* El azul navy del diseño */
+                        "sidebar-dark": "#1a2e4a", /* Azul navy */
                     },
                     fontFamily: { "display": ["Inter", "sans-serif"] },
                 },
@@ -50,7 +50,13 @@
         }
 
         /* Radar de pruebas */
-        body.modo-pruebas aside { background-color: #2b0b0b !important; border-right: 3px solid #ef4444; }
+        /* modo-pruebas: solo indicador sutil, sin cambiar color de barra */
+        body.modo-pruebas aside::after {
+            content: 'DEV';
+            position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+            font-size: 9px; font-weight: 800; letter-spacing: 0.15em;
+            color: #f87171; opacity: 0.5;
+        }
     </style>
 </head>
 <body class="bg-background-light text-slate-900 font-display min-h-screen flex flex-col">
@@ -232,7 +238,6 @@
         
         function addP(id) { 
             const container = document.getElementById(`pax_${id}`);
-            // Crear un input temporal para añadir el pasajero
             const existing = container.querySelector('.pax-input-temp');
             if (existing) { existing.focus(); return; }
             const i = document.createElement('input');
