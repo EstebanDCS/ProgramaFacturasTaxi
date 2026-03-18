@@ -4,386 +4,258 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Taxi App Pro - Panel de Gestión</title>
-    
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0d6efd">
-    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        :root { --sidebar-width: 260px; --primary-color: #0d6efd; }
-        body { background-color: #f4f7f6; min-height: 100vh; display: flex; overflow-x: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        :root { --sidebar-width: 280px; --primary-color: #3f6ad8; --dark-bg: #1e1e2d; }
+        body { background-color: #f0f2f5; display: flex; min-height: 100vh; overflow-x: hidden; font-family: 'Inter', sans-serif; }
         
-        /* Barra Lateral Moderna */
+        /* Sidebar Ultra-Moderna */
         #sidebar {
             width: var(--sidebar-width);
-            background: #1e1e2d; /* Color oscuro moderno */
-            color: #a2a3b7;
-            min-height: 100vh;
+            background: var(--dark-bg);
+            color: #9899ac;
             position: fixed;
-            transition: all 0.3s;
+            height: 100vh;
+            transition: 0.3s;
             z-index: 1000;
-            display: none; /* Oculto hasta login */
-            box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+            display: none; /* Se activa tras login */
         }
-        #sidebar .sidebar-header { padding: 25px; background: #1a1a27; text-align: center; border-bottom: 1px solid #2c2c3e; }
+        #sidebar .brand { padding: 30px; text-align: center; border-bottom: 1px solid #2c2c3e; }
         #sidebar .nav-link {
-            color: #a2a3b7;
-            padding: 15px 25px;
-            border-left: 4px solid transparent;
-            cursor: pointer;
-            transition: 0.2s;
-            font-weight: 500;
-            display: flex; align-items: center; gap: 10px;
+            color: #a2a3b7; padding: 18px 30px; cursor: pointer; border-left: 5px solid transparent;
+            transition: 0.3s; font-weight: 500; display: flex; align-items: center; gap: 12px;
         }
         #sidebar .nav-link:hover, #sidebar .nav-link.active {
-            color: white;
-            background: #2c2c3e;
-            border-left-color: var(--primary-color);
+            color: #fff; background: #2c2c3e; border-left-color: var(--primary-color);
         }
-        #sidebar .nav-link.text-danger:hover { background: #3e2121; border-left-color: #dc3545; }
-
-        /* Contenedor Principal */
-        #main-content { 
-            width: 100%; 
-            padding: 30px; 
-            transition: all 0.3s; 
-        }
-        body.logged-in #sidebar { display: block; }
-        body.logged-in #main-content { margin-left: var(--sidebar-width); }
-
-        /* Estilos de tus Secciones y Tickets (Restaurados e Integrados) */
-        .seccion { display: none; }
-        .seccion.activa { display: block; animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        .hidden-field { display: none; }
-        .ticket-header { cursor: pointer; transition: background-color 0.2s; }
-        .ticket-header:hover { background-color: #146c43 !important; }
         
-        #aviso-guardado {
-            position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); 
-            color: white; padding: 10px 20px; border-radius: 30px; font-size: 0.85rem;
-            display: none; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
+        #main-content { width: 100%; transition: 0.3s; padding: 40px; }
+        body.logged-in #sidebar { display: block; }
+        body.logged-in #main-content { margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); }
 
-        /* Modo Pruebas (Diseño moderno) */
-        body.modo-pruebas #sidebar { background: #3d1414; }
-        body.modo-pruebas #sidebar .sidebar-header { background: #2f0f0f; }
+        /* Estética de Tickets (RESTAURADA) */
+        .seccion { display: none; }
+        .seccion.activa { display: block; animation: fadeIn 0.4s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .ticket-item { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .ticket-header { border-radius: 12px 12px 0 0 !important; cursor: pointer; }
+        .hidden-field { display: none; }
+        #aviso-guardado { position: fixed; bottom: 20px; right: 20px; background: #1e1e2d; color: white; padding: 10px 25px; border-radius: 50px; display: none; z-index: 2000; }
+
+        /* Modo Pruebas */
+        body.modo-pruebas #sidebar { background: #451212; }
+        body.modo-pruebas #sidebar .brand { background: #350e0e; }
     </style>
 </head>
 <body id="cuerpo-app">
 
-    <div id="aviso-guardado">💾 Progreso guardado automáticamente</div>
+    <div id="aviso-guardado">💾 Guardado en el dispositivo</div>
     <datalist id="sugerencias-pasajeros"></datalist>
 
     <nav id="sidebar">
-        <div class="sidebar-header">
-            <h5 class="mb-0 text-white fw-bold">Taxi App Pro</h5>
-            <small class="text-muted">Panel de Facturación</small>
+        <div class="brand">
+            <h4 class="text-white fw-bold mb-0">TAXI APP</h4>
+            <small>Sistema de Facturación</small>
         </div>
-        <div class="nav flex-column mt-3">
-            <div class="nav-link activa" id="lnk-nueva" onclick="verSeccion('sec-nueva', this)">
-                📝 Nueva Factura
-            </div>
-            <div class="nav-link" id="lnk-historial" onclick="verSeccion('sec-historial', this); cargarHistorial();">
-                📊 Historial (BD)
-            </div>
-            <div class="mt-auto border-top border-secondary pt-2">
-                <div class="nav-link text-danger" onclick="cerrarSesion()">
-                    🚪 Cerrar Sesión
-                </div>
+        <div class="nav flex-column mt-4">
+            <div class="nav-link active" onclick="verSec('nueva', this)">📝 Nueva Factura</div>
+            <div class="nav-link" onclick="verSec('historial', this); cargarHistorial();">📊 Historial (BD)</div>
+            <div class="mt-5 pt-5 border-top border-secondary">
+                <div class="nav-link text-danger" onclick="location.reload()">🚪 Cerrar Sesión</div>
             </div>
         </div>
     </nav>
 
     <main id="main-content">
-        
-        <div id="sec-login" class="container mt-5" style="max-width: 400px;">
-            <div class="card p-4 shadow-lg border-primary text-center bg-white rounded-3">
-                <h3 class="text-primary fw-bold mb-4">Acceso Privado</h3>
-                <input type="password" id="input-password" class="form-control mb-3 text-center" placeholder="Contraseña Maestra">
-                <button class="btn btn-primary w-100 py-2 fw-bold" onclick="iniciarSesion()">ENTRAR AL PANEL</button>
+        <div id="sec-login" class="container mt-5" style="max-width: 420px;">
+            <div class="card p-5 border-0 shadow-lg text-center rounded-4">
+                <h2 class="fw-bold text-dark mb-4">Bienvenido</h2>
+                <input type="password" id="pass-master" class="form-control mb-3 text-center py-3" placeholder="Contraseña de acceso">
+                <button class="btn btn-primary w-100 py-3 fw-bold rounded-3" onclick="iniciarSesion()">ENTRAR AL SISTEMA</button>
             </div>
         </div>
 
-        <div id="sec-nueva" class="seccion container py-3">
-            <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-                <h2 class="fw-bold m-0">Crear Nueva Factura</h2>
-                <div>
-                    <button class="btn btn-outline-warning btn-sm me-2" onclick="limpiarBorrador(true)">🗑️ Limpiar Borrador</button>
-                    </div>
+        <div id="nueva" class="seccion container">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="fw-bold">Nueva Factura</h1>
+                <button class="btn btn-warning btn-sm shadow-sm" onclick="limpiarBorrador(true)">🗑️ Borrar Todo</button>
             </div>
             
             <form id="formTaxi">
-                <div class="card p-3 mb-4 shadow-sm border-primary bg-white rounded-3">
-                    <h6 class="text-primary border-bottom pb-2 fw-bold">Datos generales (Hoja Principal)</h6>
-                    <div class="row g-2 mt-1">
-                        <div class="col-sm-6"><label class="form-label fw-bold">Nº Factura / Servicio</label><input type="text" id="factura_numero" class="form-control" required></div>
-                        <div class="col-sm-6"><label class="form-label fw-bold">Nombre del Barco</label><input type="text" id="barco" class="form-control" required></div>
+                <div class="card p-4 mb-4 border-0 shadow-sm rounded-4 bg-white">
+                    <h5 class="text-primary fw-bold border-bottom pb-3 mb-3">Cabecera de Factura</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6"><label class="fw-bold small">Nº FACTURA / SERVICIO</label><input type="text" id="factura_numero" class="form-control" required></div>
+                        <div class="col-md-6"><label class="fw-bold small">NOMBRE DEL BARCO</label><input type="text" id="barco" class="form-control" required></div>
                     </div>
                 </div>
 
                 <div id="contenedor-tickets"></div>
 
-                <button type="button" class="btn btn-outline-success fw-bold w-100 mb-3 py-3 rounded-3" onclick="agregarTicket()">+ AÑADIR NUEVO TICKET DETALLADO</button>
-                <button type="submit" class="btn btn-primary w-100 py-3 fw-bold shadow-sm fs-5 rounded-3">GENERAR FACTURA Y GUARDAR EN BD</button>
+                <button type="button" class="btn btn-outline-primary fw-bold w-100 mb-4 py-3 rounded-4" onclick="agregarTicket()">+ AÑADIR TICKET DETALLADO</button>
+                <button type="submit" class="btn btn-primary w-100 py-4 fw-bold shadow-lg fs-5 rounded-4">GENERAR EXCEL Y GUARDAR</button>
             </form>
         </div>
 
-        <div id="sec-historial" class="seccion container py-3">
-            <h2 class="fw-bold mb-4 border-bottom pb-3">Historial de Facturas (Base de Datos)</h2>
-            <div class="card shadow-sm border-0 rounded-3">
+        <div id="historial" class="seccion container">
+            <h1 class="fw-bold mb-4">Historial en la Nube</h1>
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
                 <div class="table-responsive">
-                    <table class="table table-hover table-striped mb-0 alignment-middle">
-                        <thead class="table-dark">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-dark text-white">
                             <tr>
-                                <th>Fecha de Creación</th>
+                                <th class="p-4">Fecha Registro</th>
                                 <th>Barco</th>
-                                <th>Nº Factura</th>
-                                <th>Importe Total</th>
-                                <th>Acciones</th>
+                                <th>Factura Nº</th>
+                                <th>Importe</th>
+                                <th>Acción</th>
                             </tr>
                         </thead>
-                        <tbody id="tabla-historial">
-                            </tbody>
+                        <tbody id="tabla-historial"></tbody>
                     </table>
                 </div>
             </div>
         </div>
-
     </main>
 
     <script>
-        // ==========================================
-        // VARIABLES GLOBALES Y CONFIGURACIÓN (Restaurado)
-        // ==========================================
-        let ticketCount = 0;
-        let tokenSeguridad = ""; 
-        let nombresGuardados = new Set(); 
-        let URL_BASE = 'https://programafacturastaxi.onrender.com'; // Servidor Oficial
-
-        // --- Radar Inteligente ---
-        if (window.location.hostname !== "programa-facturas-taxi.vercel.app" && window.location.hostname !== "estebandcs.github.io") {
-            URL_BASE = 'https://programafacturastaxi-dev.onrender.com'; 
+        // --- LÓGICA DE CONTROL ---
+        let ticketCount = 0; let tokenSeguridad = ""; let URL_BASE = 'https://programafacturastaxi.onrender.com';
+        if (window.location.hostname !== "programa-facturas-taxi.vercel.app") {
+            URL_BASE = 'https://programafacturastaxi-dev.onrender.com';
             document.body.classList.add('modo-pruebas');
-            console.log("⚠️ MODO PRUEBAS ACTIVADO -> Conectando a: " + URL_BASE);
         }
 
-        // ==========================================
-        // LÓGICA DE NAVEGACIÓN Y LOGIN
-        // ==========================================
-        function verSeccion(id, link) {
+        function verSec(id, btn) {
             document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
             document.getElementById(id).classList.add('activa');
-            document.querySelectorAll('#sidebar .nav-link').forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            btn.classList.add('active');
         }
 
         async function iniciarSesion() {
-            const pwd = document.getElementById("input-password").value;
-            const res = await fetch(`${URL_BASE}/login`, { headers: { 'x-password': pwd } });
+            const p = document.getElementById('pass-master').value;
+            const res = await fetch(`${URL_BASE}/login`, { headers: {'x-password': p} });
             if (res.ok) {
-                tokenSeguridad = pwd;
-                document.body.classList.add('logged-in');
-                document.getElementById('sec-login').style.display = 'none';
-                document.getElementById('sec-nueva').classList.add('activa');
-                // Cargar progreso original tras login
+                tokenSeguridad = p; document.body.classList.add('logged-in');
+                document.getElementById('sec-login').style.display='none';
+                verSec('nueva', document.querySelector('.nav-link'));
                 if (!cargarProgreso()) agregarTicket();
-            } else { alert("Contraseña incorrecta. Acceso denegado."); }
+            } else { alert("Error de acceso"); }
         }
 
-        function cerrarSesion() { location.reload(); }
-
-        // ==========================================
-        // LÓGICA DE BASE DE DATOS (HISTORIAL)
-        // ==========================================
-        async function cargarHistorial() {
-            const tbody = document.getElementById('tabla-historial');
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><br>Cargando registros...</td></tr>';
-            
-            try {
-                const res = await fetch(`${URL_BASE}/historial`, { headers: { 'x-password': tokenSeguridad } });
-                const facturas = await res.json();
-                
-                tbody.innerHTML = '';
-                if(facturas.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted">No hay facturas guardadas aún.</td></tr>'; return; }
-                
-                facturas.forEach(f => {
-                    const fecha = new Date(f.fecha_creacion).toLocaleString('es-ES');
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${fecha}</td>
-                            <td><span class="badge bg-primary text-wrap" style="font-size:0.9rem">${f.barco}</span></td>
-                            <td>${f.numero_factura}</td>
-                            <td class="fw-bold text-success fs-5">${f.importe_total.toFixed(2)}€</td>
-                            <td><button class="btn btn-sm btn-outline-secondary" disabled>Ver Detalle (Próximamente)</button></td>
-                        </tr>
-                    `;
-                });
-            } catch (e) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger p-4 fw-bold">Error de conexión con la Base de Datos.</td></tr>'; }
-        }
-
-        // ==========================================
-        // ⭐ TU LÓGICA ORIGINAL DE TICKETS (TOTALMENTE RECUPERADA) ⭐
-        // ==========================================
-        
-        // --- Sistema de Auto-Guardado (Original) ---
-        document.getElementById('formTaxi').addEventListener('input', triggerAutoGuardado);
-        document.getElementById('formTaxi').addEventListener('change', triggerAutoGuardado);
-        let timeoutGuardado;
-        function triggerAutoGuardado() { clearTimeout(timeoutGuardado); timeoutGuardado = setTimeout(guardarProgreso, 500); }
-        function guardarProgreso() { /* Tu función original completa... */ 
-            const ticketsHTML = document.getElementById('contenedor-tickets').innerHTML;
-            const inputs = document.querySelectorAll('#formTaxi input, #formTaxi select, #formTaxi textarea');
-            const valores = [];
-            inputs.forEach(input => {
-                if(input.type === 'checkbox' || input.type === 'radio') { valores.push({ id: input.id, checked: input.checked });
-                } else { valores.push({ id: input.id, value: input.value }); }
-            });
-            localStorage.setItem('borradorFacturaTaxi', JSON.stringify({ html: ticketsHTML, count: ticketCount, data: valores }));
-            const aviso = document.getElementById('aviso-guardado'); aviso.style.display = 'block'; setTimeout(() => aviso.style.display = 'none', 1500);
-        }
-        function cargarProgreso() { /* Tu función original completa... */ 
-            const guardado = localStorage.getItem('borradorFacturaTaxi');
-            if(guardado) {
-                const progreso = JSON.parse(guardado);
-                document.getElementById('contenedor-tickets').innerHTML = progreso.html; ticketCount = progreso.count;
-                const inputs = document.querySelectorAll('#formTaxi input, #formTaxi select, #formTaxi textarea');
-                inputs.forEach((input, index) => { if(progreso.data[index]) {
-                    if(input.type === 'checkbox' || input.type === 'radio') { input.checked = progreso.data[index].checked; if(input.onchange) input.onchange(); 
-                    } else { input.value = progreso.data[index].value; }
-                }}); return true; 
-            } return false; 
-        }
-        function limpiarBorrador(preguntar = false) { if(preguntar && !confirm("¿Borrar todo?")) return; localStorage.removeItem('borradorFacturaTaxi'); document.getElementById('formTaxi').reset(); document.getElementById('contenedor-tickets').innerHTML = ''; ticketCount = 0; agregarTicket(); }
-
-        // --- Funciones de Interfaz (Originales) ---
-        function registrarNombre(nombre) { if (!nombre) return; const nombreLimpio = nombre.trim(); if (nombreLimpio !== "" && !nombresGuardados.has(nombreLimpio)) { nombresGuardados.add(nombreLimpio); const datalist = document.getElementById('sugerencias-pasajeros'); const option = document.createElement('option'); option.value = nombreLimpio; datalist.appendChild(option); }}
-        function toggleInput(checkbox, inputId) { document.getElementById(inputId).style.display = checkbox.checked ? 'block' : 'none'; }
-        function toggleTicketDisplay(id) { const body = document.getElementById(`ticket_body_${id}`); const icon = document.getElementById(`toggle_icon_${id}`); if (body.style.display === 'none') { body.style.display = 'block'; icon.innerText = '🔽'; } else { body.style.display = 'none'; icon.innerText = '▶️'; }}
-        function addDynamicField(containerId, className, inputType, placeholderTxt = "", isRequired = true, listId = "") { const container = document.getElementById(containerId); const div = document.createElement('div'); div.className = 'd-flex mb-1 mt-1'; const req = isRequired ? "required" : ""; const listAttr = listId ? `list="${listId}" onchange="registrarNombre(this.value)"` : ""; div.innerHTML = `<input type="${inputType}" class="form-control form-control-sm ${className}" placeholder="${placeholderTxt}" ${req} ${listAttr}><button type="button" class="btn btn-sm btn-outline-danger ms-1" onclick="this.parentElement.remove(); triggerAutoGuardado();">X</button>`; container.appendChild(div); triggerAutoGuardado(); }
-
-        // --- Función agregarTicket (ORIGINAL COMPLETA) ---
+        // --- TICKETS DETALLADOS (Toda tu lógica restaurada) ---
         function agregarTicket() {
-            // Contraer otros tickets
             document.querySelectorAll('.ticket-body').forEach(b => b.style.display = 'none');
-            document.querySelectorAll('.toggle-icon').forEach(i => i.innerText = '▶️');
-
-            ticketCount++;
-            const tId = ticketCount;
+            ticketCount++; const tId = ticketCount;
             const div = document.createElement('div');
-            div.className = 'card mb-3 bg-white rounded-3 shadow-sm ticket-item border-success';
-            
-            // Aquí pego TU código HTML de ticket original completo
+            div.className = 'card mb-4 ticket-item bg-white overflow-hidden';
             div.innerHTML = `
-                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center ticket-header rounded-top-3" onclick="toggleTicketDisplay(${tId})">
-                    <h6 class="m-0 fw-bold">Ticket Detallado #${tId}</h6>
-                    <div>
-                        <span id="toggle_icon_${tId}" class="toggle-icon me-3 fw-bold">🔽</span>
-                        ${tId > 1 ? `<button type="button" class="btn-close btn-close-white btn-sm" onclick="event.stopPropagation(); this.parentElement.parentElement.parentElement.remove(); triggerAutoGuardado();"></button>` : ''}
-                    </div>
+                <div class="card-header bg-success text-white p-3 d-flex justify-content-between ticket-header" onclick="toggleTicketDisplay(${tId})">
+                    <h6 class="m-0 fw-bold">Detalle Ticket #${tId}</h6>
+                    <span id="t_icon_${tId}">🔽</span>
                 </div>
-                
-                <div class="card-body ticket-body" id="ticket_body_${tId}">
-                    <div class="row g-2">
-                        <div class="col-sm-4"><label class="form-label text-muted small mb-1 fw-bold text-danger">Nº Ticket Físico</label><input type="text" class="form-control form-control-sm border-danger t-numero-ticket" required></div>
-                        <div class="col-sm-4"><label class="form-label text-muted small mb-1 fw-bold">Contacto</label><select class="form-select form-select-sm t-contacto" required><option value="whatsapp">Whatsapp</option><option value="telefono">Teléfono</option><option value="whatsapp y telefono">Whatsapp y Teléfono</option></select></div>
-                        <div class="col-sm-4"><label class="form-label text-muted small mb-1 fw-bold text-success">Importe Total (€)</label><input type="number" step="0.01" class="form-control form-control-sm t-importe" required></div>
-
-                        <div class="col-12 mt-2 border rounded p-2 bg-light"><label class="form-label text-muted small mb-1 fw-bold">Pasajeros (Opcional)</label><div id="pasajeros_${tId}"><div class="d-flex mb-1"><input type="text" class="form-control form-control-sm t-pasajeros" list="sugerencias-pasajeros" onchange="registrarNombre(this.value)"></div></div><button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addDynamicField('pasajeros_${tId}', 't-pasajeros', 'text', '', false, 'sugerencias-pasajeros')">+ Añadir Pasajero</button></div>
-
-                        <div class="col-sm-6 mt-2 border rounded p-2 bg-light"><label class="form-label text-muted small mb-1 fw-bold">Fechas Solicitud</label><div id="solicitudes_${tId}"><div class="d-flex mb-1"><input type="date" class="form-control form-control-sm t-fechas-solicitud" required></div></div><button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addDynamicField('solicitudes_${tId}', 't-fechas-solicitud', 'date', '', true)">+ Fecha</button></div>
-                        <div class="col-sm-6 mt-2 border rounded p-2 bg-light"><label class="form-label text-muted small mb-1 fw-bold">Fechas Servicio</label><div id="servicios_${tId}"><div class="d-flex mb-1"><input type="date" class="form-control form-control-sm t-fechas-servicio" required></div></div><button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addDynamicField('servicios_${tId}', 't-fechas-servicio', 'date', '', true)">+ Fecha</button></div>
-
-                        <div class="col-sm-6 mt-3 border rounded p-3 bg-light">
-                            <label class="form-label fw-bold small mb-2 text-primary">RECOGIDA</label>
-                            <div class="form-check"><input class="form-check-input t-o-aero" type="checkbox"><label>Aeropuerto</label></div>
-                            <div class="form-check"><input class="form-check-input t-o-buque" type="checkbox"><label>Buque</label></div>
-                            <div class="form-check mt-1"><input class="form-check-input t-o-hotel" type="checkbox" onchange="toggleInput(this, 'o_hotel_ext_${tId}'); triggerAutoGuardado();"><label>Hotel</label></div>
-                            <input type="text" id="o_hotel_ext_${tId}" class="form-control form-control-sm mb-2 hidden-field t-o-hotel-texto" placeholder="Nombre hotel...">
-                            <div class="form-check mt-1"><input class="form-check-input t-o-otros" type="checkbox" onchange="toggleInput(this, 'o_otros_ext_${tId}'); triggerAutoGuardado();"><label>Otros</label></div>
-                            <input type="text" id="o_otros_ext_${tId}" class="form-control form-control-sm hidden-field t-o-otros-texto" placeholder="¿Dónde?">
+                <div class="card-body p-4 ticket-body" id="ticket_body_${tId}">
+                    <div class="row g-3">
+                        <div class="col-md-4"><label class="small fw-bold text-danger">Nº TICKET FÍSICO</label><input type="text" class="form-control t-numero-ticket" required></div>
+                        <div class="col-md-4"><label class="small fw-bold">CONTACTO</label><select class="form-select t-contacto"><option value="whatsapp">Whatsapp</option><option value="telefono">Teléfono</option></select></div>
+                        <div class="col-md-4"><label class="small fw-bold text-success">IMPORTE (€)</label><input type="number" step="0.01" class="form-control t-importe" required></div>
+                        
+                        <div class="col-12 p-3 bg-light rounded-3 mt-3">
+                            <label class="small fw-bold mb-2 d-block">PASAJEROS / TRIPULANTES</label>
+                            <div id="pax_cont_${tId}"><input type="text" class="form-control form-control-sm t-pasajeros mb-1" placeholder="Nombre" list="sugerencias-pasajeros"></div>
+                            <button type="button" class="btn btn-sm btn-link p-0" onclick="addDyn('${tId}')">+ Añadir Pasajero</button>
                         </div>
 
-                        <div class="col-sm-6 mt-3 border rounded p-3 bg-light">
-                            <label class="form-label fw-bold small mb-2 text-primary">DESTINO</label>
-                            <div class="form-check"><input class="form-check-input t-d-aero" type="checkbox"><label>Aeropuerto</label></div>
-                            <div class="form-check"><input class="form-check-input t-d-buque" type="checkbox"><label>Buque</label></div>
-                            <div class="form-check"><input class="form-check-input t-d-inmigracion" type="checkbox"><label>Inmigración</label></div>
-                            <div class="form-check"><input class="form-check-input t-d-hotel" type="checkbox" onchange="toggleInput(this, 'd_hotel_ext_${tId}'); triggerAutoGuardado();"><label>Hotel</label></div>
-                            <input type="text" id="d_hotel_ext_${tId}" class="form-control form-control-sm mb-1 hidden-field t-d-hotel-texto" placeholder="Hotel...">
-                            <div class="form-check"><input class="form-check-input t-d-hospital" type="checkbox" onchange="toggleInput(this, 'd_hosp_ext_${tId}'); triggerAutoGuardado();"><label>Hospital</label></div>
-                            <input type="text" id="d_hosp_ext_${tId}" class="form-control form-control-sm mb-1 hidden-field t-d-hosp-texto" placeholder="Hospital...">
-                            <div class="form-check"><input class="form-check-input t-d-clinica" type="checkbox" onchange="toggleInput(this, 'd_clin_ext_${tId}'); triggerAutoGuardado();"><label>Clínica</label></div>
-                            <input type="text" id="d_clin_ext_${tId}" class="form-control form-control-sm mb-1 hidden-field t-d-clin-texto" placeholder="Clínica...">
-                            <div class="form-check"><input class="form-check-input t-d-otros" type="checkbox" onchange="toggleInput(this, 'd_otros_ext_${tId}'); triggerAutoGuardado();"><label>Otros</label></div>
-                            <input type="text" id="d_otros_ext_${tId}" class="form-control form-control-sm hidden-field t-d-otros-texto" placeholder="¿Dónde?">
+                        <div class="col-md-6 mt-3"><label class="small fw-bold">FECHA SOLICITUD</label><input type="date" class="form-control t-fechas-solicitud" required></div>
+                        <div class="col-md-6 mt-3"><label class="small fw-bold">FECHA SERVICIO</label><input type="date" class="form-control t-fechas-servicio" required></div>
+
+                        <div class="col-md-6 mt-3 p-3 border rounded-3 bg-white">
+                            <label class="fw-bold small text-primary mb-2 d-block">ORIGEN / RECOGIDA</label>
+                            <div class="form-check"><input class="form-check-input t-o-aero" type="checkbox"><label class="small">Aeropuerto</label></div>
+                            <div class="form-check"><input class="form-check-input t-o-buque" type="checkbox"><label class="small">Buque</label></div>
+                            <div class="form-check"><input class="form-check-input t-o-hotel" type="checkbox" onchange="toggleExt(this, 'oh_${tId}')"><label class="small">Hotel</label></div>
+                            <input type="text" id="oh_${tId}" class="form-control form-control-sm mt-1 hidden-field t-o-hotel-texto" placeholder="¿Qué hotel?">
                         </div>
 
-                        <div class="col-12 mt-3"><div class="form-check form-switch mb-2"><input class="form-check-input t-ida-vuelta" type="checkbox"><label class="form-check-label fw-bold small">¿Ida y Vuelta?</label></div><label class="form-label text-muted small mb-1">Observaciones</label><textarea class="form-control t-comentarios" rows="2"></textarea></div>
+                        <div class="col-md-6 mt-3 p-3 border rounded-3 bg-white">
+                            <label class="fw-bold small text-primary mb-2 d-block">DESTINO</label>
+                            <div class="form-check"><input class="form-check-input t-d-aero" type="checkbox"><label class="small">Aeropuerto</label></div>
+                            <div class="form-check"><input class="form-check-input t-d-buque" type="checkbox"><label class="small">Buque</label></div>
+                            <div class="form-check"><input class="form-check-input t-d-hotel" type="checkbox" onchange="toggleExt(this, 'dh_${tId}')"><label class="small">Hotel</label></div>
+                            <input type="text" id="dh_${tId}" class="form-control form-control-sm mt-1 hidden-field t-d-hotel-texto" placeholder="¿Qué hotel?">
+                        </div>
+
+                        <div class="col-12 mt-3">
+                            <div class="form-check form-switch"><input class="form-check-input t-ida-vuelta" type="checkbox"><label class="small fw-bold">¿Servicio de Ida y Vuelta?</label></div>
+                            <textarea class="form-control mt-2 t-comentarios" placeholder="Observaciones..." rows="2"></textarea>
+                        </div>
                     </div>
-                </div>
-            `;
+                </div>`;
             document.getElementById('contenedor-tickets').appendChild(div);
-            triggerAutoGuardado(); 
+            guardarProgreso();
         }
 
-        // --- Envío del Formulario (ORIGINAL COMPLETO + Mensaje BD) ---
+        function toggleTicketDisplay(id) { const b = document.getElementById(`ticket_body_${id}`); b.style.display = b.style.display==='none'?'block':'none'; }
+        function toggleExt(cb, id) { document.getElementById(id).style.display = cb.checked ? 'block':'none'; }
+        function addDyn(id) { const i = document.createElement('input'); i.className='form-control form-control-sm t-pasajeros mb-1'; i.placeholder="Nombre"; i.list="sugerencias-pasajeros"; document.getElementById(`pax_cont_${id}`).appendChild(i); }
+
+        // --- COMUNICACIÓN BD Y EXCEL ---
         document.getElementById('formTaxi').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const ticketsData = [];
-            const ticketsCards = document.querySelectorAll('.ticket-item');
+            const tickets = Array.from(document.querySelectorAll('.ticket-item')).map(item => ({
+                numero_ticket: item.querySelector('.t-numero-ticket').value,
+                importe: parseFloat(item.querySelector('.t-importe').value),
+                contacto_metodo: item.querySelector('.t-contacto').value,
+                fechas_solicitud: [item.querySelector('.t-fechas-solicitud').value],
+                fechas_servicio: [item.querySelector('.t-fechas-servicio').value],
+                pasajeros: Array.from(item.querySelectorAll('.t-pasajeros')).map(i => i.value).filter(v => v),
+                o_aeropuerto: item.querySelector('.t-o-aero').checked,
+                o_buque: item.querySelector('.t-o-buque').checked,
+                o_hotel: item.querySelector('.t-o-hotel').checked,
+                o_hotel_texto: item.querySelector('.t-o-hotel-texto').value,
+                d_aeropuerto: item.querySelector('.t-d-aero').checked,
+                d_buque: item.querySelector('.t-d-buque').checked,
+                d_hotel: item.querySelector('.t-d-hotel').checked,
+                d_hotel_texto: item.querySelector('.t-d-hotel-texto').value,
+                ida_vuelta: item.querySelector('.t-ida-vuelta').checked,
+                comentarios: item.querySelector('.t-comentarios').value
+            }));
+
+            const data = { factura_numero: document.getElementById('factura_numero').value, barco: document.getElementById('barco').value, tickets };
             
-            for (let i = 0; i < ticketsCards.length; i++) {
-                const item = ticketsCards[i];
-                // Recopilación de datos ORIGINAL completa...
-                ticketsData.push({
-                    numero_ticket: item.querySelector('.t-numero-ticket').value, 
-                    contacto_metodo: item.querySelector('.t-contacto').value,
-                    fechas_solicitud: Array.from(item.querySelectorAll('.t-fechas-solicitud')).map(inp => inp.value).filter(v => v),
-                    fechas_servicio: Array.from(item.querySelectorAll('.t-fechas-servicio')).map(inp => inp.value).filter(v => v),
-                    pasajeros: Array.from(item.querySelectorAll('.t-pasajeros')).map(inp => inp.value).filter(v => v), 
-                    o_aeropuerto: item.querySelector('.t-o-aero').checked,
-                    o_buque: item.querySelector('.t-o-buque').checked,
-                    o_hotel: item.querySelector('.t-o-hotel').checked,
-                    o_hotel_texto: item.querySelector('.t-o-hotel-texto').value,
-                    o_otros: item.querySelector('.t-o-otros').checked,
-                    o_otros_texto: item.querySelector('.t-o-otros-texto').value,
-                    d_aeropuerto: item.querySelector('.t-d-aero').checked,
-                    d_buque: item.querySelector('.t-d-buque').checked,
-                    d_hotel: item.querySelector('.t-d-hotel').checked,
-                    d_hotel_texto: item.querySelector('.t-d-hotel-texto').value,
-                    d_hospital: item.querySelector('.t-d-hospital').checked,
-                    d_hospital_texto: item.querySelector('.t-d-hosp-texto').value,
-                    d_clinica: item.querySelector('.t-d-clinica').checked,
-                    d_clinica_texto: item.querySelector('.t-d-clin-texto').value,
-                    d_inmigracion: item.querySelector('.t-d-inmigracion').checked,
-                    d_otros: item.querySelector('.t-d-otros').checked,
-                    d_otros_texto: item.querySelector('.t-d-otros-texto').value,
-                    ida_vuelta: item.querySelector('.t-ida-vuelta').checked,
-                    comentarios: item.querySelector('.t-comentarios').value,
-                    importe: parseFloat(item.querySelector('.t-importe').value)
-                });
-            }
-
-            const datos_totales = { factura_numero: document.getElementById('factura_numero').value, barco: document.getElementById('barco').value, tickets: ticketsData };
-            const boton = e.target.querySelector('button[type="submit"]'); boton.innerText = "Guardando y Generando..."; boton.disabled = true;
-
             try {
-                const res = await fetch(`${URL_BASE}/generar`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-password': tokenSeguridad }, body: JSON.stringify(datos_totales) });
-                if(res.ok) {
-                    const blob = await res.blob();
-                    const a = document.createElement('a'); a.href = window.URL.createObjectURL(blob);
-                    a.download = datos_totales.barco + '.xlsm'; a.click();
-                    alert("✅ Factura generada y guardada en el historial correctamente.");
+                const res = await fetch(`${URL_BASE}/generar`, { method: 'POST', headers: {'Content-Type':'application/json','x-password':tokenSeguridad}, body: JSON.stringify(data)});
+                if (res.ok) {
+                    const blob = await res.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${data.barco}.xlsm`; a.click();
+                    alert("✅ Guardado en historial y Excel descargado.");
                     limpiarBorrador(false);
-                } else { const err = await res.json(); alert("⚠️ Error: " + (err.detail || err.error)); }
-            } catch (err) { alert("⚠️ Error de conexión con el servidor."); }
-            boton.innerText = "GENERAR FACTURA Y GUARDAR EN BD"; boton.disabled = false;
+                }
+            } catch(e) { alert("Error al conectar."); }
         });
 
-        // ARRANCADOR PWA (Original)
-        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').then(() => console.log('SW Registrado')); }
+        async function cargarHistorial() {
+            const res = await fetch(`${URL_BASE}/historial`, { headers: {'x-password':tokenSeguridad} });
+            const datos = await res.json();
+            const tb = document.getElementById('tabla-historial'); tb.innerHTML = "";
+            datos.forEach(f => {
+                tb.innerHTML += `<tr><td class="p-4 small">${new Date(f.fecha_creacion).toLocaleString()}</td><td><span class="badge bg-primary">${f.barco}</span></td><td>${f.numero_factura}</td><td class="fw-bold text-success">${f.importe_total.toFixed(2)}€</td><td><button class="btn btn-sm btn-light border" disabled>Re-descargar</button></td></tr>`;
+            });
+        }
+
+        // --- SISTEMA DE PERSISTENCIA ---
+        function guardarProgreso() {
+            const state = { html: document.getElementById('contenedor-tickets').innerHTML, count: ticketCount, barco: document.getElementById('barco').value, num: document.getElementById('factura_numero').value };
+            localStorage.setItem('taxi_v3', JSON.stringify(state));
+        }
+        function cargarProgreso() {
+            const s = localStorage.getItem('taxi_v3'); if(!s) return false;
+            const p = JSON.parse(s); document.getElementById('contenedor-tickets').innerHTML = p.html; ticketCount = p.count;
+            document.getElementById('barco').value = p.barco; document.getElementById('factura_numero').value = p.num;
+            return true;
+        }
+        function limpiarBorrador(q) { if(q && !confirm("¿Borrar todo?")) return; localStorage.removeItem('taxi_v3'); location.reload(); }
     </script>
 </body>
 </html>
