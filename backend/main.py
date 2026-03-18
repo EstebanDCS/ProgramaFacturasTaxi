@@ -75,7 +75,18 @@ class DatosFactura(BaseModel):
     barco: str
     tickets: List[DatosTicket]
 
-# --- FUNCIÓN MAESTRA EXCEL ---
+def compact_json(data: dict) -> str:
+    """Elimina campos vacíos/falsos antes de serializar para ahorrar espacio."""
+    def strip(obj):
+        if isinstance(obj, dict):
+            return {k: strip(v) for k, v in obj.items()
+                    if v not in (False, "", [], None)}
+        if isinstance(obj, list):
+            return [strip(i) for i in obj]
+        return obj
+    return json.dumps(strip(data), separators=(',', ':'))
+
+
 def crear_excel_con_nombre(datos_dict):
     base_path = os.path.dirname(__file__)
     template_path = os.path.join(base_path, "plantilla.xlsm")
@@ -123,7 +134,7 @@ async def solo_guardar(datos: DatosFactura, x_password: str = Header(None)):
         numero_factura=datos.factura_numero,
         barco=datos.barco.upper(),
         importe_total=sum(t.importe for t in datos.tickets),
-        datos_json=json.dumps(datos.dict())
+        datos_json=compact_json(datos.dict())
     )
     db.add(nueva); db.commit(); db.close()
     return {"msg": "✅ Datos guardados en la nube"}
@@ -136,7 +147,7 @@ async def generar(datos: DatosFactura, x_password: str = Header(None)):
         numero_factura=datos.factura_numero,
         barco=datos.barco.upper(),
         importe_total=sum(t.importe for t in datos.tickets),
-        datos_json=json.dumps(datos.dict())
+        datos_json=compact_json(datos.dict())
     )
     db.add(nueva); db.commit(); db.close()
     
