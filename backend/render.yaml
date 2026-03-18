@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: programafacturastaxi
+    env: docker
+    envVars:
+      - key: TAXI_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        sync: false
