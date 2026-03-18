@@ -17,7 +17,7 @@
                     colors: {
                         "primary": "#0d6dfd",
                         "background-light": "#f5f7fb",
-                        "sidebar-dark": "#181824", /* El azul pizarra/navy exacto del diseño */
+                        "sidebar-dark": "#1a2e4a", /* El azul navy del diseño */
                     },
                     fontFamily: { "display": ["Inter", "sans-serif"] },
                 },
@@ -85,7 +85,7 @@
                     </div>
                     <div>
                         <h1 class="text-white text-lg font-bold leading-none tracking-tight">Taxi App Pro</h1>
-                        <p class="text-slate-500 text-xs mt-1 uppercase tracking-wider font-semibold">Admin Dashboard</p>
+                        <p class="text-blue-300/50 text-xs mt-1 uppercase tracking-wider font-semibold">Admin Dashboard</p>
                     </div>
                 </div>
                 <nav class="flex flex-col gap-2">
@@ -93,14 +93,14 @@
                         <span class="material-symbols-outlined fill-1">description</span>
                         <span class="text-sm font-medium">Nueva Factura</span>
                     </a>
-                    <a id="btn-historial" onclick="verSec('sec-historial', this); cargarHistorial();" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-all text-slate-400 hover:text-white cursor-pointer group">
+                    <a id="btn-historial" onclick="verSec('sec-historial', this); cargarHistorial();" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group">
                         <span class="material-symbols-outlined group-hover:fill-1 transition-colors">cloud_done</span>
                         <span class="text-sm font-medium">Historial Cloud</span>
                     </a>
                 </nav>
             </div>
-            <div class="mt-auto p-6 border-t border-slate-800/50">
-                <a onclick="location.reload()" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-all cursor-pointer">
+            <div class="mt-auto p-6 border-t border-white/10">
+                <a onclick="location.reload()" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-500/20 text-blue-200/60 hover:text-red-300 transition-all cursor-pointer">
                     <span class="material-symbols-outlined">logout</span>
                     <span class="text-sm font-medium">Cerrar Sesión</span>
                 </a>
@@ -203,7 +203,7 @@
             document.getElementById(id).classList.add('activa');
             
             document.querySelectorAll('.nav-btn').forEach(l => {
-                l.className = "nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-all text-slate-400 hover:text-white cursor-pointer group";
+                l.className = "nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group";
                 l.querySelector('span:first-child').classList.remove('fill-1');
             });
             btn.className = "nav-btn flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white shadow-lg shadow-primary/20 transition-all cursor-pointer";
@@ -231,10 +231,32 @@
         }
         
         function addP(id) { 
-            const i = document.createElement('input'); 
-            i.className = 'w-full rounded-lg border-slate-200 bg-white px-4 py-2 mt-2 focus:ring-primary focus:border-primary shadow-sm text-sm t-pasajeros'; 
-            i.list = "sugerencias-pasajeros"; i.placeholder = "Nombre del pasajero";
-            document.getElementById(`pax_${id}`).appendChild(i); 
+            const container = document.getElementById(`pax_${id}`);
+            // Crear un input temporal para añadir el pasajero
+            const existing = container.querySelector('.pax-input-temp');
+            if (existing) { existing.focus(); return; }
+            const i = document.createElement('input');
+            i.className = 'pax-input-temp flex-shrink-0 min-w-[140px] rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none';
+            i.list = "sugerencias-pasajeros"; i.placeholder = "Nombre...";
+            i.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); confirmarPax(id, i); }
+                if (e.key === 'Escape') { i.remove(); }
+            });
+            i.addEventListener('blur', () => { setTimeout(() => { if(i.value.trim()) confirmarPax(id, i); else i.remove(); }, 150); });
+            container.appendChild(i);
+            i.focus();
+        }
+
+        function confirmarPax(id, inputEl) {
+            const nombre = inputEl.value.trim();
+            inputEl.remove();
+            if (!nombre) return;
+            const container = document.getElementById(`pax_${id}`);
+            const tag = document.createElement('span');
+            tag.className = 'pax-tag inline-flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-800 text-sm font-medium px-3 py-1.5 rounded-lg';
+            tag.innerHTML = `<input type="hidden" class="t-pasajeros" value="${nombre.replace(/"/g,'&quot;')}">${nombre} <button type="button" onclick="this.closest('.pax-tag').remove(); guardarProgreso();" class="text-blue-400 hover:text-red-500 ml-1 leading-none font-bold text-base transition-colors">&times;</button>`;
+            container.appendChild(tag);
+            guardarProgreso();
         }
 
         function agregarTicket() {
@@ -288,12 +310,11 @@
                                 <div class="flex items-center justify-between">
                                     <label class="text-sm font-bold text-slate-600 uppercase tracking-tight">Pasajeros</label>
                                     <button type="button" onclick="addP(${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
-                                        <span class="material-symbols-outlined text-sm">add</span> Añadir
+                                        <span class="material-symbols-outlined text-sm">person_add</span> Añadir Pasajero
                                     </button>
                                 </div>
-                                <div id="pax_${id}">
-                                    <input type="text" list="sugerencias-pasajeros" class="t-pasajeros w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary text-sm font-medium" placeholder="Nombre completo">
-                                </div>
+                                <div id="pax_${id}" class="flex flex-wrap gap-2 items-center min-h-[42px] p-2 rounded-lg border border-slate-200 bg-slate-50">
+                                </div>                                </div>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="flex flex-col gap-2">
