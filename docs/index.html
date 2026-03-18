@@ -7,88 +7,101 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root { --sidebar-w: 260px; --dark: #1e1e2d; --primary: #0d6efd; }
-        body { background: #f4f7f6; margin: 0; display: flex; min-height: 100vh; font-family: sans-serif; }
+        body { background: #f4f7f6; margin: 0; display: flex; min-height: 100vh; font-family: 'Segoe UI', sans-serif; }
         
+        /* Sidebar Fija y Moderna */
         #sidebar { 
             width: var(--sidebar-w); background: var(--dark); color: #a2a3b7; 
             height: 100vh; position: fixed; left: 0; top: 0; display: none; flex-direction: column;
-            z-index: 1000; box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+            z-index: 1000; box-shadow: 2px 0 10px rgba(0,0,0,0.3);
         }
-        .sidebar-brand { padding: 25px; text-align: center; border-bottom: 1px solid #2c2c3e; color: white; font-weight: bold; }
+        .sidebar-brand { padding: 25px; text-align: center; border-bottom: 1px solid #2c2c3e; color: white; font-weight: bold; font-size: 1.2rem; }
         .nav-link { 
             color: #a2a3b7; padding: 18px 25px; cursor: pointer; border-left: 4px solid transparent; 
-            transition: 0.3s; text-decoration: none; display: block;
+            transition: 0.3s; text-decoration: none; display: block; font-weight: 500;
         }
         .nav-link:hover, .nav-link.active { color: white; background: #2c2c3e; border-left-color: var(--primary); }
         
+        /* Contenedor Principal (Con margen para no pisarse) */
         #main-content { flex: 1; padding: 40px; width: 100%; transition: 0.3s; }
         body.logged-in #sidebar { display: flex; }
         body.logged-in #main-content { margin-left: var(--sidebar-w); }
 
-        .seccion { display: none; }
+        /* Secciones */
+        .seccion { display: none; max-width: 900px; margin: 0 auto; }
         .seccion.activa { display: block; animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* Tickets Detallados */
         .ticket-card { border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; background: white; overflow: hidden; }
-        .ticket-header { padding: 15px 20px; background: #198754; color: white; cursor: pointer; font-weight: bold; }
+        .ticket-header { padding: 15px 20px; background: #198754; color: white; cursor: pointer; font-weight: bold; display: flex; justify-content: space-between; }
         .hidden-field { display: none; }
-        #aviso-guardado { position: fixed; bottom: 20px; right: 20px; background: #000; color: #fff; padding: 10px 25px; border-radius: 50px; display: none; z-index: 2000; }
         
+        /* Login */
         #sec-login { max-width: 400px; margin: 100px auto; width: 100%; }
         body.modo-pruebas #sidebar { background: #4a1414; }
     </style>
 </head>
 <body id="cuerpo-app">
 
-    <div id="aviso-guardado">💾 Guardado</div>
     <datalist id="sugerencias-pasajeros"></datalist>
 
     <nav id="sidebar">
-        <div class="sidebar-brand text-uppercase ls-1">Taxi App Pro</div>
-        <div class="mt-4">
+        <div class="sidebar-brand text-uppercase">Taxi Panel</div>
+        <div class="mt-4 flex-grow-1">
             <div class="nav-link active" id="btn-nueva" onclick="verSec('sec-nueva', this)">📝 Nueva Factura</div>
             <div class="nav-link" id="btn-historial" onclick="verSec('sec-historial', this); cargarHistorial();">📊 Historial Cloud</div>
-            <div class="nav-link text-danger mt-5 pt-5 border-top border-secondary" onclick="location.reload()">🚪 Salir</div>
+            <div class="nav-link text-danger mt-5 pt-5 border-top border-secondary" onclick="location.reload()">🚪 Cerrar Sesión</div>
         </div>
     </nav>
 
     <main id="main-content">
         <div id="sec-login">
             <div class="card p-5 shadow-lg border-0 rounded-4 text-center">
-                <h3 class="fw-bold mb-4">Acceso</h3>
-                <input type="password" id="pass-maestra" class="form-control mb-3 py-3 text-center" placeholder="Contraseña">
-                <button class="btn btn-primary w-100 py-3 fw-bold" onclick="iniciarSesion()">ENTRAR</button>
+                <h3 class="fw-bold mb-4 text-primary">Acceso</h3>
+                <input type="password" id="pass-maestra" class="form-control mb-3 py-3 text-center" placeholder="Introduce contraseña">
+                <button class="btn btn-primary w-100 py-3 fw-bold shadow-sm" onclick="iniciarSesion()">ENTRAR AL PANEL</button>
             </div>
         </div>
 
         <div id="sec-nueva" class="seccion">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="fw-bold m-0">Generar Factura</h2>
-                <button class="btn btn-sm btn-outline-warning" onclick="limpiarBorrador(true)">🗑️ Limpiar</button>
+                <h2 class="fw-bold m-0 text-dark">Generar Factura</h2>
+                <button class="btn btn-sm btn-outline-warning" onclick="limpiarBorrador(true)">🗑️ Limpiar Borrador</button>
             </div>
             
             <form id="formTaxi">
                 <div class="card p-4 mb-4 border-0 shadow-sm rounded-4 bg-white">
                     <div class="row g-3">
-                        <div class="col-md-6"><label class="small fw-bold">Nº FACTURA</label><input type="text" id="factura_numero" class="form-control" required></div>
-                        <div class="col-md-6"><label class="small fw-bold">BARCO</label><input type="text" id="barco" class="form-control" required></div>
+                        <div class="col-md-6"><label class="small fw-bold text-muted">Nº FACTURA / SERVICIO</label><input type="text" id="factura_numero" class="form-control" required></div>
+                        <div class="col-md-6"><label class="small fw-bold text-muted">NOMBRE DEL BARCO</label><input type="text" id="barco" class="form-control" required></div>
                     </div>
                 </div>
+
                 <div id="contenedor-tickets"></div>
+
                 <button type="button" class="btn btn-outline-primary w-100 py-3 mb-4 fw-bold rounded-3" onclick="agregarTicket()">+ AÑADIR TICKET DETALLADO</button>
-                <button type="submit" class="btn btn-primary w-100 py-4 fw-bold shadow-lg fs-5 rounded-4 text-uppercase">Guardar y Descargar</button>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-info w-100 py-3 fw-bold text-white rounded-4 shadow" onclick="enviarProceso('nube')">☁️ SOLO GUARDAR EN NUBE</button>
+                    </div>
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-success w-100 py-3 fw-bold rounded-4 shadow" onclick="enviarProceso('excel')">📥 DESCARGAR EXCEL</button>
+                    </div>
+                </div>
             </form>
         </div>
 
         <div id="sec-historial" class="seccion">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="fw-bold m-0">Historial en Frankfurt</h2>
-                <button class="btn btn-sm btn-danger" onclick="vaciarHistorial()">🗑️ Vaciar Nube</button>
+                <h2 class="fw-bold m-0">Historial en la Nube</h2>
+                <button class="btn btn-sm btn-danger" onclick="vaciarHistorial()">🗑️ Vaciar Historial</button>
             </div>
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
                 <table class="table table-hover mb-0 align-middle">
                     <thead class="table-dark">
-                        <tr><th class="p-3">Fecha</th><th>Barco</th><th>Nº Factura</th><th>Importe</th><th>Acción</th></tr>
+                        <tr><th>Fecha</th><th>Barco</th><th>Nº Fra.</th><th>Importe</th><th>Acción</th></tr>
                     </thead>
                     <tbody id="tabla-historial"></tbody>
                 </table>
@@ -119,7 +132,7 @@
                 document.getElementById('sec-login').style.display='none';
                 verSec('sec-nueva', document.getElementById('btn-nueva'));
                 if(!cargarProgreso()) agregarTicket();
-            } else { alert("Error"); }
+            } else { alert("Acceso denegado"); }
         }
 
         function agregarTicket() {
@@ -128,10 +141,8 @@
             div.className = 'ticket-card';
             div.innerHTML = `
                 <div class="ticket-header" onclick="toggleT(${id})">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span>TICKET #${id}</span>
-                        <span id="icon_${id}">🔽</span>
-                    </div>
+                    <span>TICKET DETALLADO #${id}</span>
+                    <span id="icon_${id}">🔽</span>
                 </div>
                 <div class="p-4" id="body_${id}">
                     <div class="row g-3">
@@ -139,7 +150,7 @@
                         <div class="col-md-4"><label class="small fw-bold">CONTACTO</label><select class="form-select t-contacto"><option value="whatsapp">Whatsapp</option><option value="telefono">Teléfono</option></select></div>
                         <div class="col-md-4"><label class="small fw-bold text-success">IMPORTE (€)</label><input type="number" step="0.01" class="form-control t-importe" required></div>
                         
-                        <div class="col-12 p-3 bg-light rounded"><label class="small fw-bold mb-2 d-block">PASAJEROS</label><div id="pax_${id}"><input type="text" class="form-control t-pasajeros mb-1" list="sugerencias-pasajeros"></div><button type="button" class="btn btn-sm btn-link p-0" onclick="addP(${id})">+ Añadir</button></div>
+                        <div class="col-12 p-3 bg-light rounded"><label class="small fw-bold mb-2 d-block">PASAJEROS</label><div id="pax_${id}"><input type="text" class="form-control t-pasajeros mb-1" list="sugerencias-pasajeros"></div><button type="button" class="btn btn-sm btn-link p-0" onclick="addP(${id})">+ Añadir pasajero</button></div>
                         
                         <div class="col-md-6"><label class="small fw-bold">FECHA SOLICITUD</label><input type="date" class="form-control t-fechas-solicitud" required></div>
                         <div class="col-md-6"><label class="small fw-bold">FECHA SERVICIO</label><input type="date" class="form-control t-fechas-servicio" required></div>
@@ -149,16 +160,16 @@
                             <div class="form-check"><input type="checkbox" class="form-check-input t-o-aero"><label>Aeropuerto</label></div>
                             <div class="form-check"><input type="checkbox" class="form-check-input t-o-buque"><label>Buque</label></div>
                             <div class="form-check"><input type="checkbox" class="form-check-input t-o-hotel" onchange="toggleI(this, 'oh_${id}')"><label>Hotel</label></div>
-                            <input type="text" id="oh_${id}" class="form-control form-control-sm mt-1 hidden-field t-o-hotel-texto" placeholder="Hotel...">
+                            <input type="text" id="oh_${id}" class="form-control form-control-sm mt-1 hidden-field t-o-hotel-texto" placeholder="¿Cuál?">
                         </div>
                         <div class="col-md-6 p-3 border rounded">
                             <label class="small fw-bold text-primary">DESTINO</label>
                             <div class="form-check"><input type="checkbox" class="form-check-input t-d-aero"><label>Aeropuerto</label></div>
                             <div class="form-check"><input type="checkbox" class="form-check-input t-d-buque"><label>Buque</label></div>
                             <div class="form-check"><input type="checkbox" class="form-check-input t-d-hotel" onchange="toggleI(this, 'dh_${id}')"><label>Hotel</label></div>
-                            <input type="text" id="dh_${id}" class="form-control form-control-sm mt-1 hidden-field t-d-hotel-texto" placeholder="Hotel...">
+                            <input type="text" id="dh_${id}" class="form-control form-control-sm mt-1 hidden-field t-d-hotel-texto" placeholder="¿Cuál?">
                         </div>
-                        <div class="col-12"><div class="form-check form-switch"><input type="checkbox" class="form-check-input t-ida-vuelta"><label class="fw-bold small">¿Ida y Vuelta?</label></div><textarea class="form-control mt-2 t-comentarios" placeholder="Observaciones..."></textarea></div>
+                        <div class="col-12"><textarea class="form-control t-comentarios" placeholder="Observaciones..." rows="2"></textarea></div>
                     </div>
                 </div>`;
             document.getElementById('contenedor-tickets').appendChild(div);
@@ -169,38 +180,63 @@
         function toggleI(cb, id) { document.getElementById(id).style.display = cb.checked?'block':'none'; }
         function addP(id) { const i = document.createElement('input'); i.className='form-control t-pasajeros mb-1'; i.list="sugerencias-pasajeros"; document.getElementById(`pax_${id}`).appendChild(i); }
 
-        document.getElementById('formTaxi').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        async function enviarProceso(modo) {
+            const form = document.getElementById('formTaxi');
+            if(!form.checkValidity()) { form.reportValidity(); return; }
+
             const tickets = Array.from(document.querySelectorAll('.ticket-card')).map(item => ({
                 numero_ticket: item.querySelector('.t-numero-ticket').value,
                 importe: parseFloat(item.querySelector('.t-importe').value),
                 pasajeros: Array.from(item.querySelectorAll('.t-pasajeros')).map(i => i.value).filter(v => v)
-                // Se pueden añadir el resto de campos siguiendo este patrón
             }));
+
             const data = { factura_numero: document.getElementById('factura_numero').value, barco: document.getElementById('barco').value, tickets };
-            const res = await fetch(`${URL_BASE}/generar`, { method:'POST', headers:{'Content-Type':'application/json','x-password':tokenSeguridad}, body:JSON.stringify(data)});
-            if(res.ok) {
-                const b = await res.blob(); const url = window.URL.createObjectURL(b); const a = document.createElement('a');
-                a.href = url; a.download = `${data.barco}.xlsm`; a.click(); alert("Guardado y descargado");
-            }
-        });
+            const endpoint = modo === 'nube' ? '/solo-guardar' : '/generar';
+
+            try {
+                const res = await fetch(`${URL_BASE}${endpoint}`, { 
+                    method:'POST', 
+                    headers:{'Content-Type':'application/json','x-password':tokenSeguridad}, 
+                    body:JSON.stringify(data)
+                });
+                
+                if(res.ok) {
+                    if(modo === 'excel') {
+                        const blob = await res.blob();
+                        triggerDownload(blob, `${data.barco.replace(/ /g,"_")}.xlsm`);
+                        limpiarBorrador(false);
+                    }
+                    alert(modo === 'nube' ? "☁️ Guardado en la nube" : "✅ Excel descargado");
+                }
+            } catch(e) { alert("Error de conexión"); }
+        }
 
         async function cargarHistorial() {
             const res = await fetch(`${URL_BASE}/historial`, { headers: {'x-password':tokenSeguridad} });
             const datos = await res.json();
             const tb = document.getElementById('tabla-historial'); tb.innerHTML = "";
             datos.forEach(f => {
-                tb.innerHTML += `<tr><td class="p-3 small text-muted">${new Date(f.fecha_creacion).toLocaleString()}</td><td><span class="badge bg-primary">${f.barco}</span></td><td>${f.numero_factura}</td><td class="fw-bold text-success">${f.importe_total.toFixed(2)}€</td><td><button class="btn btn-sm btn-info text-white fw-bold" onclick="redescargar(${f.id})">🔄 RE-DESCARGAR</button></td></tr>`;
+                tb.innerHTML += `<tr><td class="small">${new Date(f.fecha_creacion).toLocaleDateString()}</td><td><span class="badge bg-primary">${f.barco}</span></td><td>${f.numero_factura}</td><td class="fw-bold">${f.importe_total.toFixed(2)}€</td><td><button class="btn btn-sm btn-info text-white fw-bold" onclick="redescargar(${f.id})">🔄 RE-DESCARGAR</button></td></tr>`;
             });
         }
 
         async function redescargar(id) {
             const res = await fetch(`${URL_BASE}/re-descargar/${id}`, { headers: {'x-password':tokenSeguridad} });
             if(res.ok) {
-                const b = await res.blob(); const url = window.URL.createObjectURL(b);
-                const a = document.createElement('a'); a.href = url; a.download = `Copia_Factura_${id}.xlsm`;
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            } else { alert("Error al descargar"); }
+                const head = res.headers.get('Content-Disposition');
+                let name = `Factura_${id}.xlsm`;
+                if(head && head.includes('filename=')) name = head.split('filename=')[1].replace(/["']/g, '');
+                const blob = await res.blob();
+                triggerDownload(blob, name);
+            }
+        }
+
+        function triggerDownload(blob, filename) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click();
+            window.URL.revokeObjectURL(url); a.remove();
         }
 
         async function vaciarHistorial() {
