@@ -17,7 +17,7 @@
                     colors: {
                         "primary": "#0d6dfd",
                         "background-light": "#f5f7fb",
-                        "sidebar-dark": "#1a2e4a", /* Azul navy */
+                        "sidebar-dark": "#1a2e4a", /* El azul pizarra/navy exacto del diseño */
                     },
                     fontFamily: { "display": ["Inter", "sans-serif"] },
                 },
@@ -50,12 +50,7 @@
         }
 
         /* Radar de pruebas */
-        body.modo-pruebas aside::after {
-            content: 'DEV';
-            position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
-            font-size: 9px; font-weight: 800; letter-spacing: 0.15em;
-            color: #f87171; opacity: 0.5;
-        }
+        body.modo-pruebas aside::after { content: 'DEV'; position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 800; color: #f87171; opacity: 0.5; }
     </style>
 </head>
 <body class="bg-background-light text-slate-900 font-display min-h-screen flex flex-col">
@@ -378,14 +373,20 @@
                                         </label>
                                         <input type="text" id="dh_${id}" class="t-d-hotel-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 shadow-inner focus:ring-primary" placeholder="Especificar hotel...">
                                     </div>
-                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                        <input type="checkbox" class="t-d-hosp rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary">
-                                        <span class="text-sm font-medium text-slate-700">Hospital</span>
-                                    </label>
-                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                        <input type="checkbox" class="t-d-clin rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary">
-                                        <span class="text-sm font-medium text-slate-700">Clínica</span>
-                                    </label>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                                            <input type="checkbox" class="t-d-hosp rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dhosp_${id}')">
+                                            <span class="text-sm font-medium text-slate-700">Hospital</span>
+                                        </label>
+                                        <input type="text" id="dhosp_${id}" class="t-d-hosp-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 shadow-inner focus:ring-primary" placeholder="Especificar hospital...">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                                            <input type="checkbox" class="t-d-clin rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dclin_${id}')">
+                                            <span class="text-sm font-medium text-slate-700">Clínica</span>
+                                        </label>
+                                        <input type="text" id="dclin_${id}" class="t-d-clin-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 shadow-inner focus:ring-primary" placeholder="Especificar clínica...">
+                                    </div>
                                     <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
                                         <input type="checkbox" class="t-d-inmi rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary">
                                         <span class="text-sm font-medium text-slate-700">Inmigración</span>
@@ -448,7 +449,9 @@
                 d_hotel: item.querySelector('.t-d-hotel').checked,
                 d_hotel_texto: item.querySelector('.t-d-hotel-texto').value,
                 d_hospital: item.querySelector('.t-d-hosp').checked,
+                d_hospital_texto: item.querySelector('.t-d-hosp-texto').value,
                 d_clinica: item.querySelector('.t-d-clin').checked,
+                d_clinica_texto: item.querySelector('.t-d-clin-texto').value,
                 d_inmigracion: item.querySelector('.t-d-inmi').checked,
                 d_otros: item.querySelector('.t-d-otros').checked,
                 d_otros_texto: item.querySelector('.t-d-otros-texto').value,
