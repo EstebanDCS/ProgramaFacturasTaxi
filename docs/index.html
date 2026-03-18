@@ -22,7 +22,7 @@
         }
     </style>
 </head>
-<body class="bg-light">
+<body class="bg-light" id="cuerpo-app">
 
     <datalist id="sugerencias-pasajeros"></datalist>
 
@@ -74,27 +74,37 @@
         let nombresGuardados = new Set(); 
 
         // ==========================================
-        // 💾 SISTEMA DE AUTO-GUARDADO (NUEVO)
+        // 🔮 MAGIA PARA LOS PREVIEWS DE RENDER (Staging Automático)
         // ==========================================
+        let URL_BASE = 'https://programafacturastaxi.onrender.com';
+        
+        const parametrosURL = new URLSearchParams(window.location.search);
+        const servidorPruebas = parametrosURL.get('preview');
+        
+        if (servidorPruebas) {
+            URL_BASE = `https://${servidorPruebas}.onrender.com`;
+            console.log("⚠️ MODO PRUEBAS ACTIVADO -> Conectando a: " + URL_BASE);
+            document.getElementById('cuerpo-app').style.backgroundColor = "#ffe6e6"; // Fondo rojizo para pruebas
+            document.getElementById('cuerpo-app').classList.remove('bg-light');
+        }
 
-        // Escuchamos cualquier cambio en el formulario para guardar al instante
+        // ==========================================
+        // 💾 SISTEMA DE AUTO-GUARDADO
+        // ==========================================
         document.getElementById('formTaxi').addEventListener('input', triggerAutoGuardado);
         document.getElementById('formTaxi').addEventListener('change', triggerAutoGuardado);
 
         let timeoutGuardado;
         function triggerAutoGuardado() {
             clearTimeout(timeoutGuardado);
-            // Esperamos medio segundo antes de guardar para no saturar al navegador al teclear rápido
             timeoutGuardado = setTimeout(guardarProgreso, 500);
         }
 
         function guardarProgreso() {
-            // Guardamos la estructura HTML cruda de los tickets
             const ticketsHTML = document.getElementById('contenedor-tickets').innerHTML;
-            
-            // Recopilamos todos los valores de los inputs, selects y textareas
             const inputs = document.querySelectorAll('#formTaxi input, #formTaxi select, #formTaxi textarea');
             const valores = [];
+            
             inputs.forEach(input => {
                 if(input.type === 'checkbox' || input.type === 'radio') {
                     valores.push({ id: input.id, classList: Array.from(input.classList), checked: input.checked });
@@ -106,7 +116,6 @@
             const progreso = { html: ticketsHTML, count: ticketCount, data: valores };
             localStorage.setItem('borradorFacturaTaxi', JSON.stringify(progreso));
             
-            // Mostrar mensajito de guardado
             const aviso = document.getElementById('aviso-guardado');
             aviso.style.display = 'block';
             setTimeout(() => aviso.style.display = 'none', 1500);
@@ -117,26 +126,23 @@
             if(guardado) {
                 const progreso = JSON.parse(guardado);
                 
-                // Restauramos el HTML de los tickets
                 document.getElementById('contenedor-tickets').innerHTML = progreso.html;
                 ticketCount = progreso.count;
 
-                // Restauramos los valores uno por uno
                 const inputs = document.querySelectorAll('#formTaxi input, #formTaxi select, #formTaxi textarea');
                 inputs.forEach((input, index) => {
                     if(progreso.data[index]) {
                         if(input.type === 'checkbox' || input.type === 'radio') {
                             input.checked = progreso.data[index].checked;
-                            // Forzar que se muestren las cajitas extra si el checkbox estaba marcado
                             if(input.onchange) input.onchange(); 
                         } else {
                             input.value = progreso.data[index].value;
                         }
                     }
                 });
-                return true; // Devolvemos true si había borrador
+                return true; 
             }
-            return false; // Devolvemos false si estaba vacío
+            return false; 
         }
 
         function limpiarBorrador(preguntar = false) {
@@ -149,9 +155,8 @@
         }
 
         // ==========================================
-        // FUNCIONALIDADES PRINCIPALES (Ya existían)
+        // FUNCIONALIDADES PRINCIPALES
         // ==========================================
-
         function registrarNombre(nombre) {
             if (!nombre) return;
             const nombreLimpio = nombre.trim();
@@ -185,7 +190,8 @@
             msjError.style.display = "none";
 
             try {
-                const res = await fetch('https://programafacturastaxi.onrender.com/login', {
+                // USAMOS LA URL INTELIGENTE
+                const res = await fetch(URL_BASE + '/login', {
                     method: 'POST',
                     headers: { 'x-password': pwd }
                 });
@@ -195,7 +201,6 @@
                     document.getElementById("pantalla-login").style.display = "none";
                     document.getElementById("pantalla-app").style.display = "block";
                     
-                    // Al iniciar sesión, intentamos cargar el progreso. Si no hay, creamos ticket nuevo.
                     const habiaBorrador = cargarProgreso();
                     if(!habiaBorrador && ticketCount === 0) {
                         agregarTicket(); 
@@ -204,7 +209,7 @@
                     msjError.style.display = "block";
                 }
             } catch(e) {
-                alert("Error al conectar. ¿Está Render encendido?");
+                alert("Error al conectar. ¿Está el servidor encendido o escribiste mal el enlace del Preview?");
             }
             btn.innerText = "ENTRAR";
             btn.disabled = false;
@@ -234,7 +239,7 @@
                 <button type="button" class="btn btn-sm btn-outline-danger ms-1" onclick="this.parentElement.remove(); triggerAutoGuardado();">X</button>
             `;
             container.appendChild(div);
-            triggerAutoGuardado(); // Guardamos al añadir el campo
+            triggerAutoGuardado(); 
         }
 
         function toggleTicketDisplay(id) {
@@ -376,7 +381,7 @@
                 </div>
             `;
             document.getElementById('contenedor-tickets').appendChild(div);
-            triggerAutoGuardado(); // Guardar al añadir ticket nuevo
+            triggerAutoGuardado(); 
         }
 
         document.getElementById('formTaxi').addEventListener('submit', async (e) => {
@@ -431,8 +436,8 @@
             boton.disabled = true;
 
             try {
-                const URL_RENDER = 'https://programafacturastaxi.onrender.com/generar'; 
-                const res = await fetch(URL_RENDER, { 
+                // USAMOS LA URL INTELIGENTE
+                const res = await fetch(URL_BASE + '/generar', { 
                     method: 'POST', 
                     headers: { 
                         'Content-Type': 'application/json',
@@ -455,7 +460,6 @@
                     a.download = nombreArchivo; 
                     a.click();
 
-                    // ¡ÉXITO! Se generó el excel. Borramos la memoria local para empezar limpio a la próxima.
                     limpiarBorrador(false);
                 } else {
                     const err = await res.json(); 
@@ -469,6 +473,7 @@
             boton.disabled = false;
         });
 
+        // ARRANCADOR DE LA PWA
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js')
             .then(() => console.log('Service Worker Registrado'));
