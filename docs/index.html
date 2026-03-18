@@ -58,61 +58,37 @@
     <datalist id="sugerencias-pasajeros"></datalist>
 
     <div id="modal-descarga" class="fixed inset-0 z-[9999] hidden flex items-center justify-center">
-        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" id="modal-backdrop"></div>
-        <div class="bg-white rounded-2xl shadow-2xl z-10 p-6 w-full max-w-sm mx-4">
-            
-            <!-- Vista: elegir formato -->
-            <div id="modal-opciones">
-                <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary">download</span> Formato de descarga
-                </h3>
-                <div class="space-y-3">
-                    <button type="button" onclick="ejecutarDescarga('excel')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 transition-colors group text-left">
-                        <span class="material-symbols-outlined text-emerald-600">table_view</span>
-                        <div>
-                            <span class="block font-bold text-slate-700 group-hover:text-emerald-700">Solo Excel</span>
-                            <span class="text-xs text-slate-500">Archivo .xlsm editable</span>
-                        </div>
-                    </button>
-                    <button type="button" onclick="ejecutarDescarga('pdf')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-red-500 hover:bg-red-50 transition-colors group text-left">
-                        <span class="material-symbols-outlined text-red-600">picture_as_pdf</span>
-                        <div>
-                            <span class="block font-bold text-slate-700 group-hover:text-red-700">Solo PDF</span>
-                            <span class="text-xs text-slate-500">Documento listo para enviar/imprimir</span>
-                        </div>
-                    </button>
-                    <button type="button" onclick="ejecutarDescarga('ambos')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-primary hover:bg-blue-50 transition-colors group text-left">
-                        <span class="material-symbols-outlined text-primary">folder_zip</span>
-                        <div>
-                            <span class="block font-bold text-slate-700 group-hover:text-blue-700">Ambos (ZIP)</span>
-                            <span class="text-xs text-slate-500">Carpeta con el Excel y el PDF</span>
-                        </div>
-                    </button>
-                </div>
-                <div class="mt-6 text-right">
-                    <button onclick="cerrarModal()" class="text-sm font-semibold text-slate-500 hover:text-slate-700">Cancelar</button>
-                </div>
-            </div>
-
-            <!-- Vista: generando archivo -->
-            <div id="modal-cargando" class="hidden py-4">
-                <div class="flex flex-col items-center gap-5 text-center">
-                    <div class="relative w-16 h-16">
-                        <svg class="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
-                            <circle cx="32" cy="32" r="28" fill="none" stroke="#e2e8f0" stroke-width="5"/>
-                            <circle id="progreso-circulo" cx="32" cy="32" r="28" fill="none" stroke="#0d6dfd" stroke-width="5"
-                                stroke-linecap="round" stroke-dasharray="175.9" stroke-dashoffset="175.9"
-                                style="transition: stroke-dashoffset 0.4s ease"/>
-                        </svg>
-                        <span id="progreso-pct" class="absolute inset-0 flex items-center justify-center text-sm font-bold text-slate-700">0%</span>
-                    </div>
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="cerrarModal()"></div>
+        <div class="bg-white rounded-2xl shadow-2xl z-10 p-6 w-full max-w-sm mx-4 transform transition-all scale-100">
+            <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">download</span> Formato de descarga
+            </h3>
+            <div class="space-y-3">
+                <button type="button" onclick="ejecutarDescarga('excel')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 transition-colors group text-left">
+                    <span class="material-symbols-outlined text-emerald-600">table_view</span>
                     <div>
-                        <p class="font-bold text-slate-800 text-base" id="cargando-titulo">Generando archivo...</p>
-                        <p class="text-sm text-slate-500 mt-1" id="cargando-subtitulo">Esto puede tardar unos segundos</p>
+                        <span class="block font-bold text-slate-700 group-hover:text-emerald-700">Solo Excel</span>
+                        <span class="text-xs text-slate-500">Archivo .xlsm editable</span>
                     </div>
-                </div>
+                </button>
+                <button type="button" onclick="ejecutarDescarga('pdf')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-red-500 hover:bg-red-50 transition-colors group text-left">
+                    <span class="material-symbols-outlined text-red-600">picture_as_pdf</span>
+                    <div>
+                        <span class="block font-bold text-slate-700 group-hover:text-red-700">Solo PDF</span>
+                        <span class="text-xs text-slate-500">Documento listo para enviar/imprimir</span>
+                    </div>
+                </button>
+                <button type="button" onclick="ejecutarDescarga('ambos')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-primary hover:bg-blue-50 transition-colors group text-left">
+                    <span class="material-symbols-outlined text-primary">folder_zip</span>
+                    <div>
+                        <span class="block font-bold text-slate-700 group-hover:text-blue-700">Ambos (ZIP)</span>
+                        <span class="text-xs text-slate-500">Carpeta con el Excel y el PDF</span>
+                    </div>
+                </button>
             </div>
-
+            <div class="mt-6 text-right">
+                <button onclick="cerrarModal()" class="text-sm font-semibold text-slate-500 hover:text-slate-700">Cancelar</button>
+            </div>
         </div>
     </div>
 
@@ -258,11 +234,14 @@
     <script>
         let ticketCount = 0; 
         let tokenSeguridad = "";
-        let URL_BASE = 'https://programafacturas-dev.onrender.com';
-        
-        if (window.location.hostname !== "programa-facturas-taxi.vercel.app") {
-            document.body.classList.add('modo-pruebas');
-        }
+        const PROD_HOSTNAME = "programa-facturas-taxi.vercel.app";
+        const esProd = window.location.hostname === PROD_HOSTNAME;
+
+        let URL_BASE = esProd
+            ? 'https://programafacturas.onrender.com'
+            : 'https://programafacturas-dev.onrender.com';
+
+        if (!esProd) document.body.classList.add('modo-pruebas');
 
         function verSec(id, btn) {
             document.querySelectorAll('.app-section').forEach(s => s.classList.remove('activa'));
@@ -417,7 +396,6 @@
                                 <select class="t-contacto rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary font-medium">
                                     <option value="whatsapp">WhatsApp</option>
                                     <option value="telefono">Teléfono</option>
-                                    <option value="whatsapp_telefono">WhatsApp y Teléfono</option>
                                 </select>
                             </div>
                             <div class="flex flex-col gap-2">
@@ -559,73 +537,21 @@
 
         // --- LÓGICA DEL MODAL ---
         let idDescargaPendiente = null;
-        let progresoInterval = null;
-
         function abrirModalDescarga(id = null) {
             if (id === null) {
                 const form = document.getElementById('formTaxi');
                 if(!form.checkValidity()) { form.reportValidity(); return; }
             }
             idDescargaPendiente = id;
-            // Mostrar vista de opciones
-            document.getElementById('modal-opciones').classList.remove('hidden');
-            document.getElementById('modal-cargando').classList.add('hidden');
-            document.getElementById('modal-backdrop').onclick = cerrarModal;
             document.getElementById('modal-descarga').classList.remove('hidden');
             document.getElementById('app-layout').classList.add('blur-sm');
         }
-
         function cerrarModal() {
             document.getElementById('modal-descarga').classList.add('hidden');
             document.getElementById('app-layout').classList.remove('blur-sm');
-            if (progresoInterval) { clearInterval(progresoInterval); progresoInterval = null; }
         }
-
-        function mostrarCargando(formato) {
-            // Ocultar opciones, mostrar spinner
-            document.getElementById('modal-opciones').classList.add('hidden');
-            document.getElementById('modal-cargando').classList.remove('hidden');
-            document.getElementById('modal-backdrop').onclick = null; // no cerrar mientras carga
-            
-            const titulos = { excel: 'Generando Excel...', pdf: 'Generando PDF...', ambos: 'Generando Excel y PDF...' };
-            document.getElementById('cargando-titulo').textContent = titulos[formato] || 'Generando archivo...';
-            document.getElementById('cargando-subtitulo').textContent = 'Esto puede tardar unos segundos';
-            
-            // Animar círculo de progreso simulado (0→85% rápido, luego espera)
-            let pct = 0;
-            const circulo = document.getElementById('progreso-circulo');
-            const pctEl = document.getElementById('progreso-pct');
-            const circunferencia = 175.9;
-            if (progresoInterval) clearInterval(progresoInterval);
-            progresoInterval = setInterval(() => {
-                if (pct < 85) pct += pct < 40 ? 3 : 1;
-                circulo.style.strokeDashoffset = circunferencia * (1 - pct / 100);
-                pctEl.textContent = Math.round(pct) + '%';
-            }, 200);
-        }
-
-        function completarProgreso(exito, mensaje = '') {
-            if (progresoInterval) { clearInterval(progresoInterval); progresoInterval = null; }
-            const circulo = document.getElementById('progreso-circulo');
-            const pctEl = document.getElementById('progreso-pct');
-            if (exito) {
-                circulo.style.stroke = '#10b981'; // verde
-                circulo.style.strokeDashoffset = '0';
-                pctEl.textContent = '✓';
-                document.getElementById('cargando-titulo').textContent = '¡Listo!';
-                document.getElementById('cargando-subtitulo').textContent = mensaje || 'Descarga iniciada';
-                setTimeout(cerrarModal, 1200);
-            } else {
-                circulo.style.stroke = '#ef4444'; // rojo
-                pctEl.textContent = '✗';
-                document.getElementById('cargando-titulo').textContent = 'Error';
-                document.getElementById('cargando-subtitulo').textContent = mensaje || 'Ha ocurrido un error';
-                setTimeout(cerrarModal, 2000);
-            }
-        }
-
         function ejecutarDescarga(formato) {
-            mostrarCargando(formato);
+            cerrarModal();
             if (idDescargaPendiente) {
                 redescargar(idDescargaPendiente, formato);
             } else {
@@ -693,21 +619,14 @@
                         const a = document.createElement('a'); a.href = url; a.download = filename;
                         document.body.appendChild(a); a.click(); document.body.removeChild(a);
                         window.URL.revokeObjectURL(url);
-                        completarProgreso(true, 'Descarga iniciada');
-                    } else {
-                        // Guardar en nube: colapsar tickets y avisar con toast
-                        document.querySelectorAll('.ticket-card details').forEach(d => d.open = false);
-                        guardarProgreso();
-                        const av = document.getElementById('aviso-guardado');
-                        av.querySelector('span + span') ? null : null;
-                        av.innerHTML = '<span class="material-symbols-outlined text-sm">cloud_done</span> ' + 
-                            (editId ? 'Factura actualizada' : 'Guardado en la nube');
-                        av.style.display = 'flex'; setTimeout(() => { av.style.display = 'none'; av.innerHTML = '<span class="material-symbols-outlined text-sm">save</span> Guardado'; }, 2500);
                     }
-                } else {
-                    completarProgreso(false, 'Error en el servidor');
-                }
-            } catch(e) { completarProgreso(false, 'Error de conexión'); }
+                    limpiarBorrador(false);
+                    alert(editId
+                        ? (modo === 'nube' ? "☁️ Factura actualizada en la nube" : "✅ Archivo descargado")
+                        : (modo === 'nube' ? "☁️ Guardado en la nube" : "✅ Archivo descargado")
+                    );
+                } else alert("Error validando datos en el servidor. Puede deberse a un problema generando el archivo.");
+            } catch(e) { alert("Error de conexión con el servidor"); }
         }
 
         async function cargarHistorial() {
@@ -835,11 +754,10 @@
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a'); a.href = url; a.download = filename;
                     document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); a.remove();
-                    completarProgreso(true, 'Descarga iniciada');
                 } else {
-                    completarProgreso(false, 'Error al re-descargar');
+                     alert("Error validando datos en el servidor al intentar re-descargar.");
                 }
-            } catch(e) { completarProgreso(false, 'Error de conexión'); }
+            } catch(e) { alert("Fallo al descargar"); }
         }
 
         async function eliminarF(id) {
