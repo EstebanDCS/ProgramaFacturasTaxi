@@ -11,7 +11,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# --- CONFIGURACIÓN BASE DE DATOS ---
+# --- CONFIGURACIÓN DE BASE DE DATOS ---
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
@@ -32,7 +32,14 @@ class FacturaDB(Base):
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"], expose_headers=["Content-Disposition"])
+# expose_headers es vital para que el navegador vea el nombre del archivo al descargar
+app.add_middleware(
+    CORSMiddleware, 
+    allow_origins=["*"], 
+    allow_methods=["*"], 
+    allow_headers=["*"], 
+    expose_headers=["Content-Disposition"]
+)
 
 PASSWORD_SECRETA = os.environ.get("TAXI_PASSWORD")
 
@@ -48,10 +55,19 @@ class DatosTicket(BaseModel):
     o_buque: bool = False
     o_hotel: bool = False
     o_hotel_texto: str = ""
+    o_otros: bool = False
+    o_otros_texto: str = ""
     d_aeropuerto: bool = False
     d_buque: bool = False
     d_hotel: bool = False
     d_hotel_texto: str = ""
+    d_hospital: bool = False
+    d_hospital_texto: str = ""
+    d_clinica: bool = False
+    d_clinica_texto: str = ""
+    d_inmigracion: bool = False
+    d_otros: bool = False
+    d_otros_texto: str = ""
     ida_vuelta: bool = False
     comentarios: str = ""
 
@@ -60,12 +76,12 @@ class DatosFactura(BaseModel):
     barco: str
     tickets: List[DatosTicket]
 
-# --- UTILIDAD EXCEL ---
-def generar_archivo_excel(datos_dict):
+# --- LÓGICA DE EXCEL ---
+def logic_crear_excel(datos_dict):
     base_path = os.path.dirname(__file__)
     template_path = os.path.join(base_path, "plantilla.xlsm")
-    nombre_archivo = f"Factura_{datos_dict['barco']}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsm"
-    path_salida = os.path.join("/tmp", nombre_archivo)
+    nombre = f"Factura_{datos_dict['barco']}_{datetime.now().strftime('%H%M%S')}.xlsm"
+    output = os.path.join("/tmp", nombre)
     
     wb = openpyxl.load_workbook(template_path, keep_vba=True)
     ws = wb.active
@@ -79,32 +95,36 @@ def generar_archivo_excel(datos_dict):
         ws.cell(row=fila, column=3, value=t['importe'])
         fila += 1
     
-    wb.save(path_salida)
-    return path_salida, nombre_archivo
+    wb.save(output)
+    return output, nombre
 
-# --- RUTAS API ---
+# --- RUTAS ---
 @app.get("/login")
 async def login(x_password: str = Header(None)):
     if x_password == PASSWORD_SECRETA: return {"status": "ok"}
     raise HTTPException(status_code=401)
 
 @app.get("/historial")
-async def obtener_historial(x_password: str = Header(None)):
+async def historial(x_password: str = Header(None)):
     if x_password != PASSWORD_SECRETA: raise HTTPException(status_code=401)
     db = SessionLocal()
-    res = db.query(FacturaDB).order_by(FacturaDB.fecha_creacion.desc()).all()
+    rows = db.query(FacturaDB).order_by(FacturaDB.fecha_creacion.desc()).all()
     db.close()
-    return res
+    return rows
 
 @app.post("/generar")
 async def generar(datos: DatosFactura, x_password: str = Header(None)):
     if x_password != PASSWORD_SECRETA: raise HTTPException(status_code=401)
     db = SessionLocal()
-    total = sum(t.importe for t in datos.tickets)
-    nueva = FacturaDB(numero_factura=datos.factura_numero, barco=datos.barco.upper(), importe_total=total, datos_json=json.dumps(datos.dict()))
+    nueva = FacturaDB(
+        numero_factura=datos.factura_numero,
+        barco=datos.barco.upper(),
+        importe_total=sum(t.importe for t in datos.tickets),
+        datos_json=json.dumps(datos.dict())
+    )
     db.add(nueva); db.commit(); db.close()
-    path, name = generar_archivo_excel(datos.dict())
-    return FileResponse(path, filename=name)
+    path, name = logic_crear_excel(datos.dict())
+    return FileResponse(path, filename=name, media_type='application/vnd.ms-excel.sheet.macroEnabled.12')
 
 @app.get("/re-descargar/{f_id}")
 async def redescargar(f_id: int, x_password: str = Header(None)):
@@ -113,8 +133,8 @@ async def redescargar(f_id: int, x_password: str = Header(None)):
     f = db.query(FacturaDB).filter(FacturaDB.id == f_id).first()
     db.close()
     if not f: raise HTTPException(status_code=404)
-    path, name = generar_archivo_excel(json.loads(f.datos_json))
-    return FileResponse(path, filename=name)
+    path, name = logic_crear_excel(json.loads(f.datos_json))
+    return FileResponse(path, filename=name, headers={"Content-Disposition": f"attachment; filename={name}"})
 
 @app.delete("/limpiar-historial")
 async def limpiar(x_password: str = Header(None)):
