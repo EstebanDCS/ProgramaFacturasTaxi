@@ -93,12 +93,16 @@ def crear_excel(datos_dict, nombre_base):
     
     wb = openpyxl.load_workbook(template_path, keep_vba=True)
     
-    # FORZAR AJUSTE A4 EN TODAS LAS HOJAS PARA QUE EL PDF NO SE CORTE
+    # FORZAR AJUSTE A4 EN TODAS LAS HOJAS (con manejo de errores)
     for sheet in wb.worksheets:
-        sheet.page_setup.fitToPage = True
-        sheet.page_setup.fitToWidth = 1
-        sheet.page_setup.fitToHeight = 1
-        sheet.page_setup.paperSize = sheet.PAPERSIZE_A4
+        try:
+            sheet.page_setup.fitToWidth = 1
+            sheet.page_setup.fitToHeight = 1
+            sheet.page_setup.paperSize = getattr(sheet, 'PAPERSIZE_A4', 9)
+            if sheet.sheet_properties and sheet.sheet_properties.pageSetUpPr:
+                sheet.sheet_properties.pageSetUpPr.fitToPage = True
+        except Exception as e:
+            print(f"Aviso al configurar pagina en openpyxl: {e}")
         
     ws = wb.active
     ws["B2"] = datos_dict.get('factura_numero', '')
