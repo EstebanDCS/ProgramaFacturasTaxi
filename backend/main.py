@@ -1,8 +1,10 @@
 import os
 import json
+import subprocess
+import zipfile
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List
 import openpyxl
@@ -42,7 +44,7 @@ app.add_middleware(
 
 PASSWORD_SECRETA = os.environ.get("TAXI_PASSWORD")
 
-# --- MODELOS (Con TODOS tus campos originales) ---
+# --- MODELOS ---
 class DatosTicket(BaseModel):
     numero_ticket: str
     importe: float
@@ -84,7 +86,7 @@ def compact_json(data: dict) -> str:
         return obj
     return json.dumps(strip(data), separators=(',', ':'))
 
-# --- FUNCIÓN MAESTRA EXCEL ---
+# --- FUNCIONES EXCEL Y PDF ---
 def crear_excel_con_nombre(datos_dict):
     base_path = os.path.dirname(__file__)
     template_path = os.path.join(base_path, "plantilla.xlsm")
@@ -109,6 +111,36 @@ def crear_excel_con_nombre(datos_dict):
     
     wb.save(path_salida)
     return path_salida, nombre_archivo
+
+def generar_respuesta_archivo(path_xlsm, name_xlsm, formato):
+    if formato == "excel":
+        return FileResponse(path_xlsm, filename=name_xlsm, headers={"Content-Disposition": f"attachment; filename={name_xlsm}"})
+
+    pdf_name = name_xlsm.replace(".xlsm", ".pdf")
+    pdf_path = os.path.join("/tmp", pdf_name)
+    
+    # Generar PDF usando LibreOffice
+    try:
+        subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf", "--outdir", "/tmp", path_xlsm], check=True)
+    except Exception as e:
+        print(f"Error generando PDF: {e}")
+
+    if formato == "pdf":
+        if os.path.exists(pdf_path):
+            return FileResponse(pdf_path, filename=pdf_name, headers={"Content-Disposition": f"attachment; filename={pdf_name}"})
+        # Si falla el PDF, enviamos el excel por seguridad
+        return FileResponse(path_xlsm, filename=name_xlsm, headers={"Content-Disposition": f"attachment; filename={name_xlsm}"})
+
+    # Formato AMBOS (ZIP)
+    zip_name = name_xlsm.replace(".xlsm", ".zip")
+    zip_path = os.path.join("/tmp", zip_name)
+    with zipfile.ZipFile(zip_path, 'w') as zipf:
+        zipf.write(path_xlsm, arcname=name_xlsm)
+        if os.path.exists(pdf_path):
+            zipf.write(pdf_path, arcname=pdf_name)
+            
+    return FileResponse(zip_path, filename=zip_name, headers={"Content-Disposition": f"attachment; filename={zip_name}"})
+
 
 # --- RUTAS ---
 @app.get("/login")
@@ -138,7 +170,7 @@ async def solo_guardar(datos: DatosFactura, x_password: str = Header(None)):
     return {"msg": "✅ Datos guardados en la nube"}
 
 @app.post("/generar")
-async def generar(datos: DatosFactura, x_password: str = Header(None)):
+async def generar(datos: DatosFactura, formato: str = "excel", x_password: str = Header(None)):
     if x_password != PASSWORD_SECRETA: raise HTTPException(status_code=401)
     db = SessionLocal()
     nueva = FacturaDB(
@@ -149,8 +181,8 @@ async def generar(datos: DatosFactura, x_password: str = Header(None)):
     )
     db.add(nueva); db.commit(); db.close()
     
-    path, name = crear_excel_con_nombre(datos.dict())
-    return FileResponse(path, filename=name, headers={"Content-Disposition": f"attachment; filename={name}"})
+    path_xlsm, name_xlsm = crear_excel_con_nombre(datos.dict())
+    return generar_respuesta_archivo(path_xlsm, name_xlsm, formato)
 
 @app.get("/factura/{f_id}")
 async def get_factura(f_id: int, x_password: str = Header(None)):
@@ -177,7 +209,7 @@ async def actualizar(f_id: int, datos: DatosFactura, x_password: str = Header(No
     return {"msg": "✅ Factura actualizada"}
 
 @app.put("/actualizar-generar/{f_id}")
-async def actualizar_generar(f_id: int, datos: DatosFactura, x_password: str = Header(None)):
+async def actualizar_generar(f_id: int, datos: DatosFactura, formato: str = "excel", x_password: str = Header(None)):
     if x_password != PASSWORD_SECRETA: raise HTTPException(status_code=401)
     db = SessionLocal()
     f = db.query(FacturaDB).filter(FacturaDB.id == f_id).first()
@@ -189,21 +221,21 @@ async def actualizar_generar(f_id: int, datos: DatosFactura, x_password: str = H
     f.importe_total = sum(t.importe for t in datos.tickets)
     f.datos_json = compact_json(datos.dict())
     db.commit(); db.close()
-    path, name = crear_excel_con_nombre(datos.dict())
-    return FileResponse(path, filename=name, headers={"Content-Disposition": f"attachment; filename={name}"})
+    
+    path_xlsm, name_xlsm = crear_excel_con_nombre(datos.dict())
+    return generar_respuesta_archivo(path_xlsm, name_xlsm, formato)
 
-
-async def redescargar_file(f_id: int, x_password: str = Header(None)):
+@app.get("/re-descargar/{f_id}")
+async def redescargar_file(f_id: int, formato: str = "excel", x_password: str = Header(None)):
     if x_password != PASSWORD_SECRETA: raise HTTPException(status_code=401)
     db = SessionLocal()
     f = db.query(FacturaDB).filter(FacturaDB.id == f_id).first()
     db.close()
     if not f: raise HTTPException(status_code=404)
     
-    path, name = crear_excel_con_nombre(json.loads(f.datos_json))
-    return FileResponse(path, filename=name, headers={"Content-Disposition": f"attachment; filename={name}"})
+    path_xlsm, name_xlsm = crear_excel_con_nombre(json.loads(f.datos_json))
+    return generar_respuesta_archivo(path_xlsm, name_xlsm, formato)
 
-# --- NUEVA RUTA: ELIMINACIÓN INDIVIDUAL ---
 @app.delete("/eliminar-factura/{f_id}")
 async def eliminar_factura(f_id: int, x_password: str = Header(None)):
     if x_password != PASSWORD_SECRETA: raise HTTPException(status_code=401)

@@ -42,8 +42,6 @@
             border-radius: 9999px; font-weight: 500; font-size: 0.875rem;
             box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: none;
         }
-        
-        /* ELIMINADO EL POSITION: RELATIVE QUE ROMPÍA EL DISEÑO */
         body.modo-pruebas aside::after {
             content: 'DEV';
             position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
@@ -56,6 +54,41 @@
 
     <div id="aviso-guardado" class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">save</span> Guardado</div>
     <datalist id="sugerencias-pasajeros"></datalist>
+
+    <div id="modal-descarga" class="fixed inset-0 z-[9999] hidden flex items-center justify-center">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="cerrarModal()"></div>
+        <div class="bg-white rounded-2xl shadow-2xl z-10 p-6 w-full max-w-sm mx-4 transform transition-all scale-100">
+            <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">download</span> Formato de descarga
+            </h3>
+            <div class="space-y-3">
+                <button type="button" onclick="ejecutarDescarga('excel')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 transition-colors group text-left">
+                    <span class="material-symbols-outlined text-emerald-600">table_view</span>
+                    <div>
+                        <span class="block font-bold text-slate-700 group-hover:text-emerald-700">Solo Excel</span>
+                        <span class="text-xs text-slate-500">Archivo .xlsm editable</span>
+                    </div>
+                </button>
+                <button type="button" onclick="ejecutarDescarga('pdf')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-red-500 hover:bg-red-50 transition-colors group text-left">
+                    <span class="material-symbols-outlined text-red-600">picture_as_pdf</span>
+                    <div>
+                        <span class="block font-bold text-slate-700 group-hover:text-red-700">Solo PDF</span>
+                        <span class="text-xs text-slate-500">Documento listo para enviar/imprimir</span>
+                    </div>
+                </button>
+                <button type="button" onclick="ejecutarDescarga('ambos')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-primary hover:bg-blue-50 transition-colors group text-left">
+                    <span class="material-symbols-outlined text-primary">folder_zip</span>
+                    <div>
+                        <span class="block font-bold text-slate-700 group-hover:text-blue-700">Ambos (ZIP)</span>
+                        <span class="text-xs text-slate-500">Carpeta con el Excel y el PDF</span>
+                    </div>
+                </button>
+            </div>
+            <div class="mt-6 text-right">
+                <button onclick="cerrarModal()" class="text-sm font-semibold text-slate-500 hover:text-slate-700">Cancelar</button>
+            </div>
+        </div>
+    </div>
 
     <div id="sec-login-container" class="flex-1 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 max-w-md w-full text-center">
@@ -159,8 +192,8 @@
                             <button type="button" onclick="enviarProceso('nube')" class="flex-1 flex items-center justify-center gap-2 px-8 py-3 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 shadow-lg shadow-slate-900/20 transition-all">
                                 <span class="material-symbols-outlined">cloud_upload</span> SOLO GUARDAR EN NUBE
                             </button>
-                            <button type="button" onclick="enviarProceso('excel')" class="flex-1 flex items-center justify-center gap-2 px-8 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all">
-                                <span class="material-symbols-outlined">table_view</span> GENERAR EXCEL + PDF
+                            <button type="button" onclick="abrirModalDescarga()" class="flex-1 flex items-center justify-center gap-2 px-8 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all">
+                                <span class="material-symbols-outlined">download</span> DESCARGAR
                             </button>
                         </div>
                     </div>
@@ -483,7 +516,29 @@
             guardarProgreso();
         }
 
-        async function enviarProceso(modo) {
+        // --- LÓGICA DEL MODAL ---
+        let idDescargaPendiente = null;
+        function abrirModalDescarga(id = null) {
+            if (id === null) {
+                const form = document.getElementById('formTaxi');
+                if(!form.checkValidity()) { form.reportValidity(); return; }
+            }
+            idDescargaPendiente = id;
+            document.getElementById('modal-descarga').classList.remove('hidden');
+        }
+        function cerrarModal() {
+            document.getElementById('modal-descarga').classList.add('hidden');
+        }
+        function ejecutarDescarga(formato) {
+            cerrarModal();
+            if (idDescargaPendiente) {
+                redescargar(idDescargaPendiente, formato);
+            } else {
+                enviarProceso('descarga', formato);
+            }
+        }
+
+        async function enviarProceso(modo, formato = 'excel') {
             const form = document.getElementById('formTaxi');
             if(!form.checkValidity()) { form.reportValidity(); return; }
 
@@ -518,31 +573,36 @@
             const data = { factura_numero: document.getElementById('factura_numero').value, barco: document.getElementById('barco').value, tickets };
             const editId = document.getElementById('formTaxi').dataset.editId;
             let endpoint, method;
+            
             if (editId) {
-                endpoint = modo === 'nube' ? `/actualizar/${editId}` : `/actualizar-generar/${editId}`;
+                endpoint = modo === 'nube' ? `/actualizar/${editId}` : `/actualizar-generar/${editId}?formato=${formato}`;
                 method = 'PUT';
             } else {
-                endpoint = modo === 'nube' ? '/solo-guardar' : '/generar';
+                endpoint = modo === 'nube' ? '/solo-guardar' : `/generar?formato=${formato}`;
                 method = 'POST';
             }
 
             try {
                 const res = await fetch(`${URL_BASE}${endpoint}`, { method, headers:{'Content-Type':'application/json','x-password':tokenSeguridad}, body:JSON.stringify(data) });
                 if(res.ok) {
-                    if(modo === 'excel') {
+                    if(modo === 'descarga') {
                         const blob = await res.blob();
+                        const head = res.headers.get('Content-Disposition');
+                        let filename = `${data.barco.replace(/ /g,"_")}`;
+                        if(head && head.includes('filename=')) {
+                            filename = head.split('filename=')[1].replace(/["']/g, '');
+                        } else {
+                            filename += (formato === 'excel') ? '.xlsm' : ((formato === 'pdf') ? '.pdf' : '.zip');
+                        }
                         const url = window.URL.createObjectURL(blob);
-                        const nombreZip = `${data.barco.replace(/ /g,"_")}.zip`;
-                        const a = document.createElement('a'); a.href = url; a.download = nombreZip;
+                        const a = document.createElement('a'); a.href = url; a.download = filename;
                         document.body.appendChild(a); a.click(); document.body.removeChild(a);
                         window.URL.revokeObjectURL(url);
-                        limpiarBorrador(false);
-                    } else {
-                        limpiarBorrador(false);
                     }
+                    limpiarBorrador(false);
                     alert(editId
-                        ? (modo === 'nube' ? "☁️ Factura actualizada en la nube" : "✅ ZIP descargado (Excel + PDF)")
-                        : (modo === 'nube' ? "☁️ Guardado en la nube" : "✅ ZIP descargado (Excel + PDF)")
+                        ? (modo === 'nube' ? "☁️ Factura actualizada en la nube" : "✅ Archivo descargado")
+                        : (modo === 'nube' ? "☁️ Guardado en la nube" : "✅ Archivo descargado")
                     );
                 } else alert("Error validando datos en el servidor");
             } catch(e) { alert("Error de servidor"); }
@@ -569,7 +629,7 @@
                                     <button onclick="editarFactura(${f.id})" class="inline-flex items-center gap-1.5 text-amber-600 hover:text-amber-800 font-extrabold text-[11px] uppercase tracking-widest transition-colors">
                                         <span class="material-symbols-outlined text-lg">edit</span> EDITAR
                                     </button>
-                                    <button onclick="redescargar(${f.id})" class="inline-flex items-center gap-1.5 text-primary hover:text-blue-800 font-extrabold text-[11px] uppercase tracking-widest transition-colors">
+                                    <button onclick="abrirModalDescarga(${f.id})" class="inline-flex items-center gap-1.5 text-primary hover:text-blue-800 font-extrabold text-[11px] uppercase tracking-widest transition-colors">
                                         <span class="material-symbols-outlined text-lg">download</span> RE-DESCARGAR
                                     </button>
                                     <button onclick="eliminarF(${f.id})" class="text-slate-400 hover:text-red-500 transition-colors" title="Eliminar">
@@ -658,15 +718,20 @@
             limpiarBorrador(false);
         }
 
-        async function redescargar(id) {
+        async function redescargar(id, formato = 'excel') {
             try {
-                const res = await fetch(`${URL_BASE}/re-descargar/${id}`, { headers: {'x-password':tokenSeguridad} });
+                const res = await fetch(`${URL_BASE}/re-descargar/${id}?formato=${formato}`, { headers: {'x-password':tokenSeguridad} });
                 if(res.ok) {
+                    const blob = await res.blob();
                     const head = res.headers.get('Content-Disposition');
-                    let name = `Fra_Antigua_${id}.zip`;
-                    if(head && head.includes('filename=')) name = head.split('filename=')[1].replace(/["']/g, '');
-                    const b = await res.blob(); const url = window.URL.createObjectURL(b);
-                    const a = document.createElement('a'); a.href = url; a.download = name;
+                    let filename = `Fra_Antigua_${id}`;
+                    if(head && head.includes('filename=')) {
+                        filename = head.split('filename=')[1].replace(/["']/g, '');
+                    } else {
+                        filename += (formato === 'excel') ? '.xlsm' : ((formato === 'pdf') ? '.pdf' : '.zip');
+                    }
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = filename;
                     document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); a.remove();
                 }
             } catch(e) { alert("Fallo al descargar"); }
@@ -714,7 +779,18 @@
             } catch(e) { return false; }
         }
 
-        function limpiarBorrador(q) { if(q && !confirm("¿Borrar todo el borrador en curso?")) return; localStorage.removeItem('taxi_t1'); location.reload(); }
+        // Ya no hace location.reload(), sino que vacía el formulario en la misma pantalla.
+        function limpiarBorrador(q) { 
+            if(q && !confirm("¿Borrar todo el borrador en curso?")) return; 
+            localStorage.removeItem('taxi_t1'); 
+            document.getElementById('formTaxi').reset();
+            document.getElementById('contenedor-tickets').innerHTML = '';
+            ticketCount = 0;
+            document.getElementById('formTaxi').removeAttribute('data-edit-id');
+            document.getElementById('edit-banner').classList.add('hidden');
+            agregarTicket();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     </script>
 </body>
 </html>
