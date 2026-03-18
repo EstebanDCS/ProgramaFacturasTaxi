@@ -14,12 +14,7 @@
             darkMode: "class",
             theme: {
                 extend: {
-                    colors: {
-                        "primary": "#0d6dfd",
-                        "background-light": "#f5f7fb",
-                        "background-dark": "#0f1723",
-                        "sidebar-dark": "#1e1e2d",
-                    },
+                    colors: { "primary": "#0d6dfd", "background-light": "#f5f7fb", "background-dark": "#0f1723", "sidebar-dark": "#1e1e2d" },
                     fontFamily: { "display": ["Inter", "sans-serif"] },
                 },
             },
@@ -31,17 +26,15 @@
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
         .fill-1 { font-variation-settings: 'FILL' 1; }
         
-        /* SOLUCIÓN AL SOLAPAMIENTO: Forzamos ocultar y mostramos como flex-col cuando está activo */
+        /* Solucion de Pestañas */
         .app-section { display: none !important; animation: fadeIn 0.3s ease-in-out; }
         .app-section.activa { display: flex !important; flex-direction: column; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Estado Login vs App */
         #app-layout { display: none; }
         body.logged-in #sec-login-container { display: none !important; }
         body.logged-in #app-layout { display: flex; }
 
-        /* Aviso Guardado Flotante */
         #aviso-guardado {
             position: fixed; bottom: 24px; right: 24px; z-index: 5000;
             background-color: #1e293b; color: white; padding: 12px 24px;
@@ -49,7 +42,6 @@
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); display: none;
         }
 
-        /* Modo Pruebas */
         body.modo-pruebas aside { background-color: #3b0909 !important; border-right: 2px solid #ef4444; }
     </style>
 </head>
@@ -67,7 +59,6 @@
             </div>
             <h2 class="text-2xl font-black tracking-tight text-slate-900 mb-2">Taxi App Pro</h2>
             <p class="text-slate-500 font-medium text-sm mb-8">Acceso seguro al panel de gestión</p>
-            
             <div class="space-y-4">
                 <div class="relative">
                     <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">lock</span>
@@ -81,7 +72,6 @@
     </div>
 
     <div id="app-layout" class="w-full min-h-screen">
-        
         <aside class="fixed inset-y-0 left-0 w-64 bg-sidebar-dark text-slate-300 flex flex-col shadow-xl z-50 transition-colors">
             <div class="p-6">
                 <div class="flex items-center gap-3 mb-8">
@@ -93,7 +83,6 @@
                         <p class="text-slate-500 text-[10px] mt-1.5 uppercase tracking-[0.15em] font-bold">Admin Dashboard</p>
                     </div>
                 </div>
-                
                 <nav class="flex flex-col gap-2">
                     <a id="btn-nueva" onclick="verSec('sec-nueva', this)" class="nav-btn flex items-center gap-3 px-4 py-3.5 rounded-xl bg-primary text-white transition-all shadow-lg shadow-primary/20 cursor-pointer">
                         <span class="material-symbols-outlined fill-1">description</span>
@@ -105,7 +94,6 @@
                     </a>
                 </nav>
             </div>
-            
             <div class="mt-auto p-6 border-t border-slate-800/50">
                 <a onclick="location.reload()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-all cursor-pointer">
                     <span class="material-symbols-outlined">logout</span>
@@ -115,7 +103,6 @@
         </aside>
 
         <main class="flex-1 ml-64 flex flex-col bg-background-light min-h-screen">
-            
             <div id="sec-nueva" class="app-section flex-1 p-8">
                 <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
                     <div class="flex items-center gap-4">
@@ -153,7 +140,6 @@
                         <button type="button" onclick="agregarTicket()" class="w-full flex items-center justify-center gap-2 px-6 py-4 border-2 border-dashed border-primary/50 text-primary font-bold rounded-2xl hover:bg-primary/5 transition-all bg-white">
                             <span class="material-symbols-outlined font-bold">add_circle</span> AÑADIR NUEVO TICKET DETALLADO
                         </button>
-                        
                         <div class="flex flex-col md:flex-row gap-4">
                             <button type="button" onclick="enviarProceso('nube')" class="flex-1 flex items-center justify-center gap-2 px-8 py-4 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-900 shadow-lg shadow-slate-900/20 transition-all text-sm tracking-wide">
                                 <span class="material-symbols-outlined">cloud_upload</span> SOLO GUARDAR EN NUBE
@@ -178,7 +164,6 @@
                         </button>
                     </div>
                 </header>
-
                 <div class="p-8 flex-1">
                     <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                         <div class="overflow-x-auto">
@@ -189,41 +174,33 @@
                                         <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Barco</th>
                                         <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Nº Fra.</th>
                                         <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Importe</th>
-                                        <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em] text-right">Acción</th>
+                                        <th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em] text-right">Acciones</th>
                                     </tr>
                                 </thead>
-                                <tbody id="tabla-historial" class="divide-y divide-slate-50">
-                                    </tbody>
+                                <tbody id="tabla-historial" class="divide-y divide-slate-50"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
             </div>
-
         </main>
     </div>
 
     <script>
-        let ticketCount = 0; 
-        let tokenSeguridad = "";
+        let ticketCount = 0; let tokenSeguridad = "";
         let URL_BASE = 'https://programafacturastaxi.onrender.com';
-        
-        // Radar de Entorno
         if (window.location.hostname !== "programa-facturas-taxi.vercel.app") {
             URL_BASE = 'https://programafacturastaxi-dev.onrender.com';
             document.body.classList.add('modo-pruebas');
         }
 
-        // Navegación Sidebar (Ahora limpia y oculta perfectamente)
         function verSec(id, btn) {
             document.querySelectorAll('.app-section').forEach(s => s.classList.remove('activa'));
             document.getElementById(id).classList.add('activa');
-            
             document.querySelectorAll('.nav-btn').forEach(l => {
                 l.className = "nav-btn flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-white/5 text-slate-400 hover:text-white transition-all cursor-pointer group";
                 l.querySelector('span:first-child').classList.remove('fill-1');
             });
-            
             btn.className = "nav-btn flex items-center gap-3 px-4 py-3.5 rounded-xl bg-primary text-white transition-all shadow-lg shadow-primary/20 cursor-pointer";
             btn.querySelector('span:first-child').classList.add('fill-1');
         }
@@ -234,15 +211,13 @@
             try {
                 const res = await fetch(`${URL_BASE}/login`, { headers: {'x-password': p} });
                 if(res.ok) {
-                    tokenSeguridad = p; 
-                    document.body.classList.add('logged-in');
+                    tokenSeguridad = p; document.body.classList.add('logged-in');
                     verSec('sec-nueva', document.getElementById('btn-nueva'));
                     if(!cargarProgreso()) agregarTicket();
                 } else { alert("Contraseña incorrecta"); }
-            } catch(e) { alert("Error de conexión con el servidor"); }
+            } catch(e) { alert("Error de conexión"); }
         }
 
-        // DOM UI Tickets
         function toggleI(cb, id) { 
             const el = document.getElementById(id);
             if(cb.checked) { el.classList.remove('hidden'); el.classList.add('block'); } 
@@ -252,8 +227,7 @@
         function addP(id) { 
             const i = document.createElement('input'); 
             i.className = 'w-full rounded-lg border-slate-200 bg-white px-4 py-2 mt-2 focus:ring-primary focus:border-primary shadow-sm text-sm t-pasajeros'; 
-            i.list = "sugerencias-pasajeros"; 
-            i.placeholder = "Nombre pasajero adicional";
+            i.list = "sugerencias-pasajeros"; i.placeholder = "Nombre pasajero adicional";
             document.getElementById(`pax_${id}`).appendChild(i); 
         }
 
@@ -275,7 +249,7 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-4">
-                            ${id > 1 ? `<button type="button" onclick="this.closest('.ticket-card').remove(); guardarProgreso();" class="text-slate-400 hover:text-red-500"><span class="material-symbols-outlined">delete</span></button>` : ''}
+                            ${id > 1 ? `<button type="button" onclick="this.closest('.ticket-card').remove(); guardarProgreso();" class="text-slate-400 hover:text-red-500 transition-colors"><span class="material-symbols-outlined">delete</span></button>` : ''}
                             <span class="material-symbols-outlined group-open:rotate-180 transition-transform text-slate-400">expand_more</span>
                         </div>
                     </summary>
@@ -338,12 +312,19 @@
                                     </label>
                                     <div class="space-y-2">
                                         <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                            <input type="checkbox" class="t-o-hotel rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'oh_${id}')"> <span class="text-sm font-semibold text-slate-700">Hotel / Otros</span>
+                                            <input type="checkbox" class="t-o-hotel rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'oh_${id}')"> <span class="text-sm font-semibold text-slate-700">Hotel</span>
                                         </label>
-                                        <input type="text" id="oh_${id}" class="t-o-hotel-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="Especifique nombre o dirección...">
+                                        <input type="text" id="oh_${id}" class="t-o-hotel-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="Especifique hotel...">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                                            <input type="checkbox" class="t-o-otros rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'oo_${id}')"> <span class="text-sm font-semibold text-slate-700">Otros</span>
+                                        </label>
+                                        <input type="text" id="oo_${id}" class="t-o-otros-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="¿Dónde?">
                                     </div>
                                 </div>
                             </div>
+                            
                             <div class="space-y-4 bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
                                 <label class="text-[11px] font-bold text-primary uppercase tracking-widest flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">flight_takeoff</span> Destino</label>
                                 <div class="space-y-2">
@@ -353,11 +334,33 @@
                                     <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
                                         <input type="checkbox" class="t-d-buque rounded border-slate-300 text-primary focus:ring-primary"> <span class="text-sm font-semibold text-slate-700">Buque</span>
                                     </label>
+                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                                        <input type="checkbox" class="t-d-inmigracion rounded border-slate-300 text-primary focus:ring-primary"> <span class="text-sm font-semibold text-slate-700">Inmigración</span>
+                                    </label>
+                                    
                                     <div class="space-y-2">
                                         <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-                                            <input type="checkbox" class="t-d-hotel rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dh_${id}')"> <span class="text-sm font-semibold text-slate-700">Hotel / Otros</span>
+                                            <input type="checkbox" class="t-d-hotel rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dh_${id}')"> <span class="text-sm font-semibold text-slate-700">Hotel</span>
                                         </label>
-                                        <input type="text" id="dh_${id}" class="t-d-hotel-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="Especifique nombre o dirección...">
+                                        <input type="text" id="dh_${id}" class="t-d-hotel-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="Especifique hotel...">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                                            <input type="checkbox" class="t-d-hospital rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dhp_${id}')"> <span class="text-sm font-semibold text-slate-700">Hospital</span>
+                                        </label>
+                                        <input type="text" id="dhp_${id}" class="t-d-hospital-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="Especifique hospital...">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                                            <input type="checkbox" class="t-d-clinica rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dcl_${id}')"> <span class="text-sm font-semibold text-slate-700">Clínica</span>
+                                        </label>
+                                        <input type="text" id="dcl_${id}" class="t-d-clinica-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="Especifique clínica...">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                                            <input type="checkbox" class="t-d-otros rounded border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dot_${id}')"> <span class="text-sm font-semibold text-slate-700">Otros</span>
+                                        </label>
+                                        <input type="text" id="dot_${id}" class="t-d-otros-texto hidden w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 focus:ring-primary focus:border-primary shadow-inner" placeholder="¿Dónde?">
                                     </div>
                                 </div>
                             </div>
@@ -386,7 +389,6 @@
             guardarProgreso();
         }
 
-        // --- COMUNICACIÓN BACKEND ---
         async function enviarProceso(modo) {
             const form = document.getElementById('formTaxi');
             if(!form.checkValidity()) { form.reportValidity(); return; }
@@ -402,10 +404,19 @@
                 o_buque: item.querySelector('.t-o-buque').checked,
                 o_hotel: item.querySelector('.t-o-hotel').checked,
                 o_hotel_texto: item.querySelector('.t-o-hotel-texto').value,
+                o_otros: item.querySelector('.t-o-otros').checked,
+                o_otros_texto: item.querySelector('.t-o-otros-texto').value,
                 d_aeropuerto: item.querySelector('.t-d-aero').checked,
                 d_buque: item.querySelector('.t-d-buque').checked,
                 d_hotel: item.querySelector('.t-d-hotel').checked,
                 d_hotel_texto: item.querySelector('.t-d-hotel-texto').value,
+                d_hospital: item.querySelector('.t-d-hospital').checked,
+                d_hospital_texto: item.querySelector('.t-d-hospital-texto').value,
+                d_clinica: item.querySelector('.t-d-clinica').checked,
+                d_clinica_texto: item.querySelector('.t-d-clinica-texto').value,
+                d_inmigracion: item.querySelector('.t-d-inmigracion').checked,
+                d_otros: item.querySelector('.t-d-otros').checked,
+                d_otros_texto: item.querySelector('.t-d-otros-texto').value,
                 ida_vuelta: item.querySelector('.t-ida-vuelta').checked,
                 comentarios: item.querySelector('.t-comentarios').value
             }));
@@ -419,8 +430,7 @@
                 });
                 if(res.ok) {
                     if(modo === 'excel') {
-                        const blob = await res.blob();
-                        triggerDwn(blob, `${data.barco.replace(/ /g,"_")}.xlsm`);
+                        triggerDwn(await res.blob(), `${data.barco.replace(/ /g,"_")}.xlsm`);
                         limpiarBorrador(false);
                     }
                     alert(modo === 'nube' ? "☁️ Base de datos actualizada" : "✅ Excel generado con éxito");
@@ -451,9 +461,14 @@
                             <td class="px-8 py-5 text-sm font-semibold text-slate-900">${f.numero_factura}</td>
                             <td class="px-8 py-5 text-sm font-black text-emerald-600">${f.importe_total.toFixed(2)}€</td>
                             <td class="px-8 py-5 text-right">
-                                <button onclick="redescargar(${f.id})" class="inline-flex items-center gap-1.5 text-primary hover:text-blue-800 font-black text-[11px] uppercase tracking-widest transition-colors bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm hover:shadow">
-                                    <span class="material-symbols-outlined text-[16px]">download</span> RE-DESCARGAR
-                                </button>
+                                <div class="flex items-center justify-end gap-2">
+                                    <button onclick="redescargar(${f.id})" class="inline-flex items-center gap-1.5 text-primary hover:text-blue-800 font-black text-[11px] uppercase tracking-widest transition-colors bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm hover:shadow">
+                                        <span class="material-symbols-outlined text-[16px]">download</span> DESCARGAR
+                                    </button>
+                                    <button onclick="eliminarFactura(${f.id})" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-600 hover:text-white transition-colors border border-red-100 tooltip" title="Eliminar Factura">
+                                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                                    </button>
+                                </div>
                             </td>
                         </tr>`;
                 });
@@ -470,6 +485,15 @@
                     triggerDwn(await res.blob(), name);
                 }
             } catch(e) { alert("Fallo al descargar copia"); }
+        }
+
+        async function eliminarFactura(id) {
+            if(!confirm("¿Estás seguro de que quieres eliminar esta factura específica de la nube?")) return;
+            try {
+                const res = await fetch(`${URL_BASE}/eliminar-factura/${id}`, { method: 'DELETE', headers: {'x-password':tokenSeguridad} });
+                if(res.ok) cargarHistorial();
+                else alert("Error al eliminar la factura.");
+            } catch(e) { alert("Fallo de red al intentar eliminar."); }
         }
 
         function triggerDwn(blob, filename) {
@@ -496,24 +520,15 @@
             const html = document.getElementById('contenedor-tickets').innerHTML;
             const inputs = document.querySelectorAll('#contenedor-tickets input, #contenedor-tickets select, #contenedor-tickets textarea');
             const vals = Array.from(inputs).map(i => ({ type: i.type, value: i.value, checked: i.checked }));
-
-            localStorage.setItem('taxi_tailwind', JSON.stringify({
-                html: html, count: ticketCount, b: document.getElementById('barco').value, f: document.getElementById('factura_numero').value, data: vals
-            })); 
-
-            const av = document.getElementById('aviso-guardado');
-            av.style.display = 'flex'; setTimeout(() => av.style.display = 'none', 1500);
+            localStorage.setItem('taxi_tailwind', JSON.stringify({ html: html, count: ticketCount, b: document.getElementById('barco').value, f: document.getElementById('factura_numero').value, data: vals })); 
+            const av = document.getElementById('aviso-guardado'); av.style.display = 'flex'; setTimeout(() => av.style.display = 'none', 1500);
         }
 
         function cargarProgreso() {
             const s = localStorage.getItem('taxi_tailwind'); if(!s) return false;
             try {
                 const p = JSON.parse(s); 
-                document.getElementById('contenedor-tickets').innerHTML = p.html; 
-                ticketCount = p.count; 
-                document.getElementById('barco').value = p.b; 
-                document.getElementById('factura_numero').value = p.f;
-                
+                document.getElementById('contenedor-tickets').innerHTML = p.html; ticketCount = p.count; document.getElementById('barco').value = p.b; document.getElementById('factura_numero').value = p.f;
                 const inputs = document.querySelectorAll('#contenedor-tickets input, #contenedor-tickets select, #contenedor-tickets textarea');
                 inputs.forEach((input, index) => {
                     if(p.data[index]) {

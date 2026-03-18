@@ -42,7 +42,7 @@ app.add_middleware(
 
 PASSWORD_SECRETA = os.environ.get("TAXI_PASSWORD")
 
-# --- MODELOS ---
+# --- MODELOS (Con TODOS tus campos originales) ---
 class DatosTicket(BaseModel):
     numero_ticket: str
     importe: float
@@ -54,10 +54,19 @@ class DatosTicket(BaseModel):
     o_buque: bool = False
     o_hotel: bool = False
     o_hotel_texto: str = ""
+    o_otros: bool = False
+    o_otros_texto: str = ""
     d_aeropuerto: bool = False
     d_buque: bool = False
     d_hotel: bool = False
     d_hotel_texto: str = ""
+    d_hospital: bool = False
+    d_hospital_texto: str = ""
+    d_clinica: bool = False
+    d_clinica_texto: str = ""
+    d_inmigracion: bool = False
+    d_otros: bool = False
+    d_otros_texto: str = ""
     ida_vuelta: bool = False
     comentarios: str = ""
 
@@ -71,7 +80,6 @@ def crear_excel_con_nombre(datos_dict):
     base_path = os.path.dirname(__file__)
     template_path = os.path.join(base_path, "plantilla.xlsm")
     
-    # Nombre: NOMBREBARCO-DD_MM_AAAA.xlsm
     fecha_hoy = datetime.now().strftime("%d_%m_%Y")
     nombre_barco = datos_dict['barco'].replace(" ", "_").upper()
     nombre_archivo = f"{nombre_barco}-{fecha_hoy}.xlsm"
@@ -123,7 +131,6 @@ async def solo_guardar(datos: DatosFactura, x_password: str = Header(None)):
 @app.post("/generar")
 async def generar(datos: DatosFactura, x_password: str = Header(None)):
     if x_password != PASSWORD_SECRETA: raise HTTPException(status_code=401)
-    # Guardamos siempre en BD al generar
     db = SessionLocal()
     nueva = FacturaDB(
         numero_factura=datos.factura_numero,
@@ -146,6 +153,20 @@ async def redescargar_file(f_id: int, x_password: str = Header(None)):
     
     path, name = crear_excel_con_nombre(json.loads(f.datos_json))
     return FileResponse(path, filename=name, headers={"Content-Disposition": f"attachment; filename={name}"})
+
+# --- NUEVA RUTA: ELIMINACIÓN INDIVIDUAL ---
+@app.delete("/eliminar-factura/{f_id}")
+async def eliminar_factura(f_id: int, x_password: str = Header(None)):
+    if x_password != PASSWORD_SECRETA: raise HTTPException(status_code=401)
+    db = SessionLocal()
+    f = db.query(FacturaDB).filter(FacturaDB.id == f_id).first()
+    if not f:
+        db.close()
+        raise HTTPException(status_code=404, detail="Factura no encontrada")
+    db.delete(f)
+    db.commit()
+    db.close()
+    return {"msg": "Factura eliminada"}
 
 @app.delete("/limpiar-historial")
 async def limpiar(x_password: str = Header(None)):
