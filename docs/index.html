@@ -42,8 +42,8 @@
             border-radius: 9999px; font-weight: 500; font-size: 0.875rem;
             box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: none;
         }
-        /* DEV indicator - no red sidebar */
-        body.modo-pruebas aside { position: relative; }
+        
+        /* ELIMINADO EL POSITION: RELATIVE QUE ROMPÍA EL DISEÑO */
         body.modo-pruebas aside::after {
             content: 'DEV';
             position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
