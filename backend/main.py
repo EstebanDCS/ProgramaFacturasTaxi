@@ -76,17 +76,15 @@ class DatosFactura(BaseModel):
     tickets: List[DatosTicket]
 
 def compact_json(data: dict) -> str:
-    """Elimina campos vacíos/falsos antes de serializar para ahorrar espacio."""
     def strip(obj):
         if isinstance(obj, dict):
-            return {k: strip(v) for k, v in obj.items()
-                    if v not in (False, "", [], None)}
+            return {k: strip(v) for k, v in obj.items() if v not in (False, "", [], None)}
         if isinstance(obj, list):
             return [strip(i) for i in obj]
         return obj
     return json.dumps(strip(data), separators=(',', ':'))
 
-
+# --- FUNCIÓN MAESTRA EXCEL ---
 def crear_excel_con_nombre(datos_dict):
     base_path = os.path.dirname(__file__)
     template_path = os.path.join(base_path, "plantilla.xlsm")
@@ -154,7 +152,47 @@ async def generar(datos: DatosFactura, x_password: str = Header(None)):
     path, name = crear_excel_con_nombre(datos.dict())
     return FileResponse(path, filename=name, headers={"Content-Disposition": f"attachment; filename={name}"})
 
-@app.get("/re-descargar/{f_id}")
+@app.get("/factura/{f_id}")
+async def get_factura(f_id: int, x_password: str = Header(None)):
+    if x_password != PASSWORD_SECRETA: raise HTTPException(status_code=401)
+    db = SessionLocal()
+    f = db.query(FacturaDB).filter(FacturaDB.id == f_id).first()
+    db.close()
+    if not f: raise HTTPException(status_code=404)
+    return json.loads(f.datos_json)
+
+@app.put("/actualizar/{f_id}")
+async def actualizar(f_id: int, datos: DatosFactura, x_password: str = Header(None)):
+    if x_password != PASSWORD_SECRETA: raise HTTPException(status_code=401)
+    db = SessionLocal()
+    f = db.query(FacturaDB).filter(FacturaDB.id == f_id).first()
+    if not f:
+        db.close()
+        raise HTTPException(status_code=404)
+    f.numero_factura = datos.factura_numero
+    f.barco = datos.barco.upper()
+    f.importe_total = sum(t.importe for t in datos.tickets)
+    f.datos_json = compact_json(datos.dict())
+    db.commit(); db.close()
+    return {"msg": "✅ Factura actualizada"}
+
+@app.put("/actualizar-generar/{f_id}")
+async def actualizar_generar(f_id: int, datos: DatosFactura, x_password: str = Header(None)):
+    if x_password != PASSWORD_SECRETA: raise HTTPException(status_code=401)
+    db = SessionLocal()
+    f = db.query(FacturaDB).filter(FacturaDB.id == f_id).first()
+    if not f:
+        db.close()
+        raise HTTPException(status_code=404)
+    f.numero_factura = datos.factura_numero
+    f.barco = datos.barco.upper()
+    f.importe_total = sum(t.importe for t in datos.tickets)
+    f.datos_json = compact_json(datos.dict())
+    db.commit(); db.close()
+    path, name = crear_excel_con_nombre(datos.dict())
+    return FileResponse(path, filename=name, headers={"Content-Disposition": f"attachment; filename={name}"})
+
+
 async def redescargar_file(f_id: int, x_password: str = Header(None)):
     if x_password != PASSWORD_SECRETA: raise HTTPException(status_code=401)
     db = SessionLocal()

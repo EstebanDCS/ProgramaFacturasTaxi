@@ -122,6 +122,16 @@
                     </button>
                 </header>
 
+                <div id="edit-banner" class="hidden mb-6 flex items-center justify-between gap-4 bg-amber-50 border border-amber-200 text-amber-800 px-5 py-3.5 rounded-xl">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined fill-1 text-amber-500">edit_note</span>
+                        <span id="edit-banner-texto" class="text-sm font-semibold"></span>
+                    </div>
+                    <button onclick="cancelarEdicion()" class="text-xs font-bold text-amber-600 hover:text-amber-900 flex items-center gap-1 transition-colors">
+                        <span class="material-symbols-outlined text-sm">close</span> Cancelar edición
+                    </button>
+                </div>
+
                 <form id="formTaxi" class="space-y-6 pb-12">
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                         <div class="flex items-center gap-2 mb-6 text-primary font-bold">
@@ -219,6 +229,7 @@
                     tokenSeguridad = p; 
                     document.body.classList.add('logged-in');
                     verSec('sec-nueva', document.getElementById('btn-nueva'));
+                    cargarSugerenciasPasajeros();
                     if(!cargarProgreso()) agregarTicket();
                 } else { alert("Contraseña incorrecta"); }
             } catch(e) { alert("Error de conexión"); }
@@ -246,10 +257,30 @@
             i.focus();
         }
 
+        // --- HISTORIAL DE PASAJEROS ---
+        const PAX_KEY = 'taxi_pasajeros_historial';
+
+        function cargarSugerenciasPasajeros() {
+            const nombres = JSON.parse(localStorage.getItem(PAX_KEY) || '[]');
+            const dl = document.getElementById('sugerencias-pasajeros');
+            dl.innerHTML = nombres.map(n => `<option value="${n}">`).join('');
+        }
+
+        function guardarNombreEnHistorial(nombre) {
+            const nombres = JSON.parse(localStorage.getItem(PAX_KEY) || '[]');
+            if (!nombres.includes(nombre)) {
+                nombres.unshift(nombre); // más recientes primero
+                if (nombres.length > 200) nombres.pop(); // límite razonable
+                localStorage.setItem(PAX_KEY, JSON.stringify(nombres));
+                cargarSugerenciasPasajeros();
+            }
+        }
+
         function confirmarPax(id, inputEl) {
             const nombre = inputEl.value.trim();
             inputEl.remove();
             if (!nombre) return;
+            guardarNombreEnHistorial(nombre); // ← guarda para sugerencias futuras
             const container = document.getElementById(`pax_${id}`);
             const tag = document.createElement('span');
             tag.className = 'pax-tag inline-flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-800 text-sm font-medium px-3 py-1.5 rounded-lg';
@@ -476,14 +507,12 @@
                 pasajeros: Array.from(item.querySelectorAll('.t-pasajeros')).map(i => i.value).filter(v => v),
                 fechas_solicitud: Array.from(item.querySelectorAll('.t-fechas-solicitud')).map(i => i.value).filter(v => v),
                 fechas_servicio: Array.from(item.querySelectorAll('.t-fechas-servicio')).map(i => i.value).filter(v => v),
-                
                 o_aeropuerto: item.querySelector('.t-o-aero').checked,
                 o_buque: item.querySelector('.t-o-buque').checked,
                 o_hotel: item.querySelector('.t-o-hotel').checked,
                 o_hotel_texto: item.querySelector('.t-o-hotel-texto').value,
                 o_otros: item.querySelector('.t-o-otros').checked,
                 o_otros_texto: item.querySelector('.t-o-otros-texto').value,
-                
                 d_aeropuerto: item.querySelector('.t-d-aero').checked,
                 d_buque: item.querySelector('.t-d-buque').checked,
                 d_hotel: item.querySelector('.t-d-hotel').checked,
@@ -495,16 +524,23 @@
                 d_inmigracion: item.querySelector('.t-d-inmi').checked,
                 d_otros: item.querySelector('.t-d-otros').checked,
                 d_otros_texto: item.querySelector('.t-d-otros-texto').value,
-                
                 ida_vuelta: item.querySelector('.t-ida-vuelta').checked,
                 comentarios: item.querySelector('.t-comentarios').value
             }));
 
             const data = { factura_numero: document.getElementById('factura_numero').value, barco: document.getElementById('barco').value, tickets };
-            const endpoint = modo === 'nube' ? '/solo-guardar' : '/generar';
+            const editId = document.getElementById('formTaxi').dataset.editId;
+            let endpoint, method;
+            if (editId) {
+                endpoint = modo === 'nube' ? `/actualizar/${editId}` : `/actualizar-generar/${editId}`;
+                method = 'PUT';
+            } else {
+                endpoint = modo === 'nube' ? '/solo-guardar' : '/generar';
+                method = 'POST';
+            }
 
             try {
-                const res = await fetch(`${URL_BASE}${endpoint}`, { method:'POST', headers:{'Content-Type':'application/json','x-password':tokenSeguridad}, body:JSON.stringify(data) });
+                const res = await fetch(`${URL_BASE}${endpoint}`, { method, headers:{'Content-Type':'application/json','x-password':tokenSeguridad}, body:JSON.stringify(data) });
                 if(res.ok) {
                     if(modo === 'excel') {
                         const blob = await res.blob();
@@ -512,8 +548,13 @@
                         const a = document.createElement('a'); a.href = url; a.download = `${data.barco.replace(/ /g,"_")}.xlsm`;
                         document.body.appendChild(a); a.click(); document.body.removeChild(a);
                         limpiarBorrador(false);
+                    } else {
+                        limpiarBorrador(false);
                     }
-                    alert(modo === 'nube' ? "☁️ Guardado en la nube" : "✅ Excel descargado");
+                    alert(editId
+                        ? (modo === 'nube' ? "☁️ Factura actualizada en la nube" : "✅ Factura actualizada y Excel descargado")
+                        : (modo === 'nube' ? "☁️ Guardado en la nube" : "✅ Excel descargado")
+                    );
                 } else alert("Error validando datos en el servidor");
             } catch(e) { alert("Error de servidor"); }
         }
@@ -537,6 +578,9 @@
                             <td class="px-6 py-4 text-sm font-bold text-slate-900">${f.importe_total.toFixed(2)}€</td>
                             <td class="px-6 py-4 text-right">
                                 <div class="flex items-center justify-end gap-3">
+                                    <button onclick="editarFactura(${f.id})" class="inline-flex items-center gap-1.5 text-amber-600 hover:text-amber-800 font-extrabold text-[11px] uppercase tracking-widest transition-colors">
+                                        <span class="material-symbols-outlined text-lg">edit</span> EDITAR
+                                    </button>
                                     <button onclick="redescargar(${f.id})" class="inline-flex items-center gap-1.5 text-primary hover:text-blue-800 font-extrabold text-[11px] uppercase tracking-widest transition-colors">
                                         <span class="material-symbols-outlined text-lg">download</span> RE-DESCARGAR
                                     </button>
@@ -550,7 +594,92 @@
             } catch(e) { tb.innerHTML = `<tr><td colspan="5" class="text-center text-red-500">Error</td></tr>`; }
         }
 
-        async function redescargar(id) {
+        async function editarFactura(id) {
+            try {
+                const res = await fetch(`${URL_BASE}/factura/${id}`, { headers: {'x-password': tokenSeguridad} });
+                if (!res.ok) { alert("No se pudo cargar la factura"); return; }
+                const datos = await res.json();
+
+                localStorage.removeItem('taxi_t1');
+                document.getElementById('contenedor-tickets').innerHTML = '';
+                ticketCount = 0;
+
+                document.getElementById('factura_numero').value = datos.factura_numero || '';
+                document.getElementById('barco').value = datos.barco || '';
+                document.getElementById('formTaxi').dataset.editId = id;
+                document.getElementById('edit-banner').classList.remove('hidden');
+                document.getElementById('edit-banner-texto').textContent = `Editando: ${datos.barco} — ${datos.factura_numero || datos.numero_factura}`;
+
+                for (const t of (datos.tickets || [])) {
+                    agregarTicket();
+                    const card = document.querySelectorAll('.ticket-card')[ticketCount - 1];
+                    card.querySelector('.t-numero-ticket').value = t.numero_ticket || '';
+                    card.querySelector('.t-importe').value = t.importe || 0;
+                    card.querySelector('.t-contacto').value = t.contacto_metodo || 'whatsapp';
+
+                    (t.pasajeros || []).forEach(nombre => {
+                        guardarNombreEnHistorial(nombre); // nutre sugerencias al editar
+                        const container = card.querySelector('[id^="pax_"]');
+                        const tag = document.createElement('span');
+                        tag.className = 'pax-tag inline-flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-800 text-sm font-medium px-3 py-1.5 rounded-lg';
+                        tag.innerHTML = `<input type="hidden" class="t-pasajeros" value="${nombre.replace(/"/g,'&quot;')}">${nombre} <button type="button" onclick="this.closest('.pax-tag').remove();" class="text-blue-400 hover:text-red-500 ml-1 leading-none font-bold text-base">&times;</button>`;
+                        container.appendChild(tag);
+                    });
+
+                    (t.fechas_solicitud || []).forEach(val => {
+                        const container = card.querySelector('[id^="fechas_solicitud_"]');
+                        const [y, m, d] = val.split('-');
+                        const tag = document.createElement('span');
+                        tag.className = 'fecha-tag inline-flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg';
+                        tag.innerHTML = `<input type="hidden" class="t-fechas-solicitud" value="${val}">${d}/${m}/${y} <button type="button" onclick="this.closest('.fecha-tag').remove();" class="text-slate-400 hover:text-red-500 ml-1 leading-none font-bold text-base">&times;</button>`;
+                        container.appendChild(tag);
+                    });
+
+                    (t.fechas_servicio || []).forEach(val => {
+                        const container = card.querySelector('[id^="fechas_servicio_"]');
+                        const [y, m, d] = val.split('-');
+                        const tag = document.createElement('span');
+                        tag.className = 'fecha-tag inline-flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg';
+                        tag.innerHTML = `<input type="hidden" class="t-fechas-servicio" value="${val}">${d}/${m}/${y} <button type="button" onclick="this.closest('.fecha-tag').remove();" class="text-slate-400 hover:text-red-500 ml-1 leading-none font-bold text-base">&times;</button>`;
+                        container.appendChild(tag);
+                    });
+
+                    const campos = {
+                        '.t-o-aero': t.o_aeropuerto, '.t-o-buque': t.o_buque,
+                        '.t-o-hotel': t.o_hotel, '.t-o-otros': t.o_otros,
+                        '.t-d-aero': t.d_aeropuerto, '.t-d-buque': t.d_buque,
+                        '.t-d-hotel': t.d_hotel, '.t-d-hosp': t.d_hospital,
+                        '.t-d-clin': t.d_clinica, '.t-d-inmi': t.d_inmigracion,
+                        '.t-d-otros': t.d_otros, '.t-ida-vuelta': t.ida_vuelta
+                    };
+                    for (const [sel, val] of Object.entries(campos)) {
+                        const el = card.querySelector(sel);
+                        if (el && val) { el.checked = true; if (el.onchange) el.onchange.call(el); }
+                    }
+
+                    const textos = {
+                        '.t-o-hotel-texto': t.o_hotel_texto, '.t-o-otros-texto': t.o_otros_texto,
+                        '.t-d-hotel-texto': t.d_hotel_texto, '.t-d-hosp-texto': t.d_hospital_texto,
+                        '.t-d-clin-texto': t.d_clinica_texto, '.t-d-otros-texto': t.d_otros_texto
+                    };
+                    for (const [sel, val] of Object.entries(textos)) {
+                        const el = card.querySelector(sel);
+                        if (el && val) el.value = val;
+                    }
+
+                    if (t.comentarios) card.querySelector('.t-comentarios').value = t.comentarios;
+                }
+
+                verSec('sec-nueva', document.getElementById('btn-nueva'));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch(e) { alert("Error al cargar la factura para editar"); }
+        }
+
+        function cancelarEdicion() {
+            document.getElementById('formTaxi').removeAttribute('data-edit-id');
+            document.getElementById('edit-banner').classList.add('hidden');
+            limpiarBorrador(false);
+        }
             try {
                 const res = await fetch(`${URL_BASE}/re-descargar/${id}`, { headers: {'x-password':tokenSeguridad} });
                 if(res.ok) {
