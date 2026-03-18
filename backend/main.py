@@ -95,7 +95,11 @@ def crear_excel_con_nombre(datos_dict):
     nombre_barco = datos_dict['barco'].replace(" ", "_").upper()
     nombre_archivo = f"{nombre_barco}-{fecha_hoy}.xlsm"
     
-    path_salida = os.path.join("/tmp", nombre_archivo)
+    # Usamos una carpeta temporal DENTRO del proyecto (evita errores en Windows o permisos raros en Render)
+    temp_dir = os.path.join(base_path, "temp_files")
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    path_salida = os.path.join(temp_dir, nombre_archivo)
     
     wb = openpyxl.load_workbook(template_path, keep_vba=True)
     ws = wb.active
@@ -117,30 +121,47 @@ def generar_respuesta_archivo(path_xlsm, name_xlsm, formato):
         return FileResponse(path_xlsm, filename=name_xlsm, headers={"Content-Disposition": f"attachment; filename={name_xlsm}"})
 
     pdf_name = name_xlsm.replace(".xlsm", ".pdf")
-    pdf_path = os.path.join("/tmp", pdf_name)
+    outdir = os.path.dirname(path_xlsm)
+    pdf_path = os.path.join(outdir, pdf_name)
     
     # Generar PDF usando LibreOffice
     try:
-        subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf", "--outdir", "/tmp", path_xlsm], check=True)
+        # Perfil local para que LibreOffice no de error de permisos en servidores
+        lo_profile = os.path.join(outdir, "lo_profile")
+        cmd = [
+            "libreoffice", 
+            f"-env:UserInstallation=file://{lo_profile}",
+            "--headless", 
+            "--convert-to", 
+            "pdf", 
+            "--outdir", 
+            outdir, 
+            path_xlsm
+        ]
+        
+        # En sistemas Windows, el comando suele llamarse 'soffice'
+        if os.name == 'nt':
+            cmd[0] = "soffice"
+            
+        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except Exception as e:
-        print(f"Error generando PDF: {e}")
+        print(f"Error generando PDF con LibreOffice: {e}")
 
     if formato == "pdf":
         if os.path.exists(pdf_path):
             return FileResponse(pdf_path, filename=pdf_name, headers={"Content-Disposition": f"attachment; filename={pdf_name}"})
-        # Si falla el PDF, enviamos el excel por seguridad
-        return FileResponse(path_xlsm, filename=name_xlsm, headers={"Content-Disposition": f"attachment; filename={name_xlsm}"})
+        # Si no se creó el PDF, devolvemos error (así sabemos que falla de verdad en vez de dar Excel)
+        raise HTTPException(status_code=500, detail="Error al generar el PDF. Asegúrate de que LibreOffice está disponible.")
 
     # Formato AMBOS (ZIP)
     zip_name = name_xlsm.replace(".xlsm", ".zip")
-    zip_path = os.path.join("/tmp", zip_name)
+    zip_path = os.path.join(outdir, zip_name)
     with zipfile.ZipFile(zip_path, 'w') as zipf:
         zipf.write(path_xlsm, arcname=name_xlsm)
         if os.path.exists(pdf_path):
             zipf.write(pdf_path, arcname=pdf_name)
             
     return FileResponse(zip_path, filename=zip_name, headers={"Content-Disposition": f"attachment; filename={zip_name}"})
-
 
 # --- RUTAS ---
 @app.get("/login")
