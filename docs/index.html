@@ -232,10 +232,11 @@
     <script>
         let ticketCount = 0; 
         let tokenSeguridad = "";
-        let URL_BASE = 'https://programafacturastaxi.onrender.com';
+        
+        // AHORA LA URL ES SIEMPRE LA DEL NUEVO SERVIDOR
+        let URL_BASE = 'https://programafacturas-dev.onrender.com';
         
         if (window.location.hostname !== "programa-facturas-taxi.vercel.app") {
-            URL_BASE = 'https://programafacturas-dev.onrender.com';
             document.body.classList.add('modo-pruebas');
         }
 
@@ -525,9 +526,12 @@
             }
             idDescargaPendiente = id;
             document.getElementById('modal-descarga').classList.remove('hidden');
+            // Añadimos el blur al contenedor principal
+            document.getElementById('app-layout').classList.add('blur-sm');
         }
         function cerrarModal() {
             document.getElementById('modal-descarga').classList.add('hidden');
+            document.getElementById('app-layout').classList.remove('blur-sm');
         }
         function ejecutarDescarga(formato) {
             cerrarModal();
@@ -583,29 +587,32 @@
             }
 
             try {
-                const res = await fetch(`${URL_BASE}${endpoint}`, { method, headers:{'Content-Type':'application/json','x-password':tokenSeguridad}, body:JSON.stringify(data) });
+                const res = await fetch(`${URL_BASE}${endpoint}`, { 
+                    method, 
+                    headers:{'Content-Type':'application/json','x-password':tokenSeguridad}, 
+                    body:JSON.stringify(data) 
+                });
+
                 if(res.ok) {
                     if(modo === 'descarga') {
                         const blob = await res.blob();
-                        const head = res.headers.get('Content-Disposition');
-                        let filename = `${data.barco.replace(/ /g,"_")}`;
-                        if(head && head.includes('filename=')) {
-                            filename = head.split('filename=')[1].replace(/["']/g, '');
-                        } else {
-                            filename += (formato === 'excel') ? '.xlsm' : ((formato === 'pdf') ? '.pdf' : '.zip');
-                        }
                         const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a'); a.href = url; a.download = filename;
-                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        // Detectar extensión correcta para que windows no se haga un lío
+                        const ext = formato === 'excel' ? '.xlsm' : (formato === 'pdf' ? '.pdf' : '.zip');
+                        a.download = `${data.barco.replace(/ /g,"_")}${ext}`;
+                        document.body.appendChild(a); a.click(); a.remove();
                         window.URL.revokeObjectURL(url);
                     }
-                    limpiarBorrador(false);
+                    
+                    limpiarFormularioLocal(); 
                     alert(editId
                         ? (modo === 'nube' ? "☁️ Factura actualizada en la nube" : "✅ Archivo descargado")
                         : (modo === 'nube' ? "☁️ Guardado en la nube" : "✅ Archivo descargado")
                     );
                 } else alert("Error validando datos en el servidor");
-            } catch(e) { alert("Error de servidor"); }
+            } catch(e) { alert("Error de conexión con el servidor"); }
         }
 
         async function cargarHistorial() {
@@ -715,7 +722,7 @@
         function cancelarEdicion() {
             document.getElementById('formTaxi').removeAttribute('data-edit-id');
             document.getElementById('edit-banner').classList.add('hidden');
-            limpiarBorrador(false);
+            limpiarFormularioLocal();
         }
 
         async function redescargar(id, formato = 'excel') {
@@ -779,17 +786,21 @@
             } catch(e) { return false; }
         }
 
-        // Ya no hace location.reload(), sino que vacía el formulario en la misma pantalla.
-        function limpiarBorrador(q) { 
-            if(q && !confirm("¿Borrar todo el borrador en curso?")) return; 
-            localStorage.removeItem('taxi_t1'); 
+        // Funciones de limpieza que no recargan la página
+        function limpiarFormularioLocal() {
+            localStorage.removeItem('taxi_t1');
             document.getElementById('formTaxi').reset();
             document.getElementById('contenedor-tickets').innerHTML = '';
             ticketCount = 0;
+            agregarTicket(); // Dejar un ticket vacío
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function limpiarBorrador(q) { 
+            if(q && !confirm("¿Borrar todo el borrador en curso?")) return; 
+            limpiarFormularioLocal();
             document.getElementById('formTaxi').removeAttribute('data-edit-id');
             document.getElementById('edit-banner').classList.add('hidden');
-            agregarTicket();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     </script>
 </body>
