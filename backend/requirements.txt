@@ -2,5 +2,5 @@ fastapi
 uvicorn
 openpyxl
 python-multipart
-supabase
-httpx
+sqlalchemy
+psycopg2-binary
