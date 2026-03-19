@@ -144,10 +144,21 @@
                     </a>
                 </nav>
             </div>
-            <div class="mt-auto p-6 border-t border-white/10">
-                <a onclick="cerrarSesion()" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-500/20 text-blue-200/60 hover:text-red-300 transition-all cursor-pointer">
-                    <span class="material-symbols-outlined">logout</span><span class="text-sm font-medium">Cerrar Sesión</span>
-                </a>
+            <div class="mt-auto border-t border-white/10">
+                <div id="perfil-usuario" class="hidden px-6 pt-5 pb-3">
+                    <div class="flex items-center gap-3">
+                        <img id="perfil-avatar" src="" alt="" class="w-9 h-9 rounded-full object-cover ring-2 ring-white/20 flex-shrink-0">
+                        <div class="min-w-0">
+                            <p id="perfil-nombre" class="text-sm font-semibold text-white truncate"></p>
+                            <p id="perfil-email" class="text-[11px] text-blue-300/50 truncate"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 pb-5 pt-2">
+                    <a onclick="cerrarSesion()" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-500/20 text-blue-200/60 hover:text-red-300 transition-all cursor-pointer">
+                        <span class="material-symbols-outlined">logout</span><span class="text-sm font-medium">Cerrar Sesión</span>
+                    </a>
+                </div>
             </div>
         </aside>
 
@@ -316,11 +327,11 @@
     window.onload = () => {
         if (!sbClient) return;
         sbClient.auth.getSession().then(({ data: { session } }) => {
-            if (session) { sessionToken = session.access_token; iniciarApp(); }
+            if (session) { sessionToken = session.access_token; iniciarApp(session.user); }
         }).catch(e => console.error("Error recuperando sesión:", e));
 
         sbClient.auth.onAuthStateChange((event, session) => {
-            if (event === "SIGNED_IN" && session) { sessionToken = session.access_token; iniciarApp(); }
+            if (event === "SIGNED_IN" && session) { sessionToken = session.access_token; iniciarApp(session.user); }
             else if (event === "SIGNED_OUT") { sessionToken = null; document.body.classList.remove("logged-in"); }
         });
     };
@@ -351,11 +362,37 @@
         location.reload();
     }
 
-    function iniciarApp() {
+    function iniciarApp(user) {
         document.body.classList.add("logged-in");
         verSec("sec-nueva", $("#btn-nueva"));
         cargarSugerenciasPasajeros();
         if (!cargarProgreso()) agregarTicket();
+
+        // Mostrar perfil del usuario en el sidebar
+        if (user) {
+            const meta = user.user_metadata || {};
+            const nombre = meta.full_name || meta.name || user.email || "";
+            const avatar = meta.avatar_url || meta.picture || "";
+            const email = user.email || "";
+
+            if (nombre || avatar) {
+                $("#perfil-nombre").textContent = nombre;
+                $("#perfil-email").textContent = email;
+                if (avatar) {
+                    $("#perfil-avatar").src = avatar;
+                    $("#perfil-avatar").alt = nombre;
+                } else {
+                    // Iniciales como fallback si no hay foto
+                    $("#perfil-avatar").replaceWith(
+                        Object.assign(document.createElement("div"), {
+                            className: "w-9 h-9 rounded-full bg-primary/30 flex items-center justify-center text-white text-sm font-bold flex-shrink-0",
+                            textContent: nombre.charAt(0).toUpperCase(),
+                        })
+                    );
+                }
+                $("#perfil-usuario").classList.remove("hidden");
+            }
+        }
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
