@@ -120,7 +120,7 @@ def crear_excel(datos_dict, nombre_base):
     else:
         escribir(ws_factura, "F17", datetime.now().strftime("%d/%m/%Y"))
         
-    # --- ARREGLO DE LA DESCRIPCIÓN (Espaciado y alineación) ---
+    # --- ARREGLO DE LA DESCRIPCIÓN (Salto simple) ---
     desc_lines = []
     importe_lines = []
     total_importe = 0.0
@@ -133,11 +133,11 @@ def crear_excel(datos_dict, nombre_base):
         importe_lines.append(f"{importe:.2f}")
         total_importe += importe
         
-    # Usamos \n\n para dejar un hueco claro entre ticket y ticket
-    escribir(ws_factura, "B21", "\n\n".join(desc_lines))
-    escribir(ws_factura, "F21", "\n\n".join(importe_lines))
+    # Usamos \n (un solo salto) para que queden seguidos
+    escribir(ws_factura, "B21", "\n".join(desc_lines))
+    escribir(ws_factura, "F21", "\n".join(importe_lines))
     
-    # Forzamos a Excel a hacer saltos de línea y alinear arriba
+    # Mantenemos el ajuste de texto activado para que respete los saltos
     try:
         ws_factura["B21"].alignment = Alignment(wrap_text=True, vertical='top')
         ws_factura["F21"].alignment = Alignment(wrap_text=True, vertical='top')
