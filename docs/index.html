@@ -243,7 +243,7 @@
 
         let ticketCount = 0; 
         let sessionToken = null;
-        let supabase = null;
+        let sbClient = null;
 
         // INICIALIZACIÓN PROTEGIDA DE SUPABASE (Evita que el botón muera si algo falla)
         try {
@@ -251,7 +251,7 @@
             const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnaG9qdXVnbXVuZWdxcGRqZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzQ1NTgsImV4cCI6MjA4OTQ1MDU1OH0.FMfXxOMxu15IPKRG63uo6z1iG9vUq1P16MSeA2t6Szc';
             
             if (window.supabase) {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             } else {
                 console.error("La librería Supabase no se descargó de internet.");
             }
@@ -261,16 +261,16 @@
 
         // --- SISTEMA DE LOGIN GOOGLE ---
         window.onload = () => {
-            if(!supabase) return;
+            if(!sbClient) return;
 
-            supabase.auth.getSession().then(({ data: { session } }) => {
+            sbClient.auth.getSession().then(({ data: { session } }) => {
                 if (session) {
                     sessionToken = session.access_token;
                     iniciarApp();
                 }
             }).catch(e => console.error("Error recuperando sesión:", e));
 
-            supabase.auth.onAuthStateChange((event, session) => {
+            sbClient.auth.onAuthStateChange((event, session) => {
                 if (event === 'SIGNED_IN' && session) {
                     sessionToken = session.access_token;
                     iniciarApp();
@@ -292,11 +292,11 @@
                     btn.disabled = true;
                 }
 
-                if (!supabase) {
+                if (!sbClient) {
                     throw new Error("No se pudo cargar la conexión segura. Desactiva tu bloqueador de anuncios o pulsa Ctrl + F5 para recargar la caché.");
                 }
 
-                const { data, error } = await supabase.auth.signInWithOAuth({
+                const { data, error } = await sbClient.auth.signInWithOAuth({
                     provider: 'google',
                     options: { 
                         redirectTo: esProd
@@ -318,7 +318,7 @@
         }
 
         async function cerrarSesion() {
-            if(supabase) await supabase.auth.signOut();
+            if(sbClient) await sbClient.auth.signOut();
             location.reload();
         }
 
