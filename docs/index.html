@@ -466,6 +466,7 @@
                                 <select class="t-contacto rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary font-medium">
                                     <option value="whatsapp">WhatsApp</option>
                                     <option value="telefono">Teléfono</option>
+                                    <option value="telefono y whatsapp">Teléfono y WhatsApp</option>
                                 </select>
                             </div>
                             <div class="flex flex-col gap-2">
@@ -754,6 +755,8 @@
                         window.URL.revokeObjectURL(url);
                         
                         finalizarProgresoModal();
+                    } else {
+                        detenerErrorProgresoModal(); 
                     }
                     limpiarBorrador(false);
                     if(modo === 'nube') alert(editId ? "☁️ Factura actualizada en la nube" : "☁️ Guardado en la nube");
@@ -878,6 +881,7 @@
         }
 
         async function redescargar(id, formato = 'excel') {
+            iniciarProgresoModal();
             try {
                 const res = await fetch(`${URL_BASE}/re-descargar/${id}?formato=${formato}`, { headers: {'Authorization': `Bearer ${sessionToken}`} });
                 if(res.ok) {
