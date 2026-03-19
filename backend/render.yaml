@@ -3,7 +3,7 @@ services:
     name: programafacturastaxi
     env: docker
     envVars:
-      - key: TAXI_PASSWORD
+      - key: SUPABASE_URL
         sync: false
-      - key: DATABASE_URL
+      - key: SUPABASE_KEY
         sync: false
