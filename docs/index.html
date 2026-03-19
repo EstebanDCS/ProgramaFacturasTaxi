@@ -192,13 +192,37 @@
                             <div class="px-5 pb-5 pt-2"><label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-cli-mostrar" checked class="tpl-field rounded text-primary"> Mostrar sección de cliente en la factura</label></div></details>
                         <details open class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">view_column</span> Columnas</summary>
                             <div class="px-5 pb-5 pt-2">
-                                <p class="text-xs text-slate-500 mb-3">Empezar desde un preset o personalizar:</p>
-                                <div class="flex gap-2 mb-4">
-                                    <button type="button" onclick="cargarPreset('simple')" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-primary/10 hover:text-primary transition-colors">Simple</button>
-                                    <button type="button" onclick="cargarPreset('detallado')" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-primary/10 hover:text-primary transition-colors">Detallado</button>
-                                    <button type="button" onclick="cargarPreset('servicios')" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-primary/10 hover:text-primary transition-colors">Servicios</button>
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex gap-2 items-center">
+                                        <span class="text-xs text-slate-500">Preset:</span>
+                                        <button type="button" onclick="cargarPreset('simple')" class="text-[11px] font-bold px-2.5 py-1 rounded-md bg-slate-100 hover:bg-primary/10 hover:text-primary transition-colors">Simple</button>
+                                        <button type="button" onclick="cargarPreset('detallado')" class="text-[11px] font-bold px-2.5 py-1 rounded-md bg-slate-100 hover:bg-primary/10 hover:text-primary transition-colors">Detallado</button>
+                                        <button type="button" onclick="cargarPreset('servicios')" class="text-[11px] font-bold px-2.5 py-1 rounded-md bg-slate-100 hover:bg-primary/10 hover:text-primary transition-colors">Servicios</button>
+                                    </div>
+                                    <button type="button" onclick="$('#cols-help').classList.toggle('hidden')" class="w-6 h-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-primary/10 text-slate-400 hover:text-primary transition-colors" title="Ayuda"><span class="text-xs font-black">?</span></button>
                                 </div>
-                                <div class="space-y-2" id="tpl-cols-editor"></div>
+                                <div id="cols-help" class="hidden mb-4 p-4 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-900 space-y-2">
+                                    <p class="font-bold text-blue-700 flex items-center gap-1"><span class="material-symbols-outlined text-sm">help</span> Cómo funciona el editor de columnas</p>
+                                    <p>Cada fila define una columna de tu factura. Los campos son:</p>
+                                    <div class="grid grid-cols-2 gap-x-4 gap-y-1 mt-1">
+                                        <span><strong>Nombre:</strong> lo que aparece en la cabecera</span>
+                                        <span><strong>ID campo:</strong> identificador interno (sin espacios)</span>
+                                        <span><strong>Alinear:</strong> alineación del texto en esa columna</span>
+                                        <span><strong>Tipo:</strong> Texto, Número, Moneda o Fórmula</span>
+                                    </div>
+                                    <p class="mt-2"><strong>Fórmulas:</strong> usa <code class="bg-white px-1 rounded">=campo1*campo2</code> para cálculos automáticos. Ejemplo: si tienes columnas "cantidad" y "precio", pon <code class="bg-white px-1 rounded">=cantidad*precio</code> en una columna tipo Fórmula para calcular el total.</p>
+                                    <p><strong>Hoja de Detalle:</strong> si activas esta opción más abajo, cada línea de tu factura generará una página extra en formato ficha (como los bonos de taxi o tickets de embarque).</p>
+                                    <p class="text-blue-500 mt-1">Los presets son puntos de partida. Puedes añadir, quitar y renombrar columnas libremente.</p>
+                                </div>
+                                <div class="grid grid-cols-[1fr_1fr_70px_90px_1fr_28px] gap-2 mb-2 px-1">
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nombre</span>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ID campo</span>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Alinear</span>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tipo</span>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fórmula</span>
+                                    <span></span>
+                                </div>
+                                <div class="space-y-1.5" id="tpl-cols-editor"></div>
                                 <button type="button" onclick="addColumnaEditor()" class="mt-3 w-full flex items-center justify-center gap-1 py-2 border-2 border-dashed border-slate-200 rounded-lg text-xs font-bold text-slate-400 hover:border-primary hover:text-primary transition-colors"><span class="material-symbols-outlined text-sm">add</span> Añadir columna</button>
                             </div></details>
                         <details class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">auto_awesome</span> Hoja de Detalle</summary>
@@ -516,14 +540,14 @@
     const COL_PRESETS={simple:[{nombre:"Descripción",campo:"descripcion",alineacion:"left",tipo:"texto"},{nombre:"Importe",campo:"importe",alineacion:"right",tipo:"moneda"}],detallado:[{nombre:"Descripción",campo:"descripcion",alineacion:"left",tipo:"texto"},{nombre:"Cantidad",campo:"cantidad",alineacion:"right",tipo:"numero"},{nombre:"Precio Ud.",campo:"precio",alineacion:"right",tipo:"moneda"},{nombre:"Total",campo:"total",alineacion:"right",tipo:"formula",formula:"=cantidad*precio"}],servicios:[{nombre:"Descripción",campo:"descripcion",alineacion:"left",tipo:"texto"},{nombre:"Horas",campo:"horas",alineacion:"right",tipo:"numero"},{nombre:"Tarifa/h",campo:"tarifa",alineacion:"right",tipo:"moneda"},{nombre:"Total",campo:"total",alineacion:"right",tipo:"formula",formula:"=horas*tarifa"}]};
 
     function cargarPreset(p){const cols=COL_PRESETS[p]||COL_PRESETS.simple;$("#tpl-cols-editor").innerHTML="";cols.forEach(c=>addColumnaEditor(c));actualizarPreview()}
-    function addColumnaEditor(col=null){const d=document.createElement("div");d.className="col-editor-row grid grid-cols-[1fr_1fr_80px_100px_1fr_32px] gap-2 items-center";
+    function addColumnaEditor(col=null){const d=document.createElement("div");d.className="col-editor-row grid grid-cols-[1fr_1fr_70px_90px_1fr_28px] gap-2 items-center";
         const n=col?.nombre||"";const c=col?.campo||"";const a=col?.alineacion||"left";const t=col?.tipo||"texto";const f=col?.formula||"";
-        d.innerHTML=`<input type="text" value="${esc(n)}" placeholder="Nombre" class="ce-nombre rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-xs">
-<input type="text" value="${esc(c)}" placeholder="campo_id" class="ce-campo rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-mono">
-<select class="ce-align rounded-lg border-slate-200 bg-slate-50 px-1 py-1.5 text-xs"><option value="left"${a==="left"?" selected":""}>Izq</option><option value="center"${a==="center"?" selected":""}>Centro</option><option value="right"${a==="right"?" selected":""}>Der</option></select>
-<select class="ce-tipo rounded-lg border-slate-200 bg-slate-50 px-1 py-1.5 text-xs" onchange="this.closest('.col-editor-row').querySelector('.ce-formula').style.display=this.value==='formula'?'':'none'"><option value="texto"${t==="texto"?" selected":""}>Texto</option><option value="numero"${t==="numero"?" selected":""}>Número</option><option value="moneda"${t==="moneda"?" selected":""}>Moneda</option><option value="formula"${t==="formula"?" selected":""}>Fórmula</option></select>
-<input type="text" value="${esc(f)}" placeholder="=cant*precio" class="ce-formula rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-mono" style="display:${t==="formula"?"":"none"}">
-<button type="button" onclick="this.closest('.col-editor-row').remove();actualizarPreview()" class="text-slate-400 hover:text-red-500"><span class="material-symbols-outlined text-sm">close</span></button>`;
+        d.innerHTML=`<input type="text" value="${esc(n)}" placeholder="Ej: Total" class="ce-nombre rounded-lg border-slate-200 bg-slate-50 px-2.5 py-2 text-xs focus:ring-primary">
+<input type="text" value="${esc(c)}" placeholder="total" class="ce-campo rounded-lg border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-mono text-slate-500 focus:ring-primary">
+<select class="ce-align rounded-lg border-slate-200 bg-slate-50 px-1 py-2 text-xs focus:ring-primary"><option value="left"${a==="left"?" selected":""}>Izq</option><option value="center"${a==="center"?" selected":""}>Centro</option><option value="right"${a==="right"?" selected":""}>Der</option></select>
+<select class="ce-tipo rounded-lg border-slate-200 bg-slate-50 px-1 py-2 text-xs focus:ring-primary" onchange="this.closest('.col-editor-row').querySelector('.ce-formula').style.display=this.value==='formula'?'':'none'"><option value="texto"${t==="texto"?" selected":""}>Texto</option><option value="numero"${t==="numero"?" selected":""}>Número</option><option value="moneda"${t==="moneda"?" selected":""}>Moneda</option><option value="formula"${t==="formula"?" selected":""}>Fórmula</option></select>
+<input type="text" value="${esc(f)}" placeholder="=cant*precio" class="ce-formula rounded-lg border-violet-200 bg-violet-50 px-2.5 py-2 text-xs font-mono text-violet-700 focus:ring-violet-400" style="display:${t==="formula"?"":"none"}">
+<button type="button" onclick="this.closest('.col-editor-row').remove();actualizarPreview()" class="text-slate-300 hover:text-red-500 transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-base">close</span></button>`;
         $("#tpl-cols-editor").appendChild(d)}
 
     function getColumnasFromEditor(){return Array.from($$(".col-editor-row")).map(r=>({nombre:r.querySelector(".ce-nombre").value,campo:r.querySelector(".ce-campo").value.toLowerCase().replace(/\s+/g,"_")||r.querySelector(".ce-nombre").value.toLowerCase().replace(/\s+/g,"_"),alineacion:r.querySelector(".ce-align").value,tipo:r.querySelector(".ce-tipo").value,formula:r.querySelector(".ce-formula").value})).filter(c=>c.nombre)}
