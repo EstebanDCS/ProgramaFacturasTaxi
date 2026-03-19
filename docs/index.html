@@ -598,10 +598,12 @@
             document.getElementById('modal-descarga').classList.remove('hidden');
             document.getElementById('app-layout').classList.add('blur-sm');
         }
+        
         function cerrarModal() {
             document.getElementById('modal-descarga').classList.add('hidden');
             document.getElementById('app-layout').classList.remove('blur-sm');
         }
+        
         function ejecutarDescarga(formato) {
             cerrarModal();
             if (idDescargaPendiente) {
@@ -655,6 +657,13 @@
                 method = 'POST';
             }
 
+            // === AVISO VISUAL DE PROCESANDO (Para que no parezca colgado) ===
+            const toast = document.createElement('div');
+            toast.id = "toast-descarga";
+            toast.className = "fixed top-4 right-4 bg-primary text-white px-6 py-3 rounded-xl shadow-2xl z-[9999] flex items-center gap-3 font-bold animate-pulse";
+            toast.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> Procesando...`;
+            document.body.appendChild(toast);
+
             try {
                 const res = await fetch(`${URL_BASE}${endpoint}`, { 
                     method, 
@@ -685,7 +694,12 @@
                         : (modo === 'nube' ? "☁️ Guardado en la nube" : "✅ Archivo descargado")
                     );
                 } else alert("Error validando sesión en el servidor. Prueba a recargar.");
-            } catch(e) { alert("Error de conexión con el servidor"); }
+            } catch(e) { 
+                alert("Error de conexión con el servidor"); 
+            } finally {
+                const t = document.getElementById('toast-descarga');
+                if(t) t.remove();
+            }
         }
 
         async function cargarHistorial() {
@@ -799,6 +813,12 @@
         }
 
         async function redescargar(id, formato = 'excel') {
+            const toast = document.createElement('div');
+            toast.id = "toast-descarga";
+            toast.className = "fixed top-4 right-4 bg-primary text-white px-6 py-3 rounded-xl shadow-2xl z-[9999] flex items-center gap-3 font-bold animate-pulse";
+            toast.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> Procesando...`;
+            document.body.appendChild(toast);
+
             try {
                 const res = await fetch(`${URL_BASE}/re-descargar/${id}?formato=${formato}`, { headers: {'Authorization': `Bearer ${sessionToken}`} });
                 if(res.ok) {
@@ -816,7 +836,12 @@
                 } else {
                      alert("Error validando datos en el servidor al intentar re-descargar.");
                 }
-            } catch(e) { alert("Fallo al descargar"); }
+            } catch(e) { 
+                alert("Fallo al descargar"); 
+            } finally {
+                const t = document.getElementById('toast-descarga');
+                if(t) t.remove();
+            }
         }
 
         async function eliminarF(id) {

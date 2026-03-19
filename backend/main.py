@@ -95,15 +95,11 @@ def crear_excel(datos_dict, nombre_base):
     ws_factura = wb.worksheets[0]
     ws_template_bono = wb.worksheets[1] if len(wb.worksheets) > 1 else None
 
+    # Función segura que no sobrescribe celdas combinadas
     def escribir(ws, coord, valor):
         try:
-            celda = ws[coord]
-            if type(celda).__name__ == 'MergedCell':
-                for rango in ws.merged_cells.ranges:
-                    if coord in rango:
-                        ws.cell(row=rango.min_row, column=rango.min_col).value = valor
-                        return
-            ws[coord] = valor
+            if type(ws[coord]).__name__ != 'MergedCell':
+                ws[coord] = valor
         except:
             pass
     
@@ -113,6 +109,7 @@ def crear_excel(datos_dict, nombre_base):
     escribir(ws_factura, "C17", barco)
     tickets = datos_dict.get('tickets', [])
     
+    # Calculamos la fecha más alta
     todas_fechas = []
     for t in tickets: todas_fechas.extend(t.get('fechas_servicio', []))
     if todas_fechas:
@@ -124,16 +121,25 @@ def crear_excel(datos_dict, nombre_base):
     else:
         escribir(ws_factura, "F17", datetime.now().strftime("%d/%m/%Y"))
         
-    fila_ticket = 21
+    # --- ARREGLO DE LA DESCRIPCIÓN ---
+    # Juntamos todos los tickets en un solo texto con saltos de línea para que encaje
+    # perfectamente en tu cuadro gigante de descripción.
+    desc_lines = []
+    importe_lines = []
     total_importe = 0.0
+    
     for t in tickets:
         pasajeros = ", ".join(t.get('pasajeros', []))
         desc = f"Ticket #{t.get('numero_ticket', '')}"
         if pasajeros: desc += f" - Pax: {pasajeros}"
-        escribir(ws_factura, f"B{fila_ticket}", desc)
-        escribir(ws_factura, f"F{fila_ticket}", float(t.get('importe', 0)))
-        total_importe += float(t.get('importe', 0))
-        fila_ticket += 1
+        desc_lines.append(desc)
+        
+        importe = float(t.get('importe', 0))
+        importe_lines.append(f"{importe:.2f}")
+        total_importe += importe
+        
+    escribir(ws_factura, "B21", "\n".join(desc_lines))
+    escribir(ws_factura, "F21", "\n".join(importe_lines))
         
     base_imponible = total_importe / 1.10
     iva = total_importe - base_imponible
@@ -141,7 +147,7 @@ def crear_excel(datos_dict, nombre_base):
     escribir(ws_factura, "F39", round(iva, 2))
     escribir(ws_factura, "F40", round(total_importe, 2))
     
-    # 2. BONOS
+    # 2. BONOS (Hoja 2)
     if ws_template_bono and tickets:
         for i, t in enumerate(tickets):
             ws_bono = ws_template_bono if i == 0 else wb.copy_worksheet(ws_template_bono)
@@ -224,18 +230,17 @@ def procesar_descarga(datos_dict, formato):
         return FileResponse(zip_path, filename=zip_name, headers={"Content-Disposition": f"attachment; filename={zip_name}"})
 
 
-# --- RUTAS DE LA API (AHORA CON SUPABASE) ---
+# --- RUTAS DE LA API CON SUPABASE ---
 
 @app.get("/historial")
 async def historial(user = Depends(verificar_usuario)):
-    # Solo mostramos las facturas que coincidan con el user_id
     res = supabase.table("facturas").select("id, numero_factura, barco, importe_total, fecha_creacion").eq("user_id", user.id).order("fecha_creacion", desc=True).execute()
     return res.data
 
 @app.post("/solo-guardar")
 async def solo_guardar(datos: DatosFactura, user = Depends(verificar_usuario)):
     nueva = {
-        "user_id": user.id, # Asignamos el dueño de la factura
+        "user_id": user.id,
         "numero_factura": datos.factura_numero,
         "barco": datos.barco.upper(),
         "importe_total": sum(t.importe for t in datos.tickets),
@@ -247,7 +252,7 @@ async def solo_guardar(datos: DatosFactura, user = Depends(verificar_usuario)):
 @app.post("/generar")
 async def generar(datos: DatosFactura, formato: str = "excel", user = Depends(verificar_usuario)):
     nueva = {
-        "user_id": user.id, # Asignamos el dueño de la factura
+        "user_id": user.id,
         "numero_factura": datos.factura_numero,
         "barco": datos.barco.upper(),
         "importe_total": sum(t.importe for t in datos.tickets),
