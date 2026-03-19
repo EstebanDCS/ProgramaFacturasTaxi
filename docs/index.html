@@ -142,6 +142,9 @@
                     <a id="btn-historial" onclick="verSec('sec-historial',this);cargarHistorial();" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group">
                         <span class="material-symbols-outlined group-hover:fill-1">cloud_done</span><span class="text-sm font-medium">Historial Cloud</span>
                     </a>
+                    <a id="btn-admin" onclick="verSec('sec-admin',this);cargarDashboard();" class="nav-btn hidden flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-amber-300/70 hover:text-amber-200 cursor-pointer group">
+                        <span class="material-symbols-outlined group-hover:fill-1">admin_panel_settings</span><span class="text-sm font-medium">Dashboard Admin</span>
+                    </a>
                 </nav>
             </div>
             <div class="mt-auto border-t border-white/10">
@@ -250,6 +253,96 @@
                 </div>
             </div>
 
+            <!-- ── SECCIÓN: DASHBOARD ADMIN ── -->
+            <div id="sec-admin" class="app-section w-full max-w-[1400px]">
+                <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
+                    <div class="flex items-center gap-4">
+                        <div class="p-2 bg-amber-500/10 rounded-lg text-amber-600"><span class="material-symbols-outlined fill-1">admin_panel_settings</span></div>
+                        <div>
+                            <h2 class="text-2xl font-bold tracking-tight text-slate-900">Dashboard Administrador</h2>
+                            <p class="text-slate-500 text-sm mt-1 font-medium">Visión global de toda la plataforma</p>
+                        </div>
+                    </div>
+                    <button onclick="cargarDashboard()" class="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+                        <span class="material-symbols-outlined text-sm">refresh</span> Actualizar
+                    </button>
+                </header>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8" id="admin-stats">
+                    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Facturas</span>
+                            <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><span class="material-symbols-outlined text-primary text-lg">receipt_long</span></div>
+                        </div>
+                        <p class="text-3xl font-black text-slate-900" id="stat-total-facturas">—</p>
+                        <p class="text-xs text-slate-400 mt-1 font-medium">en la plataforma</p>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Facturado Total</span>
+                            <div class="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center"><span class="material-symbols-outlined text-emerald-600 text-lg">payments</span></div>
+                        </div>
+                        <p class="text-3xl font-black text-slate-900" id="stat-total-importe">—</p>
+                        <p class="text-xs text-slate-400 mt-1 font-medium">importe acumulado</p>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Usuarios</span>
+                            <div class="w-9 h-9 rounded-lg bg-violet-500/10 flex items-center justify-center"><span class="material-symbols-outlined text-violet-600 text-lg">group</span></div>
+                        </div>
+                        <p class="text-3xl font-black text-slate-900" id="stat-usuarios">—</p>
+                        <p class="text-xs text-slate-400 mt-1 font-medium">usuarios únicos</p>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Este Mes</span>
+                            <div class="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center"><span class="material-symbols-outlined text-amber-600 text-lg">trending_up</span></div>
+                        </div>
+                        <p class="text-3xl font-black text-slate-900" id="stat-facturas-mes">—</p>
+                        <p class="text-xs text-slate-400 mt-1 font-medium" id="stat-importe-mes"></p>
+                    </div>
+                </div>
+
+                <!-- Revenue by month + Top barcos -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-5 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-lg text-primary">bar_chart</span> Facturación por Mes
+                        </h3>
+                        <div id="chart-meses" class="flex items-end gap-2 h-48"></div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-5 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-lg text-amber-500">directions_boat</span> Top Barcos
+                        </h3>
+                        <div id="ranking-barcos" class="space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- All invoices table -->
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                            <span class="material-symbols-outlined text-lg text-slate-400">history</span> Actividad Reciente (Todas las Cuentas)
+                        </h3>
+                    </div>
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 border-b border-slate-100">
+                            <tr>
+                                <th class="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Fecha</th>
+                                <th class="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Usuario</th>
+                                <th class="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Barco</th>
+                                <th class="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Nº Fra.</th>
+                                <th class="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Importe</th>
+                                <th class="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em] text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-admin-facturas" class="divide-y divide-slate-50"></tbody>
+                    </table>
+                </div>
+            </div>
+
         </main>
     </div>
 
@@ -269,6 +362,7 @@
     let sbClient = null;
     let idDescargaPendiente = null;
     let progressInterval = null;
+    let isAdmin = false;
 
     if (!esProd) document.body.classList.add("modo-pruebas");
 
@@ -382,7 +476,6 @@
                     $("#perfil-avatar").src = avatar;
                     $("#perfil-avatar").alt = nombre;
                 } else {
-                    // Iniciales como fallback si no hay foto
                     $("#perfil-avatar").replaceWith(
                         Object.assign(document.createElement("div"), {
                             className: "w-9 h-9 rounded-full bg-primary/30 flex items-center justify-center text-white text-sm font-bold flex-shrink-0",
@@ -392,7 +485,24 @@
                 }
                 $("#perfil-usuario").classList.remove("hidden");
             }
+
+            // Comprobar si es administrador
+            checkAdminStatus();
         }
+    }
+
+    async function checkAdminStatus() {
+        try {
+            const res = await fetch(`${URL_BASE}/admin/check`, { headers: authHeaders() });
+            if (res.ok) {
+                const data = await res.json();
+                isAdmin = data.is_admin === true;
+                if (isAdmin) {
+                    $("#btn-admin").classList.remove("hidden");
+                    $("#btn-admin").classList.add("flex");
+                }
+            }
+        } catch { /* silencioso si falla */ }
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
@@ -402,7 +512,10 @@
         $$(".app-section").forEach(s => s.classList.remove("activa"));
         $(`#${id}`).classList.add("activa");
         $$(".nav-btn").forEach(l => {
+            // Preservar el estado hidden del botón admin si no es admin
+            const keepHidden = l.id === "btn-admin" && !isAdmin;
             l.className = "nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group";
+            if (keepHidden) l.classList.add("hidden");
             l.querySelector("span:first-child").classList.remove("fill-1");
         });
         btn.className = "nav-btn flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white shadow-lg shadow-primary/20 transition-all cursor-pointer";
@@ -657,6 +770,7 @@
     function cerrarModal() {
         $("#modal-descarga").classList.add("hidden");
         $("#app-layout").classList.remove("blur-sm");
+        restaurarBotonesModal();
     }
 
     function iniciarProgresoModal() {
@@ -885,6 +999,148 @@
         if (!confirm("⚠️ ATENCIÓN: Vaciarás todo el historial de la nube. ¿Continuar?")) return;
         await fetch(`${URL_BASE}/limpiar-historial`, { method: "DELETE", headers: authHeaders() });
         cargarHistorial();
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       DASHBOARD ADMINISTRADOR
+       ═══════════════════════════════════════════════════════════════════════ */
+    async function cargarDashboard() {
+        // Reset visual mientras carga
+        ["stat-total-facturas", "stat-total-importe", "stat-usuarios", "stat-facturas-mes"].forEach(id => {
+            $(`#${id}`).textContent = "…";
+        });
+        $("#tabla-admin-facturas").innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 font-medium">Cargando...</td></tr>`;
+
+        try {
+            const res = await fetch(`${URL_BASE}/admin/dashboard`, { headers: authHeaders() });
+            if (!res.ok) { alert("Error cargando dashboard"); return; }
+            const d = await res.json();
+
+            // Stats cards
+            $("#stat-total-facturas").textContent = d.total_facturas.toLocaleString("es-ES");
+            $("#stat-total-importe").textContent = d.total_importe.toLocaleString("es-ES", { minimumFractionDigits: 2 }) + " €";
+            $("#stat-usuarios").textContent = d.usuarios_unicos;
+            $("#stat-facturas-mes").textContent = d.facturas_mes;
+            $("#stat-importe-mes").textContent = d.importe_mes.toLocaleString("es-ES", { minimumFractionDigits: 2 }) + " € este mes";
+
+            // Chart: Facturación por mes (barras CSS puras)
+            renderChartMeses(d.importe_por_mes || []);
+
+            // Top barcos ranking
+            renderTopBarcos(d.top_barcos || []);
+
+            // Actividad reciente
+            renderTablaAdmin(d.actividad_reciente || []);
+
+        } catch { alert("Error de conexión al cargar el dashboard"); }
+    }
+
+    function renderChartMeses(datos) {
+        const container = $("#chart-meses");
+        if (!datos.length) { container.innerHTML = '<p class="text-sm text-slate-400 m-auto">Sin datos</p>'; return; }
+        const maxVal = Math.max(...datos.map(d => d.importe), 1);
+        container.innerHTML = datos.map(d => {
+            const pct = Math.max((d.importe / maxVal) * 100, 4);
+            const [y, m] = d.mes.split("-");
+            const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+            const label = meses[parseInt(m) - 1] || m;
+            return `<div class="flex-1 flex flex-col items-center justify-end h-full min-w-0">
+                <p class="text-[10px] font-bold text-slate-500 mb-1 truncate">${d.importe.toLocaleString("es-ES", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}€</p>
+                <div class="w-full rounded-t-lg bg-primary/80 hover:bg-primary transition-colors" style="height:${pct}%"></div>
+                <p class="text-[10px] font-bold text-slate-400 mt-2 uppercase">${esc(label)}</p>
+            </div>`;
+        }).join("");
+    }
+
+    function renderTopBarcos(datos) {
+        const container = $("#ranking-barcos");
+        if (!datos.length) { container.innerHTML = '<p class="text-sm text-slate-400">Sin datos</p>'; return; }
+        const maxFra = Math.max(...datos.map(d => d.facturas), 1);
+        container.innerHTML = datos.map((d, i) => {
+            const pct = (d.facturas / maxFra) * 100;
+            const medals = ["🥇", "🥈", "🥉"];
+            const medal = i < 3 ? medals[i] : `<span class="text-slate-400 text-xs font-bold">${i + 1}</span>`;
+            return `<div class="flex items-center gap-3">
+                <span class="w-6 text-center flex-shrink-0">${medal}</span>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-bold text-slate-700 truncate">${esc(d.barco)}</span>
+                        <span class="text-[10px] font-semibold text-slate-400 flex-shrink-0 ml-2">${d.facturas} fra · ${d.importe.toLocaleString("es-ES", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}€</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-1.5">
+                        <div class="bg-amber-400 h-1.5 rounded-full" style="width:${pct}%"></div>
+                    </div>
+                </div>
+            </div>`;
+        }).join("");
+    }
+
+    function renderTablaAdmin(facturas) {
+        const tb = $("#tabla-admin-facturas");
+        if (!facturas.length) { tb.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-slate-500 font-medium">Sin actividad</td></tr>`; return; }
+        const frag = document.createDocumentFragment();
+        facturas.forEach(f => {
+            const d = new Date(f.fecha_creacion).toLocaleDateString("es-ES", { year: "numeric", month: "2-digit", day: "2-digit" });
+            const userId = (f.user_id || "").substring(0, 8) + "…";
+            const tr = document.createElement("tr");
+            tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-50";
+            tr.innerHTML = `
+                <td class="px-6 py-3 text-sm font-medium text-slate-600">${esc(d)}</td>
+                <td class="px-6 py-3"><span class="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded">${esc(userId)}</span></td>
+                <td class="px-6 py-3"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#e1effe] text-primary uppercase tracking-wider">${esc(f.barco)}</span></td>
+                <td class="px-6 py-3 text-sm font-semibold text-slate-900">${esc(f.numero_factura)}</td>
+                <td class="px-6 py-3 text-sm font-bold text-slate-900">${f.importe_total.toFixed(2)}€</td>
+                <td class="px-6 py-3 text-right">
+                    <div class="flex items-center justify-end gap-2">
+                        <button onclick="adminRedescargar(${f.id})" class="text-primary hover:text-blue-800 transition-colors" title="Re-descargar">
+                            <span class="material-symbols-outlined text-[18px]">download</span>
+                        </button>
+                        <button onclick="adminEliminar(${f.id})" class="text-slate-400 hover:text-red-500 transition-colors" title="Eliminar">
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                    </div>
+                </td>`;
+            frag.appendChild(tr);
+        });
+        tb.innerHTML = "";
+        tb.appendChild(frag);
+    }
+
+    async function adminRedescargar(id) {
+        abrirModalDescarga();
+        idDescargaPendiente = null; // evitar conflicto
+        // Override: bind modal buttons to admin endpoint temporarily
+        const opciones = $$("#modal-content-opciones button[onclick^='ejecutarDescarga']");
+        opciones.forEach(btn => {
+            const formato = btn.getAttribute("onclick").match(/'(\w+)'/)?.[1] || "excel";
+            btn.onclick = async () => {
+                iniciarProgresoModal();
+                try {
+                    const res = await fetch(`${URL_BASE}/admin/re-descargar/${id}?formato=${formato}`, { headers: authHeaders() });
+                    if (res.ok) {
+                        descargarBlob(await res.blob(), res.headers.get("Content-Disposition"), `Admin_Fra_${id}`, formato);
+                        finalizarProgresoModal();
+                    } else { detenerErrorProgresoModal(); alert("Error al descargar."); }
+                } catch { detenerErrorProgresoModal(); alert("Error de conexión."); }
+                // Restaurar comportamiento normal de los botones
+                restaurarBotonesModal();
+            };
+        });
+    }
+
+    function restaurarBotonesModal() {
+        const formatos = ["excel", "pdf", "ambos"];
+        $$("#modal-content-opciones button[type='button']").forEach((btn, i) => {
+            if (formatos[i]) btn.onclick = () => ejecutarDescarga(formatos[i]);
+        });
+    }
+
+    async function adminEliminar(id) {
+        if (!confirm("⚠️ ADMIN: ¿Eliminar esta factura de cualquier usuario?")) return;
+        try {
+            await fetch(`${URL_BASE}/admin/eliminar-factura/${id}`, { method: "DELETE", headers: authHeaders() });
+            cargarDashboard();
+        } catch { alert("Error al eliminar"); }
     }
 
     /* ═══════════════════════════════════════════════════════════════════════

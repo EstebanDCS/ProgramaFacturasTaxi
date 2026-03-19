@@ -36,6 +36,13 @@ app.add_middleware(
 BASE_DIR = os.path.dirname(__file__)
 TEMP_DIR = os.path.join(BASE_DIR, "temp_files")
 
+# Emails con acceso de administrador (ampliable vía variable de entorno separada por comas)
+ADMIN_EMAILS = set(
+    e.strip().lower()
+    for e in os.environ.get("ADMIN_EMAILS", "estebandelka@gmail.com").split(",")
+    if e.strip()
+)
+
 
 # ─── AUTENTICACIÓN ───────────────────────────────────────────────────────────
 async def verificar_usuario(authorization: str = Header(None)):
@@ -53,6 +60,14 @@ async def verificar_usuario(authorization: str = Header(None)):
     except Exception as e:
         print(f"❌ ERROR verificando token: {type(e).__name__}: {e}")
         raise HTTPException(status_code=401, detail=f"Token no válido: {str(e)}")
+
+
+async def verificar_admin(user=Depends(verificar_usuario)):
+    """Verifica que el usuario autenticado sea administrador."""
+    email = (user.email or "").lower()
+    if email not in ADMIN_EMAILS:
+        raise HTTPException(status_code=403, detail="Acceso restringido a administradores.")
+    return user
 
 
 # ─── MODELOS PYDANTIC ────────────────────────────────────────────────────────
@@ -385,3 +400,113 @@ async def eliminar_factura(f_id: int, user=Depends(verificar_usuario)):
 async def limpiar(user=Depends(verificar_usuario)):
     supabase.table("facturas").delete().eq("user_id", user.id).execute()
     return {"msg": "ok"}
+
+
+# ─── RUTAS DE ADMINISTRADOR ──────────────────────────────────────────────────
+
+@app.get("/admin/check")
+async def admin_check(user=Depends(verificar_usuario)):
+    """Devuelve si el usuario actual es admin (no lanza 403, solo informa)."""
+    email = (user.email or "").lower()
+    return {"is_admin": email in ADMIN_EMAILS}
+
+
+@app.get("/admin/dashboard")
+async def admin_dashboard(user=Depends(verificar_admin)):
+    """Estadísticas globales para el panel de administración."""
+    res = supabase.table("facturas") \
+        .select("id, user_id, barco, importe_total, fecha_creacion, numero_factura") \
+        .order("fecha_creacion", desc=True) \
+        .execute()
+    facturas = res.data or []
+
+    # Cálculos
+    total_facturas = len(facturas)
+    total_importe = sum(f.get("importe_total", 0) for f in facturas)
+    usuarios_unicos = len(set(f.get("user_id", "") for f in facturas))
+
+    # Facturas de este mes
+    ahora = datetime.utcnow()
+    facturas_mes = [
+        f for f in facturas
+        if f.get("fecha_creacion", "").startswith(ahora.strftime("%Y-%m"))
+    ]
+    importe_mes = sum(f.get("importe_total", 0) for f in facturas_mes)
+
+    # Top barcos por frecuencia
+    barcos_count = {}
+    barcos_importe = {}
+    for f in facturas:
+        b = f.get("barco", "DESCONOCIDO")
+        barcos_count[b] = barcos_count.get(b, 0) + 1
+        barcos_importe[b] = barcos_importe.get(b, 0) + f.get("importe_total", 0)
+
+    top_barcos = sorted(barcos_count.items(), key=lambda x: x[1], reverse=True)[:10]
+    top_barcos_data = [
+        {"barco": b, "facturas": c, "importe": round(barcos_importe.get(b, 0), 2)}
+        for b, c in top_barcos
+    ]
+
+    # Importe por mes (últimos 6 meses)
+    meses = {}
+    for f in facturas:
+        fc = f.get("fecha_creacion", "")
+        if len(fc) >= 7:
+            mes_key = fc[:7]  # "2026-03"
+            meses[mes_key] = meses.get(mes_key, 0) + f.get("importe_total", 0)
+    meses_ordenados = sorted(meses.items())[-6:]
+
+    # Actividad reciente (últimas 15)
+    recientes = facturas[:15]
+
+    return {
+        "total_facturas": total_facturas,
+        "total_importe": round(total_importe, 2),
+        "usuarios_unicos": usuarios_unicos,
+        "facturas_mes": len(facturas_mes),
+        "importe_mes": round(importe_mes, 2),
+        "top_barcos": top_barcos_data,
+        "importe_por_mes": [{"mes": m, "importe": round(v, 2)} for m, v in meses_ordenados],
+        "actividad_reciente": recientes,
+    }
+
+
+@app.get("/admin/facturas")
+async def admin_facturas(user=Depends(verificar_admin)):
+    """Todas las facturas de todos los usuarios."""
+    res = supabase.table("facturas") \
+        .select("id, user_id, numero_factura, barco, importe_total, fecha_creacion") \
+        .order("fecha_creacion", desc=True) \
+        .execute()
+    return res.data
+
+
+@app.get("/admin/factura/{f_id}")
+async def admin_get_factura(f_id: int, user=Depends(verificar_admin)):
+    """Obtener datos JSON de cualquier factura (sin filtro user_id)."""
+    res = supabase.table("facturas") \
+        .select("datos_json") \
+        .eq("id", f_id) \
+        .single().execute()
+    if not res.data:
+        raise HTTPException(status_code=404)
+    return json.loads(res.data["datos_json"])
+
+
+@app.get("/admin/re-descargar/{f_id}")
+async def admin_redescargar(f_id: int, formato: str = "excel", user=Depends(verificar_admin)):
+    """Re-descargar cualquier factura (sin filtro user_id)."""
+    res = supabase.table("facturas") \
+        .select("datos_json") \
+        .eq("id", f_id) \
+        .single().execute()
+    if not res.data:
+        raise HTTPException(status_code=404)
+    return procesar_descarga(json.loads(res.data["datos_json"]), formato)
+
+
+@app.delete("/admin/eliminar-factura/{f_id}")
+async def admin_eliminar(f_id: int, user=Depends(verificar_admin)):
+    """Eliminar cualquier factura (sin filtro user_id)."""
+    supabase.table("facturas").delete().eq("id", f_id).execute()
+    return {"msg": "Factura eliminada por administrador"}
