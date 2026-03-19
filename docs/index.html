@@ -59,37 +59,54 @@
     <datalist id="sugerencias-pasajeros"></datalist>
 
     <div id="modal-descarga" class="fixed inset-0 z-[9999] hidden flex items-center justify-center">
-        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="cerrarModal()"></div>
-        <div class="bg-white rounded-2xl shadow-2xl z-10 p-6 w-full max-w-sm mx-4 transform transition-all scale-100">
-            <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary">download</span> Formato de descarga
-            </h3>
-            <div class="space-y-3">
-                <button type="button" onclick="ejecutarDescarga('excel')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 transition-colors group text-left">
-                    <span class="material-symbols-outlined text-emerald-600">table_view</span>
-                    <div>
-                        <span class="block font-bold text-slate-700 group-hover:text-emerald-700">Solo Excel</span>
-                        <span class="text-xs text-slate-500">Archivo .xlsm editable</span>
-                    </div>
-                </button>
-                <button type="button" onclick="ejecutarDescarga('pdf')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-red-500 hover:bg-red-50 transition-colors group text-left">
-                    <span class="material-symbols-outlined text-red-600">picture_as_pdf</span>
-                    <div>
-                        <span class="block font-bold text-slate-700 group-hover:text-red-700">Solo PDF</span>
-                        <span class="text-xs text-slate-500">Documento listo para enviar/imprimir</span>
-                    </div>
-                </button>
-                <button type="button" onclick="ejecutarDescarga('ambos')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-primary hover:bg-blue-50 transition-colors group text-left">
-                    <span class="material-symbols-outlined text-primary">folder_zip</span>
-                    <div>
-                        <span class="block font-bold text-slate-700 group-hover:text-blue-700">Ambos (ZIP)</span>
-                        <span class="text-xs text-slate-500">Carpeta con el Excel y el PDF</span>
-                    </div>
-                </button>
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="if(document.getElementById('modal-content-progreso').classList.contains('hidden')) cerrarModal()"></div>
+        
+        <div class="bg-white rounded-2xl shadow-2xl z-10 p-6 w-full max-w-sm mx-4 transform transition-all scale-100 relative min-h-[300px] flex flex-col justify-center">
+            
+            <div id="modal-content-opciones" class="w-full">
+                <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">download</span> Formato de descarga
+                </h3>
+                <div class="space-y-3">
+                    <button type="button" onclick="ejecutarDescarga('excel')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 transition-colors group text-left">
+                        <span class="material-symbols-outlined text-emerald-600">table_view</span>
+                        <div>
+                            <span class="block font-bold text-slate-700 group-hover:text-emerald-700">Solo Excel</span>
+                            <span class="text-xs text-slate-500">Archivo .xlsm editable</span>
+                        </div>
+                    </button>
+                    <button type="button" onclick="ejecutarDescarga('pdf')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-red-500 hover:bg-red-50 transition-colors group text-left">
+                        <span class="material-symbols-outlined text-red-600">picture_as_pdf</span>
+                        <div>
+                            <span class="block font-bold text-slate-700 group-hover:text-red-700">Solo PDF</span>
+                            <span class="text-xs text-slate-500">Documento listo para enviar/imprimir</span>
+                        </div>
+                    </button>
+                    <button type="button" onclick="ejecutarDescarga('ambos')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-primary hover:bg-blue-50 transition-colors group text-left">
+                        <span class="material-symbols-outlined text-primary">folder_zip</span>
+                        <div>
+                            <span class="block font-bold text-slate-700 group-hover:text-blue-700">Ambos (ZIP)</span>
+                            <span class="text-xs text-slate-500">Carpeta con el Excel y el PDF</span>
+                        </div>
+                    </button>
+                </div>
+                <div class="mt-6 text-right">
+                    <button onclick="cerrarModal()" class="text-sm font-semibold text-slate-500 hover:text-slate-700">Cancelar</button>
+                </div>
             </div>
-            <div class="mt-6 text-right">
-                <button onclick="cerrarModal()" class="text-sm font-semibold text-slate-500 hover:text-slate-700">Cancelar</button>
+
+            <div id="modal-content-progreso" class="hidden w-full flex flex-col items-center py-4">
+                <div class="relative flex items-center justify-center">
+                    <svg class="w-32 h-32 transform -rotate-90">
+                        <circle cx="64" cy="64" r="52" stroke="currentColor" stroke-width="8" fill="transparent" class="text-slate-100" />
+                        <circle id="circulo-progreso" cx="64" cy="64" r="52" stroke="currentColor" stroke-width="8" fill="transparent" stroke-dasharray="326.7" stroke-dashoffset="326.7" class="text-primary transition-all duration-500 ease-out" />
+                    </svg>
+                    <div class="absolute text-3xl font-black text-slate-700" id="texto-progreso">0%</div>
+                </div>
+                <p class="mt-8 text-base font-bold text-slate-800">Generando archivo...</p>
+                <p class="text-xs font-semibold text-slate-400 mt-1 text-center">Dependiendo del servidor de PDF,<br>puede tardar unos segundos.</p>
             </div>
+
         </div>
     </div>
 
@@ -245,7 +262,7 @@
         let sessionToken = null;
         let sbClient = null;
 
-        // INICIALIZACIÓN PROTEGIDA DE SUPABASE (Evita que el botón muera si algo falla)
+        // INICIALIZACIÓN PROTEGIDA DE SUPABASE
         try {
             const SUPABASE_URL = 'https://aghojuugmunegqpdjgfm.supabase.co';
             const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnaG9qdXVnbXVuZWdxcGRqZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzQ1NTgsImV4cCI6MjA4OTQ1MDU1OH0.FMfXxOMxu15IPKRG63uo6z1iG9vUq1P16MSeA2t6Szc';
@@ -588,7 +605,10 @@
             guardarProgreso();
         }
 
+        // === LOGICA DEL MODAL ANIMADO ===
         let idDescargaPendiente = null;
+        let progressInterval = null;
+
         function abrirModalDescarga(id = null) {
             if (id === null) {
                 const form = document.getElementById('formTaxi');
@@ -598,14 +618,65 @@
             document.getElementById('modal-descarga').classList.remove('hidden');
             document.getElementById('app-layout').classList.add('blur-sm');
         }
-        
+
         function cerrarModal() {
             document.getElementById('modal-descarga').classList.add('hidden');
             document.getElementById('app-layout').classList.remove('blur-sm');
         }
-        
-        function ejecutarDescarga(formato) {
+
+        // Inicia la animación de carga sin cerrar el modal
+        function iniciarProgresoModal() {
+            document.getElementById('modal-content-opciones').classList.add('hidden');
+            document.getElementById('modal-content-progreso').classList.remove('hidden');
+            
+            let percent = 0;
+            const circle = document.getElementById('circulo-progreso');
+            const text = document.getElementById('texto-progreso');
+            circle.style.strokeDashoffset = 326.7;
+            text.innerText = '0%';
+
+            progressInterval = setInterval(() => {
+                if (percent < 90) {
+                    percent += Math.floor(Math.random() * 8) + 2; 
+                    if (percent > 90) percent = 90;
+                    const offset = 326.7 - (percent / 100) * 326.7;
+                    circle.style.strokeDashoffset = offset;
+                    text.innerText = percent + '%';
+                }
+            }, 500);
+        }
+
+        // Detiene la animación poniéndola al 100% y cierra la ventana
+        function finalizarProgresoModal() {
+            clearInterval(progressInterval);
+            const circle = document.getElementById('circulo-progreso');
+            const text = document.getElementById('texto-progreso');
+            circle.style.strokeDashoffset = 0;
+            text.innerText = '100%';
+            
+            setTimeout(() => {
+                cerrarModal();
+                // Reseteamos el modal por si el usuario vuelve a abrirlo
+                setTimeout(() => {
+                    document.getElementById('modal-content-opciones').classList.remove('hidden');
+                    document.getElementById('modal-content-progreso').classList.add('hidden');
+                    circle.style.strokeDashoffset = 326.7;
+                    text.innerText = '0%';
+                }, 400);
+            }, 600);
+        }
+
+        function detenerErrorProgresoModal() {
+            clearInterval(progressInterval);
             cerrarModal();
+            setTimeout(() => {
+                document.getElementById('modal-content-opciones').classList.remove('hidden');
+                document.getElementById('modal-content-progreso').classList.add('hidden');
+            }, 400);
+        }
+
+        function ejecutarDescarga(formato) {
+            iniciarProgresoModal(); 
             if (idDescargaPendiente) {
                 redescargar(idDescargaPendiente, formato);
             } else {
@@ -657,13 +728,6 @@
                 method = 'POST';
             }
 
-            // === AVISO VISUAL DE PROCESANDO (Para que no parezca colgado) ===
-            const toast = document.createElement('div');
-            toast.id = "toast-descarga";
-            toast.className = "fixed top-4 right-4 bg-primary text-white px-6 py-3 rounded-xl shadow-2xl z-[9999] flex items-center gap-3 font-bold animate-pulse";
-            toast.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> Procesando...`;
-            document.body.appendChild(toast);
-
             try {
                 const res = await fetch(`${URL_BASE}${endpoint}`, { 
                     method, 
@@ -673,6 +737,7 @@
                     }, 
                     body:JSON.stringify(data) 
                 });
+                
                 if(res.ok) {
                     if(modo === 'descarga') {
                         const blob = await res.blob();
@@ -687,18 +752,18 @@
                         const a = document.createElement('a'); a.href = url; a.download = filename;
                         document.body.appendChild(a); a.click(); document.body.removeChild(a);
                         window.URL.revokeObjectURL(url);
+                        
+                        finalizarProgresoModal();
                     }
                     limpiarBorrador(false);
-                    alert(editId
-                        ? (modo === 'nube' ? "☁️ Factura actualizada en la nube" : "✅ Archivo descargado")
-                        : (modo === 'nube' ? "☁️ Guardado en la nube" : "✅ Archivo descargado")
-                    );
-                } else alert("Error validando sesión en el servidor. Prueba a recargar.");
+                    if(modo === 'nube') alert(editId ? "☁️ Factura actualizada en la nube" : "☁️ Guardado en la nube");
+                } else {
+                    if(modo === 'descarga') detenerErrorProgresoModal();
+                    alert("Error validando sesión en el servidor. Prueba a recargar.");
+                }
             } catch(e) { 
+                if(modo === 'descarga') detenerErrorProgresoModal();
                 alert("Error de conexión con el servidor"); 
-            } finally {
-                const t = document.getElementById('toast-descarga');
-                if(t) t.remove();
             }
         }
 
@@ -813,12 +878,6 @@
         }
 
         async function redescargar(id, formato = 'excel') {
-            const toast = document.createElement('div');
-            toast.id = "toast-descarga";
-            toast.className = "fixed top-4 right-4 bg-primary text-white px-6 py-3 rounded-xl shadow-2xl z-[9999] flex items-center gap-3 font-bold animate-pulse";
-            toast.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> Procesando...`;
-            document.body.appendChild(toast);
-
             try {
                 const res = await fetch(`${URL_BASE}/re-descargar/${id}?formato=${formato}`, { headers: {'Authorization': `Bearer ${sessionToken}`} });
                 if(res.ok) {
@@ -833,14 +892,15 @@
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a'); a.href = url; a.download = filename;
                     document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); a.remove();
+                    
+                    finalizarProgresoModal();
                 } else {
-                     alert("Error validando datos en el servidor al intentar re-descargar.");
+                    detenerErrorProgresoModal();
+                    alert("Error validando datos en el servidor al intentar re-descargar.");
                 }
             } catch(e) { 
+                detenerErrorProgresoModal();
                 alert("Fallo al descargar"); 
-            } finally {
-                const t = document.getElementById('toast-descarga');
-                if(t) t.remove();
             }
         }
 

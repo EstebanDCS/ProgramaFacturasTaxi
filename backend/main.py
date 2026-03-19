@@ -95,7 +95,6 @@ def crear_excel(datos_dict, nombre_base):
     ws_factura = wb.worksheets[0]
     ws_template_bono = wb.worksheets[1] if len(wb.worksheets) > 1 else None
 
-    # Función segura que no sobrescribe celdas combinadas
     def escribir(ws, coord, valor):
         try:
             if type(ws[coord]).__name__ != 'MergedCell':
@@ -109,7 +108,6 @@ def crear_excel(datos_dict, nombre_base):
     escribir(ws_factura, "C17", barco)
     tickets = datos_dict.get('tickets', [])
     
-    # Calculamos la fecha más alta
     todas_fechas = []
     for t in tickets: todas_fechas.extend(t.get('fechas_servicio', []))
     if todas_fechas:
@@ -121,17 +119,14 @@ def crear_excel(datos_dict, nombre_base):
     else:
         escribir(ws_factura, "F17", datetime.now().strftime("%d/%m/%Y"))
         
-    # --- ARREGLO DE LA DESCRIPCIÓN ---
-    # Juntamos todos los tickets en un solo texto con saltos de línea para que encaje
-    # perfectamente en tu cuadro gigante de descripción.
+    # --- ARREGLO DE LA DESCRIPCIÓN (Solo el número limpio) ---
     desc_lines = []
     importe_lines = []
     total_importe = 0.0
     
     for t in tickets:
-        pasajeros = ", ".join(t.get('pasajeros', []))
-        desc = f"Ticket #{t.get('numero_ticket', '')}"
-        if pasajeros: desc += f" - Pax: {pasajeros}"
+        # Se coge solo el número del ticket sin añadidos
+        desc = t.get('numero_ticket', '')
         desc_lines.append(desc)
         
         importe = float(t.get('importe', 0))
@@ -147,7 +142,7 @@ def crear_excel(datos_dict, nombre_base):
     escribir(ws_factura, "F39", round(iva, 2))
     escribir(ws_factura, "F40", round(total_importe, 2))
     
-    # 2. BONOS (Hoja 2)
+    # 2. BONOS
     if ws_template_bono and tickets:
         for i, t in enumerate(tickets):
             ws_bono = ws_template_bono if i == 0 else wb.copy_worksheet(ws_template_bono)
