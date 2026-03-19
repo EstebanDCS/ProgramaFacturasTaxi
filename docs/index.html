@@ -77,7 +77,7 @@
                         <span class="material-symbols-outlined fill-1">dashboard</span><span class="text-sm font-medium">Dashboard</span></a>
                     <a id="btn-plantillas" onclick="verSec('sec-plantillas',this);cargarPlantillas()" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group">
                         <span class="material-symbols-outlined group-hover:fill-1">draft</span><span class="text-sm font-medium">Plantillas</span></a>
-                    <a id="btn-nueva" onclick="verSec('sec-nueva',this)" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group">
+                    <a id="btn-nueva" onclick="verSec('sec-nueva',this);cargarGridNuevaFactura()" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group">
                         <span class="material-symbols-outlined group-hover:fill-1">description</span><span class="text-sm font-medium">Nueva Factura</span></a>
                     <a id="btn-historial" onclick="verSec('sec-historial',this);cargarHistorial()" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group">
                         <span class="material-symbols-outlined group-hover:fill-1">cloud_done</span><span class="text-sm font-medium">Historial</span></a>
@@ -238,58 +238,69 @@
             <!-- ══ NUEVA FACTURA ══ -->
             <div id="sec-nueva" class="app-section w-full max-w-[1400px]">
                 <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
-                    <div class="flex items-center gap-4"><div class="p-2 bg-primary/10 rounded-lg text-primary"><span class="material-symbols-outlined fill-1">receipt_long</span></div><h2 class="text-2xl font-bold tracking-tight text-slate-900">Generar Factura</h2></div>
-                    <button onclick="limpiarBorrador(true)" class="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all"><span class="material-symbols-outlined text-sm">delete_sweep</span> Limpiar</button>
+                    <div class="flex items-center gap-4"><div class="p-2 bg-primary/10 rounded-lg text-primary"><span class="material-symbols-outlined fill-1">receipt_long</span></div><h2 class="text-2xl font-bold tracking-tight text-slate-900">Nueva Factura</h2></div>
+                    <button id="btn-volver-selector" onclick="mostrarSelectorPlantilla()" class="hidden flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all"><span class="material-symbols-outlined text-sm">arrow_back</span> Cambiar plantilla</button>
                 </header>
-                <div id="edit-banner" class="hidden mb-6 flex items-center justify-between gap-4 bg-amber-50 border border-amber-200 text-amber-800 px-5 py-3.5 rounded-xl">
-                    <div class="flex items-center gap-3"><span class="material-symbols-outlined fill-1 text-amber-500">edit_note</span><span id="edit-banner-texto" class="text-sm font-semibold"></span></div>
-                    <button onclick="cancelarEdicion()" class="text-xs font-bold text-amber-600 hover:text-amber-900 flex items-center gap-1"><span class="material-symbols-outlined text-sm">close</span> Cancelar</button>
+
+                <!-- PASO 1: Selector de plantilla -->
+                <div id="nueva-paso-selector">
+                    <p class="text-slate-500 text-sm mb-6">Selecciona una plantilla para crear tu factura:</p>
+                    <div id="nueva-plantillas-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-6"></div>
+                    <div class="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl">
+                        <span class="material-symbols-outlined text-4xl text-slate-300 mb-2 block">add_circle</span>
+                        <p class="text-slate-500 font-medium mb-3">¿No tienes plantillas?</p>
+                        <button onclick="verSec('sec-plantillas',document.getElementById('btn-plantillas'));cargarPlantillas()" class="bg-primary hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-lg text-sm transition-all">Crear mi primera plantilla</button>
+                    </div>
                 </div>
-                <form id="formTaxi" class="space-y-6 pb-12">
+
+                <!-- PASO 2: Formulario genérico (se muestra al seleccionar plantilla) -->
+                <div id="nueva-paso-form" class="hidden space-y-6">
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                         <div class="flex items-center gap-2 mb-6 text-primary font-bold"><span class="material-symbols-outlined text-xl">info</span><h3 class="text-lg">Detalles de Factura</h3></div>
+                        <div class="flex items-center gap-3 mb-6 bg-violet-50 border border-violet-200 px-4 py-3 rounded-lg">
+                            <span class="material-symbols-outlined text-violet-600">draft</span>
+                            <span class="text-sm font-semibold text-violet-700" id="nueva-plantilla-nombre">Plantilla</span>
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="flex flex-col gap-2"><label class="text-sm font-semibold text-slate-600">Nº Factura / Servicio</label><input type="text" id="factura_numero" required class="w-full rounded-lg border-slate-200 bg-slate-50 focus:ring-primary px-4 py-3" placeholder="Ej: 2024-0001"></div>
-                            <div class="flex flex-col gap-2"><label class="text-sm font-semibold text-slate-600">Nombre del Barco / Referencia</label><input type="text" id="barco" required class="w-full rounded-lg border-slate-200 bg-slate-50 focus:ring-primary px-4 py-3" placeholder="Nombre del buque"></div>
+                            <div class="flex flex-col gap-2"><label class="text-sm font-semibold text-slate-600">Nº Factura</label><input type="text" id="factura_numero" required class="w-full rounded-lg border-slate-200 bg-slate-50 focus:ring-primary px-4 py-3" placeholder="Ej: 2026-0001"></div>
+                            <div class="flex flex-col gap-2"><label class="text-sm font-semibold text-slate-600">Fecha</label><input type="date" id="gen-fecha" class="w-full rounded-lg border-slate-200 bg-slate-50 focus:ring-primary px-4 py-3"></div>
                         </div>
-                        <div class="mt-4 flex flex-col gap-2"><label class="text-sm font-semibold text-slate-600 flex items-center gap-2"><span class="material-symbols-outlined text-base text-primary">draft</span> Plantilla</label>
-                            <select id="sel-plantilla" onchange="onPlantillaChange()" class="w-full md:w-1/2 rounded-lg border-slate-200 bg-slate-50 focus:ring-primary px-4 py-3 text-sm"><option value="">Plantilla original (por defecto)</option></select></div>
+                        <div class="mt-4 flex flex-col gap-2"><label class="text-sm font-semibold text-slate-600">Referencia (opcional)</label><input type="text" id="gen-referencia" class="w-full rounded-lg border-slate-200 bg-slate-50 focus:ring-primary px-4 py-3 text-sm" placeholder="Ej: Proyecto Alpha"></div>
                     </div>
-                    <div id="form-original">
-                        <div id="contenedor-tickets" class="space-y-6"></div>
-                        <div class="pt-4 space-y-6">
-                            <button type="button" onclick="agregarTicket()" class="w-full flex items-center justify-center gap-2 px-6 py-4 border-2 border-primary text-primary font-bold rounded-lg hover:bg-primary hover:text-white transition-all bg-white shadow-sm"><span class="material-symbols-outlined font-bold">add_circle</span> AÑADIR TICKET</button>
-                            <div class="flex flex-col md:flex-row gap-4">
-                                <button type="button" onclick="enviarProceso('nube')" class="flex-1 flex items-center justify-center gap-2 px-8 py-3 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 shadow-lg transition-all"><span class="material-symbols-outlined">cloud_upload</span> GUARDAR EN NUBE</button>
-                                <button type="button" onclick="abrirModalDescarga()" class="flex-1 flex items-center justify-center gap-2 px-8 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-lg transition-all"><span class="material-symbols-outlined">download</span> DESCARGAR</button>
-                            </div>
+
+                    <!-- Cliente -->
+                    <div id="gen-cliente-sec" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex items-center gap-2 mb-4 text-primary font-bold"><span class="material-symbols-outlined text-xl">person</span><h3 class="text-lg">Datos del Cliente</h3></div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="text" id="gen-cli-nombre" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Nombre / Razón social">
+                            <input type="text" id="gen-cli-cif" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="CIF / NIF">
+                            <input type="text" id="gen-cli-dir" class="md:col-span-2 rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Dirección">
+                            <input type="email" id="gen-cli-email" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Email">
+                            <input type="text" id="gen-cli-tel" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Teléfono">
                         </div>
                     </div>
-                    <div id="form-plantilla" class="hidden space-y-6">
-                        <div id="gen-cliente-sec" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                            <div class="flex items-center gap-2 mb-4 text-primary font-bold"><span class="material-symbols-outlined text-xl">person</span><h3 class="text-lg">Datos del Cliente</h3></div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input type="text" id="gen-cli-nombre" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Nombre / Razón social">
-                                <input type="text" id="gen-cli-cif" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="CIF / NIF">
-                                <input type="text" id="gen-cli-dir" class="md:col-span-2 rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Dirección">
-                                <input type="email" id="gen-cli-email" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Email">
-                                <input type="text" id="gen-cli-tel" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Teléfono">
-                            </div>
+
+                    <!-- Líneas -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2 text-primary font-bold"><span class="material-symbols-outlined text-xl">list_alt</span><h3 class="text-lg">Líneas de Factura</h3></div>
+                            <button type="button" onclick="addLineaGenerica()" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-sm">add</span> Añadir línea</button>
                         </div>
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6"><div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="flex flex-col gap-2"><label class="text-sm font-semibold text-slate-600">Referencia</label><input type="text" id="gen-referencia" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Ej: Proyecto Alpha"></div>
-                            <div class="flex flex-col gap-2"><label class="text-sm font-semibold text-slate-600">Fecha</label><input type="date" id="gen-fecha" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm"></div>
-                        </div></div>
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                            <div class="flex items-center justify-between mb-4"><div class="flex items-center gap-2 text-primary font-bold"><span class="material-symbols-outlined text-xl">list_alt</span><h3 class="text-lg">Líneas</h3></div>
-                                <button type="button" onclick="addLineaGenerica()" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-sm">add</span> Añadir</button></div>
-                            <div id="gen-lineas-header" class="grid gap-2 mb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider"></div>
-                            <div id="gen-lineas" class="space-y-2"></div>
-                        </div>
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6"><label class="text-sm font-bold text-slate-600">Notas</label><textarea id="gen-notas" class="mt-2 w-full rounded-lg border-slate-200 bg-slate-50 p-4 min-h-[80px] text-sm" placeholder="Observaciones..."></textarea></div>
-                        <button type="button" onclick="generarConPlantilla()" class="w-full flex items-center justify-center gap-2 px-8 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-lg transition-all"><span class="material-symbols-outlined">picture_as_pdf</span> GENERAR PDF</button>
+                        <div id="gen-lineas-header" class="grid gap-2 mb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider"></div>
+                        <div id="gen-lineas" class="space-y-2"></div>
                     </div>
-                </form>
+
+                    <!-- Notas -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <label class="text-sm font-bold text-slate-600">Notas / Observaciones</label>
+                        <textarea id="gen-notas" class="mt-2 w-full rounded-lg border-slate-200 bg-slate-50 p-4 min-h-[80px] text-sm" placeholder="Condiciones de pago, notas adicionales..."></textarea>
+                    </div>
+
+                    <!-- Botón generar -->
+                    <button type="button" onclick="generarConPlantilla()" class="w-full flex items-center justify-center gap-2 px-8 py-4 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all text-lg">
+                        <span class="material-symbols-outlined">picture_as_pdf</span> GENERAR FACTURA
+                    </button>
+                </div>
             </div>
 
             <!-- ══ HISTORIAL ══ -->
@@ -407,7 +418,6 @@
         document.body.classList.add("logged-in");
         verSec("sec-dashboard",$("#btn-dashboard"));
         cargarSugerenciasPasajeros();
-        if(!cargarProgreso())agregarTicket();
         if(user){
             await initCrypto(user.id);
             const meta=user.user_metadata||{};
@@ -421,7 +431,6 @@
                 $("#perfil-usuario").classList.remove("hidden");
             }
             checkAdminStatus();
-            cargarSelectorPlantillas();
             cargarUserDashboard();
         }
     }
@@ -458,37 +467,18 @@
     function addP(id){const c=$(`#pax_${id}`);if(c.querySelector(".pax-input-temp")){c.querySelector(".pax-input-temp").focus();return}const i=document.createElement("input");i.className="pax-input-temp flex-shrink-0 min-w-[140px] rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary/30 outline-none";i.setAttribute("list","sugerencias-pasajeros");i.placeholder="Nombre...";const conf=()=>{const n=i.value.trim();i.remove();if(!n)return;guardarNombreEnHistorial(n);crearTag(c,"t-pasajeros",n,n);guardarProgreso()};i.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===","){e.preventDefault();conf()}if(e.key==="Escape")i.remove()});i.addEventListener("blur",()=>setTimeout(()=>{if(i.parentNode)conf()},150));c.appendChild(i);i.focus()}
     function addFecha(tipo,id){const c=$(`#fechas_${tipo}_${id}`);if(c.querySelector(".fecha-input-temp")){c.querySelector(".fecha-input-temp").focus();return}const i=document.createElement("input");i.type="date";i.className="fecha-input-temp rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary/30 outline-none";const conf=()=>{const v=i.value;i.remove();if(!v)return;crearTag(c,`t-fechas-${tipo}`,fechaISO_a_ES(v),v);guardarProgreso()};i.addEventListener("change",()=>{if(i.value)conf()});i.addEventListener("keydown",e=>{if(e.key==="Escape")i.remove()});i.addEventListener("blur",()=>setTimeout(()=>{if(i.parentNode&&!i.value)i.remove()},200));c.appendChild(i);i.focus()}
 
-    /* ═══ TICKET HTML ═══ */
-    function _cb(cls,label,cId=null,cCls=null,ph=""){let h=`<label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors"><input type="checkbox" class="${cls} rounded-full w-5 h-5 border-slate-300 text-primary"${cId?` onchange="toggleI(this,'${cId}')"`:""}><span class="text-sm font-medium text-slate-700">${label}</span></label>`;if(cId)h+=`<input type="text" id="${cId}" class="${cCls} condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 shadow-inner" placeholder="${ph}">`;return h}
-    function agregarTicket(){ticketCount++;const id=ticketCount;const div=document.createElement("div");div.className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ticket-card";div.innerHTML=`<details class="group" open><summary class="flex items-center justify-between p-6 cursor-pointer hover:bg-slate-50 list-none select-none"><div class="flex items-center gap-4"><div class="w-10 h-10 flex items-center justify-center rounded-lg bg-primary/10 text-primary"><span class="material-symbols-outlined fill-1">confirmation_number</span></div><div><h3 class="font-bold text-lg text-slate-900">Ticket #${id}</h3><p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-0.5">Detalles del trayecto</p></div></div><div class="flex items-center gap-4">${id>1?`<button type="button" onclick="this.closest('.ticket-card').remove();guardarProgreso();" class="text-slate-400 hover:text-red-500"><span class="material-symbols-outlined">delete</span></button>`:""}<span class="material-symbols-outlined group-open:rotate-180 transition-transform text-slate-400">expand_more</span></div></summary><div class="p-6 border-t border-slate-100 space-y-8"><div class="grid grid-cols-1 md:grid-cols-3 gap-6"><div class="flex flex-col gap-2"><label class="text-sm font-bold text-red-500 uppercase">Nº Ticket</label><input type="text" required class="t-numero-ticket rounded-lg border-slate-200 bg-slate-50 px-4 py-3 font-medium" placeholder="Referencia"></div><div class="flex flex-col gap-2"><label class="text-sm font-bold text-slate-600 uppercase">Contacto</label><select class="t-contacto rounded-lg border-slate-200 bg-slate-50 px-4 py-3 font-medium"><option value="whatsapp">WhatsApp</option><option value="telefono">Teléfono</option><option value="telefono y whatsapp">Teléfono y WhatsApp</option></select></div><div class="flex flex-col gap-2"><label class="text-sm font-bold text-emerald-600 uppercase">Importe (€)</label><div class="relative"><input type="number" step="0.01" required class="t-importe w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 pr-10 font-bold" placeholder="0.00"><span class="absolute right-4 top-3.5 text-slate-400 font-bold">€</span></div></div></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6"><div class="space-y-2"><div class="flex items-center justify-between"><label class="text-sm font-bold text-slate-600 uppercase">Pasajeros</label><button type="button" onclick="addP(${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-sm">person_add</span> Añadir</button></div><div id="pax_${id}" class="flex flex-wrap gap-2 items-center min-h-[50px] p-2 rounded-lg border border-slate-200 bg-slate-50"></div></div><div class="space-y-2"><div class="flex items-center justify-between"><label class="text-sm font-bold text-slate-600 uppercase">F. Solicitud</label><button type="button" onclick="addFecha('solicitud',${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-sm">add</span> Añadir</button></div><div id="fechas_solicitud_${id}" class="flex flex-wrap gap-2 items-center min-h-[50px] p-2 rounded-lg border border-slate-200 bg-slate-50"></div></div><div class="space-y-2"><div class="flex items-center justify-between"><label class="text-sm font-bold text-slate-600 uppercase">F. Servicio</label><button type="button" onclick="addFecha('servicio',${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-sm">add</span> Añadir</button></div><div id="fechas_servicio_${id}" class="flex flex-wrap gap-2 items-center min-h-[50px] p-2 rounded-lg border border-slate-200 bg-slate-50"></div></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-8"><div class="space-y-4"><label class="text-sm font-bold uppercase text-primary">Recogida</label><div class="space-y-2">${_cb("t-o-aero","Aeropuerto")}${_cb("t-o-buque","Buque")}${_cb("t-o-hotel","Hotel",`oh_${id}`,"t-o-hotel-texto","Hotel...")}${_cb("t-o-otros","Otros",`oo_${id}`,"t-o-otros-texto","Especificar...")}</div></div><div class="space-y-4"><label class="text-sm font-bold uppercase text-primary">Destino</label><div class="space-y-2">${_cb("t-d-aero","Aeropuerto")}${_cb("t-d-buque","Buque")}${_cb("t-d-hotel","Hotel",`dh_${id}`,"t-d-hotel-texto","Hotel...")}${_cb("t-d-hosp","Hospital",`dhosp_${id}`,"t-d-hosp-texto","Hospital...")}${_cb("t-d-clin","Clínica",`dclin_${id}`,"t-d-clin-texto","Clínica...")}${_cb("t-d-inmi","Inmigración")}${_cb("t-d-otros","Otros",`do_${id}`,"t-d-otros-texto","Especificar...")}</div></div></div><div class="grid grid-cols-1 gap-6"><div class="flex items-center justify-between py-4 border-y border-slate-100"><div><span class="text-sm font-bold text-slate-700">Ida y Vuelta</span><p class="text-xs text-slate-500">Incluye regreso</p></div><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="t-ida-vuelta sr-only peer"><div class="w-12 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary shadow-sm"></div></label></div><div class="flex flex-col gap-2"><label class="text-sm font-bold text-slate-600 uppercase">Observaciones</label><textarea class="t-comentarios rounded-lg border-slate-200 bg-slate-50 p-4 min-h-[80px] text-sm" placeholder="Notas..."></textarea></div></div></div></details>`;$("#contenedor-tickets").appendChild(div);guardarProgreso()}
-
-    /* ═══ FORM DATA ═══ */
-    function recogerDatos(){const tickets=$$(".ticket-card").map(c=>({numero_ticket:$(".t-numero-ticket",c).value,importe:parseFloat($(".t-importe",c).value)||0,contacto_metodo:$(".t-contacto",c).value,pasajeros:$$(".t-pasajeros",c).map(i=>i.value).filter(Boolean),fechas_solicitud:$$(".t-fechas-solicitud",c).map(i=>i.value).filter(Boolean),fechas_servicio:$$(".t-fechas-servicio",c).map(i=>i.value).filter(Boolean),o_aeropuerto:$(".t-o-aero",c)?.checked||false,o_buque:$(".t-o-buque",c)?.checked||false,o_hotel:$(".t-o-hotel",c)?.checked||false,o_hotel_texto:$(".t-o-hotel-texto",c)?.value||"",o_otros:$(".t-o-otros",c)?.checked||false,o_otros_texto:$(".t-o-otros-texto",c)?.value||"",d_aeropuerto:$(".t-d-aero",c)?.checked||false,d_buque:$(".t-d-buque",c)?.checked||false,d_hotel:$(".t-d-hotel",c)?.checked||false,d_hotel_texto:$(".t-d-hotel-texto",c)?.value||"",d_hospital:$(".t-d-hosp",c)?.checked||false,d_hospital_texto:$(".t-d-hosp-texto",c)?.value||"",d_clinica:$(".t-d-clin",c)?.checked||false,d_clinica_texto:$(".t-d-clin-texto",c)?.value||"",d_inmigracion:$(".t-d-inmi",c)?.checked||false,d_otros:$(".t-d-otros",c)?.checked||false,d_otros_texto:$(".t-d-otros-texto",c)?.value||"",ida_vuelta:$(".t-ida-vuelta",c)?.checked||false,comentarios:$(".t-comentarios",c)?.value||""}));return{factura_numero:$("#factura_numero").value,barco:$("#barco").value,tickets}}
-
     /* ═══ MODAL ═══ */
-    function abrirModalDescarga(id=null){if(id===null){const f=$("#formTaxi");if(!f.checkValidity()){f.reportValidity();return}}idDescargaPendiente=id;$("#modal-descarga").classList.remove("hidden");$("#app-layout").classList.add("blur-sm")}
+    function abrirModalDescarga(id=null){idDescargaPendiente=id;$("#modal-descarga").classList.remove("hidden");$("#app-layout").classList.add("blur-sm")}
     function cerrarModal(){$("#modal-descarga").classList.add("hidden");$("#app-layout").classList.remove("blur-sm");restaurarBotonesModal()}
     function iniciarProgresoModal(){$("#modal-content-opciones").classList.add("hidden");$("#modal-content-progreso").classList.remove("hidden");let p=0;const ci=$("#circulo-progreso"),tx=$("#texto-progreso");ci.style.strokeDashoffset=326.7;tx.innerText="0%";progressInterval=setInterval(()=>{if(p<90){p+=Math.floor(Math.random()*8)+2;if(p>90)p=90;ci.style.strokeDashoffset=326.7-(p/100)*326.7;tx.innerText=p+"%"}},500)}
     function finalizarProgresoModal(){clearInterval(progressInterval);$("#circulo-progreso").style.strokeDashoffset=0;$("#texto-progreso").innerText="100%";setTimeout(()=>{cerrarModal();setTimeout(resetearModalVisual,400)},600)}
     function detenerErrorProgresoModal(){clearInterval(progressInterval);cerrarModal();setTimeout(resetearModalVisual,400)}
     function resetearModalVisual(){$("#modal-content-opciones").classList.remove("hidden");$("#modal-content-progreso").classList.add("hidden");$("#circulo-progreso").style.strokeDashoffset=326.7;$("#texto-progreso").innerText="0%"}
-    function ejecutarDescarga(f){iniciarProgresoModal();if(idDescargaPendiente)redescargar(idDescargaPendiente,f);else enviarProceso("descarga",f)}
+    function ejecutarDescarga(f){iniciarProgresoModal();if(idDescargaPendiente)redescargar(idDescargaPendiente,f)}
     function restaurarBotonesModal(){["excel","pdf","ambos"].forEach((f,i)=>{const btns=$$("#modal-content-opciones button[type='button']");if(btns[i])btns[i].onclick=()=>ejecutarDescarga(f)})}
 
-    /* ═══ ENVIAR FACTURA ═══ */
-    async function enviarProceso(modo,formato="excel"){const form=$("#formTaxi");if(!form.checkValidity()){form.reportValidity();return}
-        const data=recogerDatos();const editId=form.dataset.editId;const plantillaId=$("#sel-plantilla")?.value||"";
-        let endpoint,method;
-        if(editId){endpoint=modo==="nube"?`/actualizar/${editId}`:`/actualizar-generar/${editId}?formato=${formato}`;method="PUT"}
-        else if(plantillaId&&modo==="descarga"){endpoint=`/generar-con-plantilla?formato=${formato}&plantilla_id=${plantillaId}`;method="POST"}
-        else{endpoint=modo==="nube"?"/solo-guardar":`/generar?formato=${formato}`;method="POST"}
-        try{const res=await fetch(`${URL_BASE}${endpoint}`,{method,headers:authHeaders({"Content-Type":"application/json"}),body:JSON.stringify(data)});
-            if(res.ok){if(modo==="descarga"){descargarBlob(await res.blob(),res.headers.get("Content-Disposition"),data.barco.replace(/ /g,"_"),formato);finalizarProgresoModal()}else{detenerErrorProgresoModal()}limpiarBorrador(false);if(modo==="nube")alert(editId?"☁️ Actualizada":"☁️ Guardado")}else{if(modo==="descarga")detenerErrorProgresoModal();alert("Error en el servidor")}}catch{if(modo==="descarga")detenerErrorProgresoModal();alert("Error de conexión")}}
-
     /* ═══ HISTORIAL ═══ */
-    async function cargarHistorial(){const tb=$("#tabla-historial");tb.innerHTML=`<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500">Cargando...</td></tr>`;try{const res=await fetch(`${URL_BASE}/historial`,{headers:authHeaders()});const datos=await res.json();tb.innerHTML="";if(!datos.length){tb.innerHTML=`<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500">No hay facturas.</td></tr>`;return}const frag=document.createDocumentFragment();datos.forEach(f=>{const d=new Date(f.fecha_creacion).toLocaleDateString("es-ES",{year:"numeric",month:"2-digit",day:"2-digit"});const tr=document.createElement("tr");tr.className="hover:bg-slate-50/80 border-b border-slate-50";tr.innerHTML=`<td class="px-6 py-4 text-sm font-medium text-slate-600">${esc(d)}</td><td class="px-6 py-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#e1effe] text-primary uppercase tracking-wider">${esc(f.barco)}</span></td><td class="px-6 py-4 text-sm font-semibold text-slate-900">${esc(f.numero_factura)}</td><td class="px-6 py-4 text-sm font-bold text-slate-900">${f.importe_total.toFixed(2)}€</td><td class="px-6 py-4 text-right"><div class="flex items-center justify-end gap-3"><button onclick="editarFactura(${f.id})" class="text-amber-600 hover:text-amber-800 font-extrabold text-[11px] uppercase tracking-widest"><span class="material-symbols-outlined text-lg">edit</span></button><button onclick="abrirModalDescarga(${f.id})" class="text-primary hover:text-blue-800 font-extrabold text-[11px] uppercase tracking-widest"><span class="material-symbols-outlined text-lg">download</span></button><button onclick="eliminarF(${f.id})" class="text-slate-400 hover:text-red-500"><span class="material-symbols-outlined text-[18px]">delete</span></button></div></td>`;frag.appendChild(tr)});tb.appendChild(frag)}catch{tb.innerHTML=`<tr><td colspan="5" class="text-center text-red-500">Error</td></tr>`}}
-    async function editarFactura(id){try{const res=await fetch(`${URL_BASE}/factura/${id}`,{headers:authHeaders()});if(!res.ok){alert("No se pudo cargar");return}let datos=await res.json();if(datos.datos_json_cifrado){const raw=await descifrar(datos.datos_json_cifrado);datos=JSON.parse(raw)}localStorage.removeItem("taxi_t1");$("#contenedor-tickets").innerHTML="";ticketCount=0;$("#factura_numero").value=datos.factura_numero||"";$("#barco").value=datos.barco||"";$("#formTaxi").dataset.editId=id;$("#edit-banner").classList.remove("hidden");$("#edit-banner-texto").textContent=`Editando: ${datos.barco} — ${datos.factura_numero}`;for(const t of datos.tickets||[]){agregarTicket();const card=$$(".ticket-card").at(-1);$(".t-numero-ticket",card).value=t.numero_ticket||"";$(".t-importe",card).value=t.importe||0;$(".t-contacto",card).value=t.contacto_metodo||"whatsapp";const pC=card.querySelector('[id^="pax_"]');(t.pasajeros||[]).forEach(n=>{guardarNombreEnHistorial(n);crearTag(pC,"t-pasajeros",n,n)});const sC=card.querySelector('[id^="fechas_solicitud_"]');(t.fechas_solicitud||[]).forEach(v=>crearTag(sC,"t-fechas-solicitud",fechaISO_a_ES(v),v));const seC=card.querySelector('[id^="fechas_servicio_"]');(t.fechas_servicio||[]).forEach(v=>crearTag(seC,"t-fechas-servicio",fechaISO_a_ES(v),v));const checks={".t-o-aero":t.o_aeropuerto,".t-o-buque":t.o_buque,".t-o-hotel":t.o_hotel,".t-o-otros":t.o_otros,".t-d-aero":t.d_aeropuerto,".t-d-buque":t.d_buque,".t-d-hotel":t.d_hotel,".t-d-hosp":t.d_hospital,".t-d-clin":t.d_clinica,".t-d-inmi":t.d_inmigracion,".t-d-otros":t.d_otros,".t-ida-vuelta":t.ida_vuelta};for(const[sel,val]of Object.entries(checks)){const el=$(sel,card);if(el&&val){el.checked=true;const fn=el.getAttribute("onchange");if(fn)new Function(fn).call(el)}}const textos={".t-o-hotel-texto":t.o_hotel_texto,".t-o-otros-texto":t.o_otros_texto,".t-d-hotel-texto":t.d_hotel_texto,".t-d-hosp-texto":t.d_hospital_texto,".t-d-clin-texto":t.d_clinica_texto,".t-d-otros-texto":t.d_otros_texto};for(const[sel,val]of Object.entries(textos)){const el=$(sel,card);if(el&&val)el.value=val}if(t.comentarios)$(".t-comentarios",card).value=t.comentarios}verSec("sec-nueva",$("#btn-nueva"));scrollTo({top:0,behavior:"smooth"})}catch{alert("Error al cargar")}}
-    function cancelarEdicion(){$("#formTaxi").removeAttribute("data-edit-id");$("#edit-banner").classList.add("hidden");limpiarFormularioLocal()}
+    async function cargarHistorial(){const tb=$("#tabla-historial");tb.innerHTML=`<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500">Cargando...</td></tr>`;try{const res=await fetch(`${URL_BASE}/historial`,{headers:authHeaders()});const datos=await res.json();tb.innerHTML="";if(!datos.length){tb.innerHTML=`<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500">No hay facturas.</td></tr>`;return}const frag=document.createDocumentFragment();datos.forEach(f=>{const d=new Date(f.fecha_creacion).toLocaleDateString("es-ES",{year:"numeric",month:"2-digit",day:"2-digit"});const tr=document.createElement("tr");tr.className="hover:bg-slate-50/80 border-b border-slate-50";tr.innerHTML=`<td class="px-6 py-4 text-sm font-medium text-slate-600">${esc(d)}</td><td class="px-6 py-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#e1effe] text-primary uppercase tracking-wider">${esc(f.barco||f.plantilla_nombre||"-")}</span></td><td class="px-6 py-4 text-sm font-semibold text-slate-900">${esc(f.numero_factura)}</td><td class="px-6 py-4 text-sm font-bold text-slate-900">${f.importe_total.toFixed(2)}€</td><td class="px-6 py-4 text-right"><div class="flex items-center justify-end gap-3"><button onclick="abrirModalDescarga(${f.id})" class="text-primary hover:text-blue-800 font-extrabold text-[11px] uppercase tracking-widest"><span class="material-symbols-outlined text-lg">download</span></button><button onclick="eliminarF(${f.id})" class="text-slate-400 hover:text-red-500"><span class="material-symbols-outlined text-[18px]">delete</span></button></div></td>`;frag.appendChild(tr)});tb.appendChild(frag)}catch{tb.innerHTML=`<tr><td colspan="5" class="text-center text-red-500">Error</td></tr>`}}
     async function redescargar(id,f="excel"){try{const res=await fetch(`${URL_BASE}/re-descargar/${id}?formato=${f}`,{headers:authHeaders()});if(res.ok){descargarBlob(await res.blob(),res.headers.get("Content-Disposition"),`Fra_${id}`,f);finalizarProgresoModal()}else{detenerErrorProgresoModal();alert("Error")}}catch{detenerErrorProgresoModal();alert("Error")}}
     async function eliminarF(id){if(!confirm("¿Borrar factura?"))return;await fetch(`${URL_BASE}/eliminar-factura/${id}`,{method:"DELETE",headers:authHeaders()});cargarHistorial()}
     async function vaciarHistorial(){if(!confirm("⚠️ ¿Vaciar todo el historial?"))return;await fetch(`${URL_BASE}/limpiar-historial`,{method:"DELETE",headers:authHeaders()});cargarHistorial()}
@@ -499,22 +489,88 @@
     function getColumnas(){return COL_PRESETS[getSelectedPreset()]||COL_PRESETS.simple}
     function tabPlantilla(t){const v=t==="visual";$("#panel-visual").classList.toggle("hidden",!v);$("#panel-visual").classList.toggle("grid",v);$("#panel-excel").classList.toggle("hidden",v);$("#tab-visual").className=`px-5 py-2 rounded-md text-sm font-bold transition-all ${v?"bg-white text-primary shadow-sm":"text-slate-500"}`;$("#tab-excel").className=`px-5 py-2 rounded-md text-sm font-bold transition-all ${!v?"bg-white text-primary shadow-sm":"text-slate-500"}`}
     async function cargarPlantillas(){const c=$("#lista-plantillas");c.innerHTML='<p class="col-span-3 text-center text-slate-400 py-12">Cargando...</p>';try{const r=await fetch(`${URL_BASE}/plantillas`,{headers:authHeaders()});const data=await r.json();if(!data.length){c.innerHTML=`<div class="col-span-3 text-center py-16"><span class="material-symbols-outlined text-5xl text-slate-200 mb-4 block">draft</span><p class="text-slate-400 font-medium">No hay plantillas</p></div>`;return}c.innerHTML=data.map(p=>`<div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow"><div class="flex items-center justify-between mb-3"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.tipo==="visual"?"bg-violet-100 text-violet-700":"bg-emerald-100 text-emerald-700"}">${esc(p.tipo)}</span></div><h3 class="font-bold text-slate-900 text-lg mb-1">${esc(p.nombre)}</h3><p class="text-xs text-slate-400 mb-4">${new Date(p.created_at).toLocaleDateString("es-ES")}</p><div class="flex items-center gap-2"><button onclick="previewPlantilla(${p.id})" class="flex-1 text-xs font-bold text-primary bg-primary/5 hover:bg-primary/10 rounded-lg py-2 flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">visibility</span> Preview</button><button onclick="eliminarPlantilla(${p.id})" class="text-slate-400 hover:text-red-500 p-2"><span class="material-symbols-outlined text-lg">delete</span></button></div></div>`).join("")}catch{c.innerHTML='<p class="col-span-3 text-center text-red-500">Error</p>'}}
-    async function cargarSelectorPlantillas(){const sel=$("#sel-plantilla");if(!sel)return;try{const r=await fetch(`${URL_BASE}/plantillas`,{headers:authHeaders()});const data=await r.json();sel.innerHTML='<option value="">Plantilla original (por defecto)</option>';data.forEach(p=>{sel.innerHTML+=`<option value="${p.id}">${esc(p.nombre)} (${p.tipo})</option>`})}catch{}}
     function buildVisualConfig(){return{empresa:{nombre:$("#tpl-emp-nombre").value,cif:$("#tpl-emp-cif").value,direccion:$("#tpl-emp-dir").value,telefono:$("#tpl-emp-tel").value,email:$("#tpl-emp-email").value,logo_url:$("#tpl-emp-logo").value},estilo:{color_primario:$("#tpl-color1").value,color_secundario:$("#tpl-color2").value,fuente:$("#tpl-fuente").value,tam_fuente:parseInt($("#tpl-tam").value)||10},pagina:{size:$("#tpl-page-size").value,orientation:$("#tpl-page-orient").value,margenes:{top:parseInt($("#tpl-margin-v").value)||20,right:parseInt($("#tpl-margin-h").value)||15,bottom:parseInt($("#tpl-margin-v").value)||20,left:parseInt($("#tpl-margin-h").value)||15}},cliente:{mostrar:$("#tpl-cli-mostrar").checked},columnas:getColumnas(),columna_importe:getColumnas().at(-1)?.campo||"importe",impuestos:[{nombre:$("#tpl-imp-nombre").value||"IVA",porcentaje:parseInt($("#tpl-imp-pct").value)||21}],moneda:$("#tpl-moneda").value||"€",titulo:$("#tpl-fac-titulo").value||"FACTURA",mostrar_desglose:$("#tpl-desglose").checked,pie:{texto:$("#tpl-pie-texto").value,mostrar_datos_pago:$("#tpl-pie-pago").checked,datos_pago:$("#tpl-pie-pago-texto").value}}}
     function actualizarPreview(){const c=buildVisualConfig(),e=c.empresa,s=c.estilo,cols=c.columnas,moneda=c.moneda,sc=0.7;const logo=e.logo_url?`<img src="${esc(e.logo_url)}" style="max-height:30px;max-width:90px;">`:"";const ejs=[{descripcion:"Servicio profesional",cantidad:"10",horas:"10",precio:"50.00",tarifa:"50.00",importe:"500.00",total:"500.00"},{descripcion:"Material",cantidad:"1",horas:"2",precio:"30.00",tarifa:"30.00",importe:"30.00",total:"30.00"}];const thH=cols.map(col=>`<th style="padding:4px 6px;text-align:${col.alineacion};">${col.nombre}</th>`).join("");const rowsH=ejs.map(ej=>"<tr>"+cols.map(col=>{let v=ej[col.campo]||"";if(col.tipo==="moneda")v+=" "+moneda;return`<td style="padding:4px 6px;border-bottom:1px solid #eee;text-align:${col.alineacion};${col.alineacion==="right"?"font-weight:600;":""}">${v}</td>`}).join("")+"</tr>").join("");const cliH=c.cliente.mostrar?`<div style="margin:8px 0;padding:6px;background:#f8f9fa;border-radius:3px;font-size:${(s.tam_fuente-1)*sc}px;"><span style="color:#999;font-weight:600;">FACTURAR A:</span><br>Empresa Ejemplo S.L.</div>`:"";
     $("#tpl-preview").innerHTML=`<div style="font-family:${s.fuente};font-size:${s.tam_fuente*sc}px;color:#333;line-height:1.5;"><table style="width:100%;margin-bottom:10px;"><tr><td style="vertical-align:top;width:55%;">${logo}<div style="font-weight:800;color:${s.color_primario};font-size:${(s.tam_fuente+4)*sc}px;margin-top:4px;">${esc(e.nombre||"Tu Empresa")}</div><div style="color:#888;font-size:${(s.tam_fuente-2)*sc}px;">${esc(e.cif)}</div></td><td style="vertical-align:top;text-align:right;"><div style="font-weight:900;color:${s.color_secundario};font-size:${(s.tam_fuente+8)*sc}px;">${esc(c.titulo)}</div><div>Nº: 2026-0001</div><div>Fecha: 19/03/2026</div></td></tr></table>${cliH}<table style="width:100%;border-collapse:collapse;"><tr style="background:${s.color_primario};color:white;font-size:${(s.tam_fuente-1)*sc}px;">${thH}</tr>${rowsH}</table><table style="margin-top:8px;margin-left:auto;">${c.mostrar_desglose?`<tr><td style="padding:2px 8px;color:#888;">Subtotal</td><td style="text-align:right;">530.00 ${esc(moneda)}</td></tr><tr><td style="padding:2px 8px;color:#888;">${esc(c.impuestos[0]?.nombre)} (${c.impuestos[0]?.porcentaje}%)</td><td style="text-align:right;">111.30 ${esc(moneda)}</td></tr>`:""}<tr style="border-top:2px solid ${s.color_primario};"><td style="padding:3px 8px;font-weight:800;color:${s.color_primario};">TOTAL</td><td style="text-align:right;font-weight:800;color:${s.color_primario};">641.30 ${esc(moneda)}</td></tr></table>${c.pie.texto?`<div style="margin-top:12px;padding-top:4px;border-top:1px solid #ddd;color:#aaa;">${esc(c.pie.texto)}</div>`:""}</div>`}
     document.addEventListener("input",e=>{if(e.target.closest?.("#panel-visual"))actualizarPreview()});document.addEventListener("change",e=>{if(e.target.closest?.("#panel-visual"))actualizarPreview()});setTimeout(actualizarPreview,500);
-    async function guardarPlantillaVisual(){const n=$("#tpl-nombre").value.trim();if(!n){alert("Pon un nombre");return}const cfg=buildVisualConfig();const fd=new FormData();fd.append("nombre",n);fd.append("config_json",JSON.stringify(cfg));try{const r=await fetch(`${URL_BASE}/plantillas/crear-visual`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){alert("✅ Guardada");cargarSelectorPlantillas();verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()}else alert("Error")}catch{alert("Error")}}
-    async function subirPlantillaExcel(){const n=$("#excel-tpl-nombre").value.trim();const fi=$("#excel-tpl-file");if(!n){alert("Pon un nombre");return}if(!fi.files.length){alert("Selecciona archivo");return}const fd=new FormData();fd.append("nombre",n);fd.append("file",fi.files[0]);fd.append("config_json","{}");try{const r=await fetch(`${URL_BASE}/plantillas/upload-excel`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){const d=await r.json();const tags=d.tags_detectados||[];if(tags.length){const div=$("#excel-tags-resultado");div.classList.remove("hidden");div.innerHTML=`<p class="text-sm font-bold text-emerald-700 mb-2">✅ ${tags.length} tags:</p><div class="flex flex-wrap gap-2">${tags.map(t=>`<span class="bg-emerald-100 text-emerald-800 text-xs font-mono px-2 py-1 rounded">${esc(t)}</span>`).join("")}</div>`}alert("✅ Subida");cargarSelectorPlantillas();setTimeout(()=>{verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()},1000)}else{const err=await r.json().catch(()=>({}));alert("Error: "+(err.detail||""))}}catch{alert("Error")}}
+    async function guardarPlantillaVisual(){const n=$("#tpl-nombre").value.trim();if(!n){alert("Pon un nombre");return}const cfg=buildVisualConfig();const fd=new FormData();fd.append("nombre",n);fd.append("config_json",JSON.stringify(cfg));try{const r=await fetch(`${URL_BASE}/plantillas/crear-visual`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){alert("✅ Guardada");verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()}else alert("Error")}catch{alert("Error")}}
+    async function subirPlantillaExcel(){const n=$("#excel-tpl-nombre").value.trim();const fi=$("#excel-tpl-file");if(!n){alert("Pon un nombre");return}if(!fi.files.length){alert("Selecciona archivo");return}const fd=new FormData();fd.append("nombre",n);fd.append("file",fi.files[0]);fd.append("config_json","{}");try{const r=await fetch(`${URL_BASE}/plantillas/upload-excel`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){const d=await r.json();const tags=d.tags_detectados||[];if(tags.length){const div=$("#excel-tags-resultado");div.classList.remove("hidden");div.innerHTML=`<p class="text-sm font-bold text-emerald-700 mb-2">✅ ${tags.length} tags:</p><div class="flex flex-wrap gap-2">${tags.map(t=>`<span class="bg-emerald-100 text-emerald-800 text-xs font-mono px-2 py-1 rounded">${esc(t)}</span>`).join("")}</div>`}alert("✅ Subida");setTimeout(()=>{verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()},1000)}else{const err=await r.json().catch(()=>({}));alert("Error: "+(err.detail||""))}}catch{alert("Error")}}
     async function previewPlantilla(id){try{const r=await fetch(`${URL_BASE}/plantillas/${id}/preview`,{method:"POST",headers:authHeaders()});if(r.ok){window.open(URL.createObjectURL(await r.blob()),"_blank")}else alert("Error preview")}catch{alert("Error")}}
     async function previewPDF(){const n=$("#tpl-nombre").value.trim()||"Preview";const cfg=buildVisualConfig();const fd=new FormData();fd.append("nombre",n);fd.append("config_json",JSON.stringify(cfg));try{const r=await fetch(`${URL_BASE}/plantillas/crear-visual`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){const d=await r.json();if(d.id)await previewPlantilla(d.id)}}catch{alert("Error")}}
     async function eliminarPlantilla(id){if(!confirm("¿Eliminar?"))return;try{await fetch(`${URL_BASE}/plantillas/${id}`,{method:"DELETE",headers:authHeaders()});cargarPlantillas();cargarSelectorPlantillas()}catch{alert("Error")}}
 
     /* ═══ PLANTILLA → FORM SWITCH ═══ */
-    async function onPlantillaChange(){const v=$("#sel-plantilla").value;if(!v){$("#form-original").classList.remove("hidden");$("#form-plantilla").classList.add("hidden");const br=$("#barco")?.closest(".flex.flex-col");if(br)br.style.display="";currentPlantillaConfig=null;return}$("#form-original").classList.add("hidden");$("#form-plantilla").classList.remove("hidden");const br=$("#barco")?.closest(".flex.flex-col");if(br)br.style.display="none";try{const r=await fetch(`${URL_BASE}/plantillas/${v}`,{headers:authHeaders()});if(r.ok){const p=await r.json();currentPlantillaConfig=JSON.parse(p.config_json||"{}");setupGenericForm(currentPlantillaConfig)}}catch{}}
+    /* ═══ NUEVA FACTURA: Template selector → Form ═══ */
+    let selectedPlantillaId = null;
+
+    async function cargarGridNuevaFactura() {
+        mostrarSelectorPlantilla();
+        const grid = $("#nueva-plantillas-grid");
+        grid.innerHTML = '<p class="col-span-3 text-center text-slate-400 py-6">Cargando plantillas...</p>';
+        try {
+            const r = await fetch(`${URL_BASE}/plantillas`, { headers: authHeaders() });
+            const data = await r.json();
+            if (!data.length) { grid.innerHTML = ''; return; }
+            grid.innerHTML = data.map(p => `
+                <button onclick="seleccionarPlantilla(${p.id},'${esc(p.nombre).replace(/'/g,"\\'")}','${esc(p.tipo)}')" class="bg-white rounded-xl border-2 border-slate-200 p-6 shadow-sm hover:border-primary hover:shadow-md transition-all text-left group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.tipo === 'visual' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}">${esc(p.tipo)}</span>
+                        <span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">chevron_right</span>
+                    </div>
+                    <h3 class="font-bold text-slate-900 text-lg">${esc(p.nombre)}</h3>
+                    <p class="text-xs text-slate-400 mt-1">${new Date(p.created_at).toLocaleDateString("es-ES")}</p>
+                </button>`).join("");
+        } catch { grid.innerHTML = '<p class="col-span-3 text-center text-red-500">Error cargando plantillas</p>'; }
+    }
+
+    async function seleccionarPlantilla(id, nombre, tipo) {
+        selectedPlantillaId = id;
+        $("#nueva-paso-selector").classList.add("hidden");
+        $("#nueva-paso-form").classList.remove("hidden");
+        $("#btn-volver-selector").classList.remove("hidden");
+        $("#nueva-plantilla-nombre").textContent = `${nombre} (${tipo})`;
+
+        // Load config and setup form
+        try {
+            const r = await fetch(`${URL_BASE}/plantillas/${id}`, { headers: authHeaders() });
+            if (r.ok) {
+                const p = await r.json();
+                currentPlantillaConfig = JSON.parse(p.config_json || "{}");
+                setupGenericForm(currentPlantillaConfig);
+            }
+        } catch { currentPlantillaConfig = null; setupGenericForm(null); }
+    }
+
+    function mostrarSelectorPlantilla() {
+        selectedPlantillaId = null;
+        currentPlantillaConfig = null;
+        $("#nueva-paso-selector").classList.remove("hidden");
+        $("#nueva-paso-form").classList.add("hidden");
+        $("#btn-volver-selector").classList.add("hidden");
+    }
+
     function setupGenericForm(cfg){const showCli=cfg?.cliente?.mostrar!==false;$("#gen-cliente-sec").style.display=showCli?"":"none";const cols=cfg?.columnas||COL_PRESETS.simple;const h=$("#gen-lineas-header");h.style.gridTemplateColumns=cols.map(c=>c.tipo==="texto"?"2fr":"1fr").join(" ")+" 40px";h.innerHTML=cols.map(c=>`<span>${esc(c.nombre)}</span>`).join("")+"<span></span>";$("#gen-lineas").innerHTML="";addLineaGenerica()}
     function addLineaGenerica(){const cols=currentPlantillaConfig?.columnas||COL_PRESETS.simple;const c=$("#gen-lineas");const r=document.createElement("div");r.className="gen-linea grid gap-2 items-center";r.style.gridTemplateColumns=cols.map(c=>c.tipo==="texto"?"2fr":"1fr").join(" ")+" 40px";r.innerHTML=cols.map(c=>`<input type="${c.tipo==="texto"?"text":"number"}" step="any" data-campo="${esc(c.campo)}" class="rounded-lg border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" placeholder="${esc(c.nombre)}">`).join("")+`<button type="button" onclick="this.closest('.gen-linea').remove()" class="text-slate-400 hover:text-red-500 flex items-center justify-center"><span class="material-symbols-outlined text-lg">close</span></button>`;c.appendChild(r)}
-    async function generarConPlantilla(){const pId=$("#sel-plantilla").value;if(!pId)return;const cols=currentPlantillaConfig?.columnas||COL_PRESETS.simple;const lineas=$$(".gen-linea").map(r=>{const o={};r.querySelectorAll("input").forEach(i=>{if(i.dataset.campo)o[i.dataset.campo]=i.value});return o}).filter(l=>Object.values(l).some(v=>v));const data={numero_factura:$("#factura_numero").value,fecha:$("#gen-fecha")?.value?new Date($("#gen-fecha").value).toLocaleDateString("es-ES"):"",referencia:$("#gen-referencia")?.value||"",cliente:{nombre:$("#gen-cli-nombre")?.value||"",cif:$("#gen-cli-cif")?.value||"",direccion:$("#gen-cli-dir")?.value||"",email:$("#gen-cli-email")?.value||"",telefono:$("#gen-cli-tel")?.value||""},lineas,notas:$("#gen-notas")?.value||""};if(!data.numero_factura){alert("Nº factura requerido");return}if(!lineas.length){alert("Añade líneas");return}abrirModalDescarga();iniciarProgresoModal();try{const r=await fetch(`${URL_BASE}/generar-con-plantilla?formato=pdf&plantilla_id=${pId}`,{method:"POST",headers:authHeaders({"Content-Type":"application/json"}),body:JSON.stringify(data)});if(r.ok){descargarBlob(await r.blob(),r.headers.get("Content-Disposition"),`Factura_${data.numero_factura}`,"pdf");finalizarProgresoModal()}else{detenerErrorProgresoModal();alert("Error")}}catch{detenerErrorProgresoModal();alert("Error")}}
+
+    async function generarConPlantilla(){
+        if(!selectedPlantillaId){alert("Selecciona una plantilla primero");return}
+        const cols=currentPlantillaConfig?.columnas||COL_PRESETS.simple;
+        const lineas=$$(".gen-linea").map(r=>{const o={};r.querySelectorAll("input").forEach(i=>{if(i.dataset.campo)o[i.dataset.campo]=i.value});return o}).filter(l=>Object.values(l).some(v=>v));
+        const data={
+            numero_factura:$("#factura_numero").value,
+            fecha:$("#gen-fecha")?.value?new Date($("#gen-fecha").value).toLocaleDateString("es-ES"):"",
+            referencia:$("#gen-referencia")?.value||"",
+            cliente:{nombre:$("#gen-cli-nombre")?.value||"",cif:$("#gen-cli-cif")?.value||"",direccion:$("#gen-cli-dir")?.value||"",email:$("#gen-cli-email")?.value||"",telefono:$("#gen-cli-tel")?.value||""},
+            lineas,notas:$("#gen-notas")?.value||""
+        };
+        if(!data.numero_factura){alert("Indica el nº de factura");return}
+        if(!lineas.length){alert("Añade al menos una línea");return}
+        abrirModalDescarga();iniciarProgresoModal();
+        try{const r=await fetch(`${URL_BASE}/generar-con-plantilla?formato=pdf&plantilla_id=${selectedPlantillaId}`,{method:"POST",headers:authHeaders({"Content-Type":"application/json"}),body:JSON.stringify(data)});
+        if(r.ok){descargarBlob(await r.blob(),r.headers.get("Content-Disposition"),`Factura_${data.numero_factura}`,"pdf");finalizarProgresoModal()}
+        else{detenerErrorProgresoModal();alert("Error generando factura")}}
+        catch{detenerErrorProgresoModal();alert("Error de conexión")}
+    }
 
     /* ═══ ADMIN DASHBOARD ═══ */
     function adminTab(t){["stats","users","activity","system"].forEach(x=>{$(`#adm-panel-${x}`).classList.toggle("hidden",x!==t);$(`#adm-tab-${x}`).className=`px-4 py-2 rounded-md text-sm font-bold ${x===t?"bg-white text-primary shadow-sm":"text-slate-500"}`})}
@@ -545,11 +601,6 @@
     async function toggleUser(uid){try{const r=await fetch(`${URL_BASE}/admin/users/${uid}/toggle`,{method:"PUT",headers:authHeaders()});if(r.ok)cargarAdminDashboard()}catch{alert("Error")}}
 
     /* ═══ PERSISTENCIA LOCAL ═══ */
-    let tSave;const form=$("#formTaxi");form.addEventListener("input",()=>{clearTimeout(tSave);tSave=setTimeout(guardarProgreso,500)});form.addEventListener("change",()=>{clearTimeout(tSave);tSave=setTimeout(guardarProgreso,500)});
-    function guardarProgreso(){const html=$("#contenedor-tickets").innerHTML;const inputs=$$("#contenedor-tickets input, #contenedor-tickets select, #contenedor-tickets textarea");const vals=inputs.map(i=>({type:i.type,value:i.value,checked:i.checked}));localStorage.setItem("taxi_t1",JSON.stringify({html,count:ticketCount,b:$("#barco").value,f:$("#factura_numero").value,data:vals}));const av=$("#aviso-guardado");av.style.display="flex";setTimeout(()=>av.style.display="none",1500)}
-    function cargarProgreso(){const s=localStorage.getItem("taxi_t1");if(!s)return false;try{const p=JSON.parse(s);$("#contenedor-tickets").innerHTML=p.html;ticketCount=p.count;$("#barco").value=p.b;$("#factura_numero").value=p.f;$$("#contenedor-tickets input, #contenedor-tickets select, #contenedor-tickets textarea").forEach((input,i)=>{if(!p.data[i])return;if(input.type==="checkbox"||input.type==="radio")input.checked=p.data[i].checked;else input.value=p.data[i].value});return true}catch{return false}}
-    function limpiarFormularioLocal(){localStorage.removeItem("taxi_t1");$("#formTaxi").reset();$("#contenedor-tickets").innerHTML="";ticketCount=0;agregarTicket();scrollTo({top:0,behavior:"smooth"})}
-    function limpiarBorrador(c){if(c&&!confirm("¿Borrar borrador?"))return;limpiarFormularioLocal();$("#formTaxi").removeAttribute("data-edit-id");$("#edit-banner").classList.add("hidden")}
     </script>
 </body>
 </html>
