@@ -231,9 +231,11 @@
 
     <script>
         // CONFIGURACIÓN GLOBAL
-        let URL_BASE = 'https://programafacturas-dev.onrender.com';
         const PROD_HOSTNAME = "programa-facturas-taxi.vercel.app";
         const esProd = window.location.hostname === PROD_HOSTNAME;
+        let URL_BASE = esProd
+            ? 'https://programafacturas.onrender.com'
+            : 'https://programafacturas-dev.onrender.com';
 
         if (!esProd) {
             document.body.classList.add('modo-pruebas');
@@ -297,7 +299,9 @@
                 const { data, error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
                     options: { 
-                        redirectTo: window.location.origin 
+                        redirectTo: esProd
+                            ? 'https://programa-facturas-taxi.vercel.app'
+                            : window.location.href
                     }
                 });
 
