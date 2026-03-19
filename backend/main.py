@@ -405,6 +405,8 @@ def procesar_con_plantilla_excel(excel_bytes: bytes, datos_dict: dict) -> str:
 # ─── GENERACIÓN DE EXCEL (PLANTILLA ORIGINAL) ────────────────────────────────
 def crear_excel(datos_dict, nombre_base):
     template_path = os.path.join(BASE_DIR, "plantilla.xlsm")
+    if not os.path.exists(template_path):
+        raise HTTPException(status_code=410, detail="La plantilla original (.xlsm) ya no está disponible. Use el sistema de plantillas personalizadas.")
     os.makedirs(TEMP_DIR, exist_ok=True)
     name_xlsm = f"{nombre_base}.xlsm"
     path_salida = os.path.join(TEMP_DIR, name_xlsm)
