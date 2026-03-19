@@ -252,8 +252,40 @@ def rellenar_tags_hoja(ws, tags_map: dict):
                         cell.value = nuevo
 
 
+# ─── FÓRMULAS ────────────────────────────────────────────────────────────────
+def evaluar_formula(formula: str, linea: dict) -> str:
+    """Evalúa fórmula =campo1*campo2. Soporta +,-,*,/ y constantes."""
+    if not formula or not formula.startswith("="):
+        return formula
+    expr = formula[1:].strip()
+    for campo, valor in sorted(linea.items(), key=lambda x: -len(x[0])):
+        try:
+            num = float(valor) if valor else 0
+        except (ValueError, TypeError):
+            num = 0
+        expr = expr.replace(campo, str(num))
+    if re.match(r'^[\d\s\.\+\-\*\/\(\)]+$', expr):
+        try:
+            return f"{eval(expr):.2f}"
+        except Exception:
+            return "0.00"
+    return "0.00"
+
+
+def aplicar_formulas(lineas: list, columnas: list) -> list:
+    """Aplica fórmulas a todas las líneas."""
+    resultado = []
+    for linea in lineas:
+        ln = dict(linea)
+        for col in columnas:
+            if col.get("tipo") == "formula" and col.get("formula"):
+                ln[col["campo"]] = evaluar_formula(col["formula"], ln)
+        resultado.append(ln)
+    return resultado
+
+
 def generar_html_visual(config: dict, datos_dict: dict) -> str:
-    """Genera HTML de factura genérica desde config + datos."""
+    """Genera HTML con fórmulas, multi-hoja y control de página."""
     emp = config.get("empresa", {})
     est = config.get("estilo", {})
     pag = config.get("pagina", {})
@@ -261,24 +293,33 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
         {"nombre": "Descripción", "campo": "descripcion", "alineacion": "left"},
         {"nombre": "Importe", "campo": "importe", "alineacion": "right"},
     ])
-    col_importe = config.get("columna_importe", cols[-1].get("campo", "importe") if cols else "importe")
+    col_importe = config.get("columna_importe", "")
+    if not col_importe and cols:
+        for c in reversed(cols):
+            if c.get("tipo") in ("moneda", "numero", "formula"):
+                col_importe = c["campo"]; break
+        if not col_importe:
+            col_importe = cols[-1].get("campo", "importe")
+
     impuestos = config.get("impuestos", [{"nombre": "IVA", "porcentaje": 21}])
     pie = config.get("pie", {})
-
     color1 = est.get("color_primario", "#1a2e4a")
     color2 = est.get("color_secundario", "#0d6dfd")
     fuente = est.get("fuente", "Helvetica, Arial, sans-serif")
     tam = est.get("tam_fuente", 10)
     moneda = config.get("moneda", "€")
     titulo = config.get("titulo", "FACTURA")
-
     mg = pag.get("margenes", {})
     mt, mr, mb, ml = mg.get("top", 20), mg.get("right", 15), mg.get("bottom", 20), mg.get("left", 15)
+    escala = pag.get("escala", 100)
+    interlineado = pag.get("interlineado", 1.5)
 
     fecha = datos_dict.get("fecha", "") or datetime.now().strftime("%d/%m/%Y")
     cliente = datos_dict.get("cliente", {})
     lineas = datos_dict.get("lineas", [])
     notas = datos_dict.get("notas", "")
+
+    lineas = aplicar_formulas(lineas, cols)
 
     logo_html = ""
     if emp.get("logo_url"):
@@ -294,31 +335,30 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
         if campos:
             cliente_html = f'<div style="margin:16px 0;padding:12px;background:#f8f9fa;border-radius:4px;"><p style="font-size:{tam-1}px;color:#999;margin:0 0 4px;font-weight:600;">FACTURAR A:</p>{"<br>".join(campos)}</div>'
 
-    th_html = "".join(f'<th style="padding:10px;text-align:{c.get("alineacion","left")};font-size:{tam}px;">{c["nombre"]}</th>' for c in cols)
+    cols_vis = [c for c in cols if not c.get("oculta")]
+    th_html = "".join(f'<th style="padding:10px;text-align:{c.get("alineacion","left")};font-size:{tam}px;">{c["nombre"]}</th>' for c in cols_vis)
 
     filas_html = ""
     for linea in lineas:
         celdas = ""
-        for c in cols:
+        for c in cols_vis:
             val = linea.get(c.get("campo", ""), "")
             align = c.get("alineacion", "left")
-            display = val
-            if c.get("campo") == col_importe or c.get("tipo") == "moneda":
-                try:
-                    display = f'{float(val):,.2f} {moneda}'
-                except (ValueError, TypeError):
-                    display = str(val)
-            else:
-                display = str(val)
-            celdas += f'<td style="padding:8px 10px;border-bottom:1px solid #eee;text-align:{align};{"font-weight:600;" if align == "right" else ""}">{display}</td>'
+            if c.get("tipo") in ("moneda", "formula") or c.get("campo") == col_importe:
+                try: display = f'{float(val):,.2f} {moneda}'
+                except: display = str(val)
+            elif c.get("tipo") == "numero":
+                try: display = f'{float(val):g}'
+                except: display = str(val)
+            else: display = str(val)
+            fw = "font-weight:600;" if align == "right" else ""
+            celdas += f'<td style="padding:8px 10px;border-bottom:1px solid #eee;text-align:{align};{fw}">{display}</td>'
         filas_html += f"<tr>{celdas}</tr>"
 
     subtotal = 0
     for linea in lineas:
-        try:
-            subtotal += float(linea.get(col_importe, 0))
-        except (ValueError, TypeError):
-            pass
+        try: subtotal += float(linea.get(col_importe, 0))
+        except: pass
 
     totales_html = ""
     total_final = subtotal
@@ -337,13 +377,7 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
     notas_html = f'<p style="margin:8px 0;font-size:{tam-1}px;color:#555;"><em>{notas}</em></p>' if notas else ""
     pago_html = f'<p style="margin:4px 0;font-size:{tam-1}px;color:#555;">{pie["datos_pago"]}</p>' if pie.get("mostrar_datos_pago") and pie.get("datos_pago") else ""
 
-    return f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8">
-<style>
-@page {{ size: {pag.get("size","A4")} {pag.get("orientation","portrait")}; margin: {mt}mm {mr}mm {mb}mm {ml}mm; }}
-body {{ font-family: {fuente}; font-size: {tam}px; color: #333; margin: 0; padding: 0; }}
-table {{ border-collapse: collapse; width: 100%; }}
-</style></head><body>
+    pag_principal = f"""
 <table style="margin-bottom:16px;"><tr>
 <td style="vertical-align:top;width:55%;">{logo_html}
 <h2 style="margin:8px 0 2px;color:{color1};font-size:{tam+6}px;">{emp.get("nombre","")}</h2>
@@ -360,7 +394,43 @@ table {{ border-collapse: collapse; width: 100%; }}
 <table style="margin-top:20px;width:auto;margin-left:auto;">{totales_html}</table>
 {notas_html}
 <div style="margin-top:40px;padding-top:12px;border-top:1px solid #ddd;font-size:{tam-1}px;color:#888;">
-<p>{pie.get("texto","")}</p>{pago_html}</div>
+<p>{pie.get("texto","")}</p>{pago_html}</div>"""
+
+    # Hojas de detalle
+    det = config.get("hoja_detalle", {})
+    pags_det = ""
+    if det.get("activar") and lineas:
+        titulo_det = det.get("titulo", "Detalle")
+        campos_det = det.get("campos", [c["campo"] for c in cols])
+        nombres = {{c["campo"]: c["nombre"] for c in cols}}
+        for idx, linea in enumerate(lineas, 1):
+            filas_d = ""
+            for campo in campos_det:
+                nom = nombres.get(campo, campo.replace("_", " ").title())
+                val = linea.get(campo, "")
+                filas_d += f'<tr><td style="padding:8px 12px;font-weight:600;color:{color1};width:40%;border-bottom:1px solid #eee;">{nom}</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">{val}</td></tr>'
+            pags_det += f"""
+<div style="page-break-before:always;"></div>
+<table style="margin-bottom:16px;"><tr>
+<td style="vertical-align:top;width:55%;">{logo_html}
+<h2 style="margin:8px 0 2px;color:{color1};font-size:{tam+4}px;">{emp.get("nombre","")}</h2>
+</td><td style="vertical-align:top;text-align:right;">
+<h2 style="margin:0;color:{color2};font-size:{tam+6}px;">{titulo_det} #{idx}</h2>
+<p style="margin:4px 0;">Factura: {datos_dict.get("numero_factura","")}</p>
+<p style="margin:2px 0;">{fecha}</p>
+</td></tr></table>
+<table style="margin-top:16px;width:100%;"><tbody>{filas_d}</tbody></table>"""
+
+    escala_css = f"transform:scale({escala/100});transform-origin:top left;" if escala != 100 else ""
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+@page {{ size: {pag.get("size","A4")} {pag.get("orientation","portrait")}; margin: {mt}mm {mr}mm {mb}mm {ml}mm; }}
+body {{ font-family: {fuente}; font-size: {tam}px; color: #333; margin: 0; padding: 0; {escala_css} line-height: {interlineado}; }}
+table {{ border-collapse: collapse; width: 100%; }}
+</style></head><body>
+{pag_principal}
+{pags_det}
 </body></html>"""
 
 
