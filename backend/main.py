@@ -51,16 +51,16 @@ async def verificar_usuario(authorization: str = Header(None)):
         res = supabase.auth.get_user(token)
         if not res or not res.user:
             raise HTTPException(status_code=401, detail="Sesión inválida.")
-        # Comprobar si el usuario está desactivado
+        # Comprobar si el usuario está desactivado (defensivo: si falla, deja pasar)
         try:
             settings = supabase.table("user_settings") \
-                .select("disabled").eq("user_id", res.user.id).single().execute()
-            if settings.data and settings.data.get("disabled"):
+                .select("disabled").eq("user_id", res.user.id).execute()
+            if settings.data and len(settings.data) > 0 and settings.data[0].get("disabled"):
                 raise HTTPException(status_code=403, detail="Cuenta desactivada por administrador.")
         except HTTPException:
             raise
-        except Exception:
-            pass  # Sin settings = no desactivado
+        except:
+            pass  # Tabla no existe, sin fila, o cualquier error → no desactivado
         return res.user
     except HTTPException:
         raise
@@ -179,7 +179,7 @@ def formatear_fechas(fechas: list, fmt_in="%Y-%m-%d", fmt_out="%d/%m/%Y") -> lis
 
 
 def datos_registro(user_id: str, datos: DatosFactura, plantilla: str = "original") -> dict:
-    """Construye dict para Supabase. datos_json viene del cliente (puede estar cifrado)."""
+    """Construye dict para Supabase."""
     return {
         "user_id": user_id,
         "numero_factura": datos.factura_numero,
@@ -538,9 +538,15 @@ def procesar_descarga(datos_dict, formato):
 
 @app.get("/historial")
 async def historial(user=Depends(verificar_usuario)):
-    res = supabase.table("facturas") \
-        .select("id, numero_factura, barco, importe_total, fecha_creacion, plantilla_nombre") \
-        .eq("user_id", user.id).order("fecha_creacion", desc=True).execute()
+    try:
+        res = supabase.table("facturas") \
+            .select("id, numero_factura, barco, importe_total, fecha_creacion, plantilla_nombre") \
+            .eq("user_id", user.id).order("fecha_creacion", desc=True).execute()
+    except Exception:
+        # Fallback si plantilla_nombre no existe aún
+        res = supabase.table("facturas") \
+            .select("id, numero_factura, barco, importe_total, fecha_creacion") \
+            .eq("user_id", user.id).order("fecha_creacion", desc=True).execute()
     return res.data
 
 
@@ -623,13 +629,21 @@ async def limpiar(user=Depends(verificar_usuario)):
 @app.get("/user/stats")
 async def user_stats(user=Depends(verificar_usuario)):
     """Estadísticas del usuario actual (ve sus propios datos)."""
-    facturas = supabase.table("facturas") \
-        .select("id, fecha_creacion, plantilla_nombre, importe_total") \
-        .eq("user_id", user.id).execute().data or []
+    try:
+        facturas = supabase.table("facturas") \
+            .select("id, fecha_creacion, plantilla_nombre, importe_total") \
+            .eq("user_id", user.id).execute().data or []
+    except Exception:
+        facturas = supabase.table("facturas") \
+            .select("id, fecha_creacion, importe_total") \
+            .eq("user_id", user.id).execute().data or []
 
-    plantillas = supabase.table("plantillas") \
-        .select("id, nombre, tipo") \
-        .eq("user_id", user.id).execute().data or []
+    try:
+        plantillas = supabase.table("plantillas") \
+            .select("id, nombre, tipo") \
+            .eq("user_id", user.id).execute().data or []
+    except Exception:
+        plantillas = []
 
     ahora = datetime.utcnow()
     facturas_mes = [f for f in facturas if f.get("fecha_creacion", "").startswith(ahora.strftime("%Y-%m"))]
