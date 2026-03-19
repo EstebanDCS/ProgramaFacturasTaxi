@@ -49,6 +49,8 @@
             font-size: 9px; font-weight: 800; letter-spacing: 0.15em;
             color: #f87171; opacity: 0.5;
         }
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-background-light text-slate-900 font-display min-h-screen flex flex-col">
@@ -234,11 +236,11 @@
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let URL_BASE = 'https://programafacturas-dev.onrender.com';
-        if (window.location.hostname !== "programa-facturas-taxi.vercel.app") {
+        const PROD_HOSTNAME = "programa-facturas-taxi.vercel.app";
+        const esProd = window.location.hostname === PROD_HOSTNAME;
+
+        if (!esProd) {
             document.body.classList.add('modo-pruebas');
-        } else {
-            // Si tienes un backend de producción, ponlo aquí. Si usas el dev para todo, déjalo así.
-            // URL_BASE = 'https://TU-RENDER-DE-PRODUCCION.onrender.com'; 
         }
 
         let ticketCount = 0; 
@@ -264,11 +266,39 @@
             });
         };
 
-        function iniciarSesionGoogle() {
-            supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: { redirectTo: window.location.origin }
-            });
+        async function iniciarSesionGoogle() {
+            // Le ponemos la animación de carga al botón
+            const btn = document.querySelector('button[onclick="iniciarSesionGoogle()"]');
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-outlined animate-spin mr-2 text-base">refresh</span> Conectando con Google...';
+            btn.classList.add('opacity-70', 'cursor-wait');
+            btn.disabled = true;
+
+            try {
+                // Intentamos conectar con Google a través de Supabase
+                const { data, error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: { 
+                        // Esto le dice a Google a dónde devolverte después de loguearte
+                        redirectTo: window.location.origin 
+                    }
+                });
+
+                // Si Supabase nos devuelve un error, lo mostramos en pantalla
+                if (error) {
+                    alert("Fallo al conectar con Google: " + error.message);
+                    btn.innerHTML = textoOriginal;
+                    btn.classList.remove('opacity-70', 'cursor-wait');
+                    btn.disabled = false;
+                }
+                // Si no hay error, la página se redirigirá sola a la pantalla de Google
+                
+            } catch (err) {
+                alert("Error inesperado en el navegador: " + err.message);
+                btn.innerHTML = textoOriginal;
+                btn.classList.remove('opacity-70', 'cursor-wait');
+                btn.disabled = false;
+            }
         }
 
         async function cerrarSesion() {
