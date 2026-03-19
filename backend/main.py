@@ -29,13 +29,15 @@ async def verificar_usuario(authorization: str = Header(None)):
         raise HTTPException(status_code=401, detail="Acceso denegado. No hay sesión activa.")
     token = authorization.split(" ")[1]
     try:
-        # Supabase comprueba si el token de Google del usuario es válido
         res = supabase.auth.get_user(token)
         if not res or not res.user:
             raise HTTPException(status_code=401, detail="Sesión inválida o expirada.")
         return res.user
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=401, detail="Token no válido.")
+        print(f"❌ ERROR verificando token: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=401, detail=f"Token no válido: {str(e)}")
 
 # --- MODELOS ---
 class DatosTicket(BaseModel):
