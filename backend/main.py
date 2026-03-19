@@ -120,30 +120,33 @@ def crear_excel(datos_dict, nombre_base):
     else:
         escribir(ws_factura, "F17", datetime.now().strftime("%d/%m/%Y"))
         
-    # --- ARREGLO DE LA DESCRIPCIÓN (Salto simple) ---
-    desc_lines = []
-    importe_lines = []
+    # --- ARREGLO DE LA DESCRIPCIÓN (Todos en una línea separados por un espacio) ---
+    numeros_tickets = []
     total_importe = 0.0
     
     for t in tickets:
-        desc = t.get('numero_ticket', '')
-        desc_lines.append(desc)
+        # Cogemos los números y los metemos en la lista
+        num = str(t.get('numero_ticket', '')).strip()
+        if num:
+            numeros_tickets.append(num)
         
-        importe = float(t.get('importe', 0))
-        importe_lines.append(f"{importe:.2f}")
-        total_importe += importe
+        # Sumamos los importes
+        total_importe += float(t.get('importe', 0))
         
-    # Usamos \n (un solo salto) para que queden seguidos
-    escribir(ws_factura, "B21", "\n".join(desc_lines))
-    escribir(ws_factura, "F21", "\n".join(importe_lines))
+    # Unimos la lista con un simple espacio (" ")
+    texto_descripcion = " ".join(numeros_tickets)
     
-    # Mantenemos el ajuste de texto activado para que respete los saltos
+    # Escribimos los números en B21 y la suma total del importe en F21
+    escribir(ws_factura, "B21", texto_descripcion)
+    escribir(ws_factura, "F21", round(total_importe, 2))
+    
+    # Le decimos a Excel que haga un salto de línea automático (wrap_text) si se llena la fila
     try:
-        ws_factura["B21"].alignment = Alignment(wrap_text=True, vertical='top')
-        ws_factura["F21"].alignment = Alignment(wrap_text=True, vertical='top')
+        ws_factura["B21"].alignment = Alignment(wrap_text=True, vertical='top', horizontal='left')
     except:
         pass
         
+    # Totales abajo
     base_imponible = total_importe / 1.10
     iva = total_importe - base_imponible
     escribir(ws_factura, "F38", round(base_imponible, 2))
