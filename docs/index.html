@@ -101,7 +101,7 @@
             <h2 class="text-2xl font-black tracking-tight text-slate-900 mb-2">Gestión Facturas</h2>
             <p class="text-slate-500 font-medium text-sm mb-8">Administración Privada</p>
             <div class="space-y-4">
-                <button onclick="iniciarSesionGoogle()" class="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-xl shadow-sm transition-all flex items-center justify-center gap-3">
+                <button id="btn-login-google" onclick="iniciarSesionGoogle()" class="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-xl shadow-sm transition-all flex items-center justify-center gap-3">
                     <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5" alt="Google">
                     Iniciar sesión con Google
                 </button>
@@ -230,11 +230,7 @@
     </div>
 
     <script>
-        // CONFIGURACIÓN DE SUPABASE Y RUTAS
-        const SUPABASE_URL = 'https://aghojuugmunegqpdjgfm.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnaG9qdXVnbXVuZWdxcGRqZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzQ1NTgsImV4cCI6MjA4OTQ1MDU1OH0.FMfXxOMxu15IPKRG63uo6z1iG9vUq1P16MSeA2t6Szc';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+        // CONFIGURACIÓN GLOBAL
         let URL_BASE = 'https://programafacturas-dev.onrender.com';
         const PROD_HOSTNAME = "programa-facturas-taxi.vercel.app";
         const esProd = window.location.hostname === PROD_HOSTNAME;
@@ -245,15 +241,32 @@
 
         let ticketCount = 0; 
         let sessionToken = null;
+        let supabase = null;
+
+        // INICIALIZACIÓN PROTEGIDA DE SUPABASE (Evita que el botón muera si algo falla)
+        try {
+            const SUPABASE_URL = 'https://aghojuugmunegqpdjgfm.supabase.co';
+            const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnaG9qdXVnbXVuZWdxcGRqZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzQ1NTgsImV4cCI6MjA4OTQ1MDU1OH0.FMfXxOMxu15IPKRG63uo6z1iG9vUq1P16MSeA2t6Szc';
+            
+            if (window.supabase) {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            } else {
+                console.error("La librería Supabase no se descargó de internet.");
+            }
+        } catch(e) {
+            console.error("Fallo grave al inicializar Supabase:", e);
+        }
 
         // --- SISTEMA DE LOGIN GOOGLE ---
         window.onload = () => {
+            if(!supabase) return;
+
             supabase.auth.getSession().then(({ data: { session } }) => {
                 if (session) {
                     sessionToken = session.access_token;
                     iniciarApp();
                 }
-            });
+            }).catch(e => console.error("Error recuperando sesión:", e));
 
             supabase.auth.onAuthStateChange((event, session) => {
                 if (event === 'SIGNED_IN' && session) {
@@ -267,42 +280,41 @@
         };
 
         async function iniciarSesionGoogle() {
-            // Le ponemos la animación de carga al botón
-            const btn = document.querySelector('button[onclick="iniciarSesionGoogle()"]');
-            const textoOriginal = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-outlined animate-spin mr-2 text-base">refresh</span> Conectando con Google...';
-            btn.classList.add('opacity-70', 'cursor-wait');
-            btn.disabled = true;
+            const btn = document.getElementById('btn-login-google');
+            const textoOriginal = btn ? btn.innerHTML : 'Iniciar sesión';
 
             try {
-                // Intentamos conectar con Google a través de Supabase
+                if(btn) {
+                    btn.innerHTML = '<span class="material-symbols-outlined animate-spin mr-2 text-base">refresh</span> Conectando...';
+                    btn.classList.add('opacity-70', 'cursor-wait');
+                    btn.disabled = true;
+                }
+
+                if (!supabase) {
+                    throw new Error("No se pudo cargar la conexión segura. Desactiva tu bloqueador de anuncios o pulsa Ctrl + F5 para recargar la caché.");
+                }
+
                 const { data, error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
                     options: { 
-                        // Esto le dice a Google a dónde devolverte después de loguearte
                         redirectTo: window.location.origin 
                     }
                 });
 
-                // Si Supabase nos devuelve un error, lo mostramos en pantalla
-                if (error) {
-                    alert("Fallo al conectar con Google: " + error.message);
+                if (error) throw error;
+                
+            } catch (err) {
+                alert("Atención: " + err.message);
+                if(btn) {
                     btn.innerHTML = textoOriginal;
                     btn.classList.remove('opacity-70', 'cursor-wait');
                     btn.disabled = false;
                 }
-                // Si no hay error, la página se redirigirá sola a la pantalla de Google
-                
-            } catch (err) {
-                alert("Error inesperado en el navegador: " + err.message);
-                btn.innerHTML = textoOriginal;
-                btn.classList.remove('opacity-70', 'cursor-wait');
-                btn.disabled = false;
             }
         }
 
         async function cerrarSesion() {
-            await supabase.auth.signOut();
+            if(supabase) await supabase.auth.signOut();
             location.reload();
         }
 
@@ -313,6 +325,7 @@
             if(!cargarProgreso()) agregarTicket();
         }
 
+        // --- RESTO DE FUNCIONES DE LA APP ---
         function verSec(id, btn) {
             document.querySelectorAll('.app-section').forEach(s => s.classList.remove('activa'));
             document.getElementById(id).classList.add('activa');
@@ -327,10 +340,9 @@
         function toggleI(cb, id) { 
             const el = document.getElementById(id);
             if(cb.checked) { el.classList.remove('condicional'); el.classList.add('block'); } 
-            else { el.classList.add('condicional'); el.classList.remove('block'); el.value = ''; }
+            else { el.classList.add('condicional'); el.remove('block'); el.value = ''; }
         }
 
-        // --- HISTORIAL DE PASAJEROS ---
         const PAX_KEY = 'taxi_pasajeros_historial';
         function cargarSugerenciasPasajeros() {
             const nombres = JSON.parse(localStorage.getItem(PAX_KEY) || '[]');
@@ -347,7 +359,6 @@
             }
         }
 
-        // --- PASAJEROS (tags) ---
         function addP(id) { 
             const container = document.getElementById(`pax_${id}`);
             const existing = container.querySelector('.pax-input-temp');
@@ -376,7 +387,6 @@
             guardarProgreso();
         }
 
-        // --- FECHAS (tags) ---
         function addFecha(tipo, id) {
             const container = document.getElementById(`fechas_${tipo}_${id}`);
             const existing = container.querySelector('.fecha-input-temp');
@@ -425,7 +435,6 @@
                         </div>
                     </summary>
                     <div class="p-6 border-t border-slate-100 space-y-8">
-
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div class="flex flex-col gap-2">
                                 <label class="text-sm font-bold text-red-500 uppercase tracking-tight">Nº Ticket</label>
@@ -575,7 +584,6 @@
             guardarProgreso();
         }
 
-        // --- LÓGICA DEL MODAL ---
         let idDescargaPendiente = null;
         function abrirModalDescarga(id = null) {
             if (id === null) {
@@ -648,7 +656,7 @@
                     method, 
                     headers:{
                         'Content-Type':'application/json',
-                        'Authorization': `Bearer ${sessionToken}` // SE ENVÍA EL TOKEN DE GOOGLE
+                        'Authorization': `Bearer ${sessionToken}` 
                     }, 
                     body:JSON.stringify(data) 
                 });
@@ -819,7 +827,6 @@
             cargarHistorial();
         }
 
-        // --- PERSISTENCIA LOCAL ---
         document.getElementById('formTaxi').addEventListener('input', triggerAutoSave);
         document.getElementById('formTaxi').addEventListener('change', triggerAutoSave);
         let tSave; function triggerAutoSave() { clearTimeout(tSave); tSave = setTimeout(guardarProgreso, 500); }
