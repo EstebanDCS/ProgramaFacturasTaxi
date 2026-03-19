@@ -25,7 +25,6 @@
     <div id="aviso-guardado" class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">save</span> Guardado</div>
     <datalist id="sugerencias-pasajeros"></datalist>
 
-    <!-- MODAL DESCARGA -->
     <div id="modal-descarga" class="fixed inset-0 z-[9999] hidden flex items-center justify-center">
         <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="if(document.getElementById('modal-content-progreso').classList.contains('hidden')) cerrarModal()"></div>
         <div class="bg-white rounded-2xl shadow-2xl z-10 p-6 w-full max-w-sm mx-4 relative min-h-[300px] flex flex-col justify-center">
@@ -52,7 +51,6 @@
         </div>
     </div>
 
-    <!-- LOGIN -->
     <div id="sec-login-container" class="flex-1 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 max-w-md w-full text-center">
             <div class="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-6"><span class="material-symbols-outlined text-4xl fill-1">directions_boat</span></div>
@@ -64,7 +62,6 @@
         </div>
     </div>
 
-    <!-- APP -->
     <div id="app-layout" class="w-full min-h-screen">
         <aside class="fixed inset-y-0 left-0 w-64 bg-sidebar text-slate-300 flex flex-col shadow-xl z-50">
             <div class="p-6">
@@ -99,7 +96,6 @@
 
         <main class="flex-1 ml-64 p-4 md:pl-8 md:pr-8 md:pt-6">
 
-            <!-- ══ USER DASHBOARD ══ -->
             <div id="sec-dashboard" class="app-section activa w-full max-w-[1400px]">
                 <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
                     <div class="flex items-center gap-4"><div class="p-2 bg-primary/10 rounded-lg text-primary"><span class="material-symbols-outlined fill-1">dashboard</span></div>
@@ -111,30 +107,18 @@
                     <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Facturado total</span><p class="text-3xl font-black text-slate-900 mt-2" id="ud-importe">—</p></div>
                     <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Mis plantillas</span><p class="text-3xl font-black text-slate-900 mt-2" id="ud-plantillas">—</p></div>
                 </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-                        <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2"><span class="material-symbols-outlined text-lg text-primary">bar_chart</span> Facturas por mes</h3>
-                        <div id="ud-chart" class="flex items-end gap-2 h-40"></div>
-                    </div>
-                    <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-                        <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2"><span class="material-symbols-outlined text-lg text-amber-500">draft</span> Uso por plantilla</h3>
-                        <div id="ud-plantillas-list" class="space-y-3"></div>
-                    </div>
-                </div>
             </div>
 
-            <!-- ══ PLANTILLAS ══ -->
             <div id="sec-plantillas" class="app-section w-full max-w-[1400px]">
                 <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
                     <div class="flex items-center gap-4"><div class="p-2 bg-primary/10 rounded-lg text-primary"><span class="material-symbols-outlined fill-1">draft</span></div><div>
-                        <h2 class="text-2xl font-bold tracking-tight text-slate-900">Mis Plantillas</h2><p class="text-slate-500 text-sm mt-1 font-medium">Modelos de factura</p></div></div>
+                        <h2 class="text-2xl font-bold tracking-tight text-slate-900">Mis Plantillas</h2></div></div>
                     <button onclick="verSec('sec-crear-plantilla',document.getElementById('btn-plantillas'));setTimeout(actualizarPreview,100)" class="flex items-center gap-2 bg-primary hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm">
                         <span class="material-symbols-outlined text-lg">add</span> Nueva Plantilla</button>
                 </header>
                 <div id="lista-plantillas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
             </div>
 
-            <!-- ══ CREAR PLANTILLA (builder visual + Excel upload) ══ -->
             <div id="sec-crear-plantilla" class="app-section w-full max-w-[1400px]">
                 <header class="flex items-center justify-between mb-6 pb-6 border-b border-slate-200">
                     <div class="flex items-center gap-4">
@@ -146,7 +130,6 @@
                     <button onclick="tabPlantilla('excel')" id="tab-excel" class="px-5 py-2 rounded-md text-sm font-bold text-slate-500 hover:text-slate-700 transition-all">Subir Excel</button>
                 </div>
 
-                <!-- Visual Builder -->
                 <div id="panel-visual" class="grid grid-cols-1 lg:grid-cols-5 gap-6">
                     <div class="lg:col-span-3 space-y-5">
                         <div class="flex flex-col gap-2"><label class="text-sm font-bold text-slate-700">Nombre de la plantilla</label><input type="text" id="tpl-nombre" class="rounded-lg border-slate-200 bg-white px-4 py-3 focus:ring-primary" placeholder="Ej: Factura estándar"></div>
@@ -167,26 +150,52 @@
                                 <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Tamaño texto</label><input type="number" id="tpl-tam" value="10" min="8" max="14" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm"></div>
                                 <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Página</label><select id="tpl-page-size" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm"><option value="A4">A4</option><option value="Letter">Carta</option></select></div>
                                 <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Orientación</label><select id="tpl-page-orient" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm"><option value="portrait">Vertical</option><option value="landscape">Horizontal</option></select></div>
-                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Margen V (mm)</label><input type="number" id="tpl-margin-v" value="20" min="5" max="50" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm"></div>
-                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Margen H (mm)</label><input type="number" id="tpl-margin-h" value="15" min="5" max="50" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm"></div>
                             </div></details>
                         <details class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">person</span> Datos del Cliente</summary>
                             <div class="px-5 pb-5 pt-2"><label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-cli-mostrar" checked class="tpl-field rounded text-primary"> Mostrar sección de cliente en la factura</label></div></details>
-                        <details open class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">view_column</span> Columnas</summary>
-                            <div class="px-5 pb-5 pt-2"><p class="text-xs text-slate-500 mb-3">Formato de las líneas de tu factura:</p>
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <label class="flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 border-slate-200"><input type="radio" name="tpl-cols-preset" value="simple" checked class="tpl-field mt-0.5 text-primary"><div><span class="text-sm font-bold text-slate-700">Simple</span><p class="text-[11px] text-slate-400 mt-0.5">Descripción + Importe</p></div></label>
-                                    <label class="flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 border-slate-200"><input type="radio" name="tpl-cols-preset" value="detallado" class="tpl-field mt-0.5 text-primary"><div><span class="text-sm font-bold text-slate-700">Detallado</span><p class="text-[11px] text-slate-400 mt-0.5">Descripción + Cant. + Precio + Total</p></div></label>
-                                    <label class="flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 border-slate-200"><input type="radio" name="tpl-cols-preset" value="servicios" class="tpl-field mt-0.5 text-primary"><div><span class="text-sm font-bold text-slate-700">Servicios</span><p class="text-[11px] text-slate-400 mt-0.5">Descripción + Horas + Tarifa + Total</p></div></label>
-                                </div></div></details>
-                        <details class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">percent</span> Impuestos y Moneda</summary>
-                            <div class="px-5 pb-5 pt-2 grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Título</label><input type="text" id="tpl-fac-titulo" value="FACTURA" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
-                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Impuesto</label><input type="text" id="tpl-imp-nombre" value="IVA" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
-                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">%</label><input type="number" id="tpl-imp-pct" value="21" min="0" max="100" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
-                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Moneda</label><input type="text" id="tpl-moneda" value="€" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
-                                <label class="flex items-center gap-2 text-sm col-span-2"><input type="checkbox" id="tpl-desglose" checked class="tpl-field rounded text-primary"> Mostrar desglose</label>
-                            </div></details>
+                        
+                        <details open class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">view_column</span> Líneas / Tickets</summary>
+                            <div class="px-5 pb-5 pt-2">
+                                <label class="flex items-center gap-2 text-sm mb-4 font-bold text-slate-700">
+                                    <input type="checkbox" id="tpl-usar-lineas" checked class="tpl-field rounded text-primary" onchange="toggleI(this, 'tpl-cols-config')"> 
+                                    Activar tabla de tickets / desglose de líneas
+                                </label>
+                                <div id="tpl-cols-config" class="block">
+                                    <p class="text-xs text-slate-500 mb-3">Las líneas se sumarán automáticamente en el total. Elige el formato:</p>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <label class="flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 border-slate-200"><input type="radio" name="tpl-cols-preset" value="simple" checked class="tpl-field mt-0.5 text-primary"><div><span class="text-sm font-bold text-slate-700">Simple</span><p class="text-[11px] text-slate-400 mt-0.5">Descripción + Importe</p></div></label>
+                                        <label class="flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 border-slate-200"><input type="radio" name="tpl-cols-preset" value="detallado" class="tpl-field mt-0.5 text-primary"><div><span class="text-sm font-bold text-slate-700">Detallado</span><p class="text-[11px] text-slate-400 mt-0.5">Desc. + Cant. + Precio + Total</p></div></label>
+                                        <label class="flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 border-slate-200"><input type="radio" name="tpl-cols-preset" value="servicios" class="tpl-field mt-0.5 text-primary"><div><span class="text-sm font-bold text-slate-700">Servicios</span><p class="text-[11px] text-slate-400 mt-0.5">Desc. + Horas + Tarifa + Total</p></div></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+
+                        <details class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">percent</span> Impuestos y Moneda</summary>
+                            <div class="px-5 pb-5 pt-2 space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Título Factura</label><input type="text" id="tpl-fac-titulo" value="FACTURA" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
+                                    <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Moneda</label><input type="text" id="tpl-moneda" value="€" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
+                                </div>
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label class="text-xs font-bold text-slate-700 uppercase">Impuestos a aplicar</label>
+                                        <button type="button" onclick="addImpuestoTpl()" class="text-xs font-bold text-primary flex items-center gap-1"><span class="material-symbols-outlined text-sm">add</span> Añadir</button>
+                                    </div>
+                                    <div id="tpl-impuestos-list" class="space-y-2">
+                                        <div class="flex items-center gap-2 tpl-impuesto-row">
+                                            <input type="text" class="imp-nom tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm flex-1" value="IVA" placeholder="Nombre (ej. IRPF)">
+                                            <input type="number" class="imp-pct tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm w-20" value="21" placeholder="%">
+                                            <button type="button" onclick="this.parentElement.remove(); actualizarPreview()" class="text-slate-400 hover:text-red-500"><span class="material-symbols-outlined text-lg">close</span></button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-desglose" checked class="tpl-field rounded text-primary"> Mostrar desglose de impuestos</label>
+                            </div>
+                        </details>
+                        
                         <details class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">sticky_note_2</span> Pie de Página</summary>
                             <div class="px-5 pb-5 pt-2 space-y-3">
                                 <textarea id="tpl-pie-texto" class="tpl-field w-full rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm min-h-[60px]" placeholder="Texto del pie"></textarea>
@@ -203,7 +212,6 @@
                     </div>
                 </div>
 
-                <!-- Excel Upload -->
                 <div id="panel-excel" class="hidden space-y-6">
                     <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
                         <h3 class="font-bold text-lg text-slate-900 flex items-center gap-2 mb-4"><span class="material-symbols-outlined text-primary">menu_book</span> Guía: Preparar tu Excel</h3>
@@ -215,18 +223,13 @@
                                 <span><span class="text-primary">{{cif}}</span> — CIF / NIF</span>
                                 <span><span class="text-primary">{{fecha}}</span> — Fecha de la factura</span>
                                 <span><span class="text-primary">{{numero}}</span> — Nº de factura</span>
-                                <span><span class="text-primary">{{cliente}}</span> — Nombre del cliente</span>
-                                <span><span class="text-primary">{{total}}</span> — Importe total</span>
-                                <span><span class="text-primary">{{base}}</span> — Base imponible</span>
-                                <span><span class="text-primary">{{iva}}</span> — Importe IVA</span>
                             </div>
-                            <p class="text-xs text-slate-400 mt-2">Configura márgenes y áreas de impresión en <strong>Excel → Diseño de página</strong> antes de subir.</p>
                         </div>
                     </div>
                     <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
                         <input type="text" id="excel-tpl-nombre" class="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Nombre de la plantilla">
                         <div class="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center hover:border-primary transition-colors">
-                            <input type="file" id="excel-tpl-file" accept=".xlsx,.xlsm" class="hidden" onchange="$('#excel-file-label').textContent=this.files[0]?.name||'Seleccionar...'">
+                            <input type="file" id="excel-tpl-file" accept=".xlsx,.xlsm" class="hidden" onchange="document.getElementById('excel-file-label').textContent=this.files[0]?.name||'Seleccionar...'">
                             <label for="excel-tpl-file" class="cursor-pointer"><span class="material-symbols-outlined text-4xl text-slate-300 mb-2 block">upload_file</span><p class="text-sm font-semibold text-slate-600" id="excel-file-label">Clic para seleccionar .xlsx o .xlsm</p></label>
                         </div>
                         <div id="excel-tags-resultado" class="hidden bg-emerald-50 border border-emerald-200 rounded-lg p-4"></div>
@@ -235,25 +238,17 @@
                 </div>
             </div>
 
-            <!-- ══ NUEVA FACTURA ══ -->
             <div id="sec-nueva" class="app-section w-full max-w-[1400px]">
                 <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
                     <div class="flex items-center gap-4"><div class="p-2 bg-primary/10 rounded-lg text-primary"><span class="material-symbols-outlined fill-1">receipt_long</span></div><h2 class="text-2xl font-bold tracking-tight text-slate-900">Nueva Factura</h2></div>
                     <button id="btn-volver-selector" onclick="mostrarSelectorPlantilla()" class="hidden flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all"><span class="material-symbols-outlined text-sm">arrow_back</span> Cambiar plantilla</button>
                 </header>
 
-                <!-- PASO 1: Selector de plantilla -->
                 <div id="nueva-paso-selector">
                     <p class="text-slate-500 text-sm mb-6">Selecciona una plantilla para crear tu factura:</p>
                     <div id="nueva-plantillas-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-6"></div>
-                    <div class="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl">
-                        <span class="material-symbols-outlined text-4xl text-slate-300 mb-2 block">add_circle</span>
-                        <p class="text-slate-500 font-medium mb-3">¿No tienes plantillas?</p>
-                        <button onclick="verSec('sec-plantillas',document.getElementById('btn-plantillas'));cargarPlantillas()" class="bg-primary hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-lg text-sm transition-all">Crear mi primera plantilla</button>
-                    </div>
                 </div>
 
-                <!-- PASO 2: Formulario genérico (se muestra al seleccionar plantilla) -->
                 <div id="nueva-paso-form" class="hidden space-y-6">
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                         <div class="flex items-center gap-2 mb-6 text-primary font-bold"><span class="material-symbols-outlined text-xl">info</span><h3 class="text-lg">Detalles de Factura</h3></div>
@@ -265,54 +260,56 @@
                             <div class="flex flex-col gap-2"><label class="text-sm font-semibold text-slate-600">Nº Factura</label><input type="text" id="factura_numero" required class="w-full rounded-lg border-slate-200 bg-slate-50 focus:ring-primary px-4 py-3" placeholder="Ej: 2026-0001"></div>
                             <div class="flex flex-col gap-2"><label class="text-sm font-semibold text-slate-600">Fecha</label><input type="date" id="gen-fecha" class="w-full rounded-lg border-slate-200 bg-slate-50 focus:ring-primary px-4 py-3"></div>
                         </div>
-                        <div class="mt-4 flex flex-col gap-2"><label class="text-sm font-semibold text-slate-600">Referencia (opcional)</label><input type="text" id="gen-referencia" class="w-full rounded-lg border-slate-200 bg-slate-50 focus:ring-primary px-4 py-3 text-sm" placeholder="Ej: Proyecto Alpha"></div>
                     </div>
 
-                    <!-- Cliente -->
                     <div id="gen-cliente-sec" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                         <div class="flex items-center gap-2 mb-4 text-primary font-bold"><span class="material-symbols-outlined text-xl">person</span><h3 class="text-lg">Datos del Cliente</h3></div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <input type="text" id="gen-cli-nombre" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Nombre / Razón social">
                             <input type="text" id="gen-cli-cif" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="CIF / NIF">
                             <input type="text" id="gen-cli-dir" class="md:col-span-2 rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Dirección">
-                            <input type="email" id="gen-cli-email" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Email">
-                            <input type="text" id="gen-cli-tel" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Teléfono">
                         </div>
                     </div>
 
-                    <!-- Líneas -->
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="flex items-center gap-2 text-primary font-bold"><span class="material-symbols-outlined text-xl">list_alt</span><h3 class="text-lg">Líneas de Factura</h3></div>
-                            <button type="button" onclick="addLineaGenerica()" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-sm">add</span> Añadir línea</button>
+                        <div id="gen-lineas-container">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2 text-primary font-bold"><span class="material-symbols-outlined text-xl">list_alt</span><h3 class="text-lg">Líneas de Factura (Tickets)</h3></div>
+                                <button type="button" onclick="addLineaGenerica()" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-sm">add</span> Añadir línea</button>
+                            </div>
+                            <div id="gen-lineas-header" class="grid gap-2 mb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider"></div>
+                            <div id="gen-lineas" class="space-y-2"></div>
                         </div>
-                        <div id="gen-lineas-header" class="grid gap-2 mb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider"></div>
-                        <div id="gen-lineas" class="space-y-2"></div>
+                        
+                        <div id="gen-importe-fijo-container" class="hidden">
+                            <div class="flex items-center gap-2 mb-4 text-primary font-bold"><span class="material-symbols-outlined text-xl">payments</span><h3 class="text-lg">Importe Base</h3></div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-sm font-semibold text-slate-600">Base imponible (antes de impuestos)</label>
+                                <input type="number" step="0.01" id="gen-importe-base" class="w-full md:w-1/2 rounded-lg border-slate-200 bg-slate-50 focus:ring-primary px-4 py-3" placeholder="Ej: 1500.00">
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Notas -->
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                         <label class="text-sm font-bold text-slate-600">Notas / Observaciones</label>
                         <textarea id="gen-notas" class="mt-2 w-full rounded-lg border-slate-200 bg-slate-50 p-4 min-h-[80px] text-sm" placeholder="Condiciones de pago, notas adicionales..."></textarea>
                     </div>
 
-                    <!-- Botón generar -->
                     <button type="button" onclick="generarConPlantilla()" class="w-full flex items-center justify-center gap-2 px-8 py-4 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all text-lg">
                         <span class="material-symbols-outlined">picture_as_pdf</span> GENERAR FACTURA
                     </button>
                 </div>
             </div>
 
-            <!-- ══ HISTORIAL ══ -->
             <div id="sec-historial" class="app-section w-full max-w-[1400px]">
                 <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
-                    <div><h2 class="text-2xl font-bold tracking-tight text-slate-900">Historial</h2><p class="text-slate-500 text-sm mt-1 font-medium">Facturas almacenadas de forma segura</p></div>
-                    <button onclick="vaciarHistorial()" class="bg-[#f04444] hover:bg-red-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 shadow-sm"><span class="material-symbols-outlined text-lg">delete_sweep</span> Vaciar</button>
+                    <div><h2 class="text-2xl font-bold tracking-tight text-slate-900">Historial</h2></div>
+                    <button onclick="vaciarHistorial()" class="bg-[#f04444] hover:bg-red-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm">Vaciar</button>
                 </header>
                 <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm"><table class="w-full text-left">
                     <thead class="bg-slate-50 border-b border-slate-100"><tr>
                         <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Fecha</th>
-                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Barco</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Plantilla</th>
                         <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Nº Fra.</th>
                         <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Importe</th>
                         <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em] text-right">Acciones</th>
@@ -320,48 +317,8 @@
                     <tbody id="tabla-historial" class="divide-y divide-slate-50"></tbody>
                 </table></div>
             </div>
-
-            <!-- ══ ADMIN DASHBOARD ══ -->
-            <div id="sec-admin" class="app-section w-full max-w-[1400px]">
-                <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
-                    <div class="flex items-center gap-4"><div class="p-2 bg-amber-500/10 rounded-lg text-amber-600"><span class="material-symbols-outlined fill-1">admin_panel_settings</span></div><div>
-                        <h2 class="text-2xl font-bold tracking-tight text-slate-900">Panel de Administración</h2><p class="text-slate-500 text-sm mt-1">Gestión y estadísticas de uso (sin acceso a datos privados)</p></div></div>
-                    <button onclick="cargarAdminDashboard()" class="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold"><span class="material-symbols-outlined text-sm">refresh</span> Actualizar</button>
-                </header>
-                <!-- Tabs -->
-                <div class="flex gap-1 mb-6 bg-slate-100 p-1 rounded-lg w-fit">
-                    <button onclick="adminTab('stats')" id="adm-tab-stats" class="px-4 py-2 rounded-md text-sm font-bold bg-white text-primary shadow-sm">Estadísticas</button>
-                    <button onclick="adminTab('users')" id="adm-tab-users" class="px-4 py-2 rounded-md text-sm font-bold text-slate-500">Usuarios</button>
-                    <button onclick="adminTab('activity')" id="adm-tab-activity" class="px-4 py-2 rounded-md text-sm font-bold text-slate-500">Actividad</button>
-                    <button onclick="adminTab('system')" id="adm-tab-system" class="px-4 py-2 rounded-md text-sm font-bold text-slate-500">Sistema</button>
-                </div>
-                <div id="adm-panel-stats" class="space-y-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                        <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase">Total facturas</span><p class="text-3xl font-black text-slate-900 mt-2" id="adm-total-facturas">—</p></div>
-                        <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase">Usuarios</span><p class="text-3xl font-black text-slate-900 mt-2" id="adm-usuarios">—</p></div>
-                        <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase">Hoy</span><p class="text-3xl font-black text-slate-900 mt-2" id="adm-hoy">—</p></div>
-                        <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase">Plantillas</span><p class="text-3xl font-black text-slate-900 mt-2" id="adm-plantillas">—</p></div>
-                    </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm"><h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Facturas por día (14d)</h3><div id="adm-chart-dias" class="flex items-end gap-1 h-40"></div></div>
-                        <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm"><h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Uso por plantilla</h3><div id="adm-uso-plantillas" class="space-y-3"></div></div>
-                    </div>
-                </div>
-                <div id="adm-panel-users" class="hidden"><div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm"><table class="w-full text-left"><thead class="bg-slate-50 border-b border-slate-100"><tr>
-                    <th class="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase">ID Usuario</th>
-                    <th class="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase">Facturas</th>
-                    <th class="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase">Plantillas</th>
-                    <th class="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase">Última actividad</th>
-                    <th class="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase text-right">Estado</th>
-                </tr></thead><tbody id="adm-users-table" class="divide-y divide-slate-50"></tbody></table></div></div>
-                <div id="adm-panel-activity" class="hidden"><div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm"><table class="w-full text-left"><thead class="bg-slate-50 border-b border-slate-100"><tr>
-                    <th class="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase">Fecha</th>
-                    <th class="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase">Usuario</th>
-                    <th class="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase">Acción</th>
-                    <th class="px-6 py-3 text-[11px] font-bold text-slate-400 uppercase">Detalle</th>
-                </tr></thead><tbody id="adm-activity-table" class="divide-y divide-slate-50"></tbody></table></div></div>
-                <div id="adm-panel-system" class="hidden"><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="adm-system-cards"></div></div>
-            </div>
+            
+            <div id="sec-admin" class="app-section w-full max-w-[1400px]"></div>
 
         </main>
     </div>
@@ -382,27 +339,6 @@
     function authHeaders(x={}){return{"Authorization":`Bearer ${sessionToken}`,...x}}
     function descargarBlob(b,h,n,f){let fn=n;if(h?.includes("filename="))fn=h.split("filename=")[1].replace(/["']/g,"");else fn+=f==="excel"?".xlsm":f==="pdf"?".pdf":".zip";const u=URL.createObjectURL(b);Object.assign(document.createElement("a"),{href:u,download:fn}).click();URL.revokeObjectURL(u)}
 
-    /* ═══ E2E ENCRYPTION (Web Crypto API) ═══ */
-    async function initCrypto(userId){
-        const enc=new TextEncoder();
-        const km=await crypto.subtle.importKey("raw",enc.encode(userId),"PBKDF2",false,["deriveKey"]);
-        cryptoKey=await crypto.subtle.deriveKey({name:"PBKDF2",salt:enc.encode("gestion-facturas-v2"),iterations:100000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
-    }
-    async function cifrar(texto){
-        if(!cryptoKey)return texto;
-        const enc=new TextEncoder(),iv=crypto.getRandomValues(new Uint8Array(12));
-        const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},cryptoKey,enc.encode(texto));
-        const combined=new Uint8Array(iv.length+ct.byteLength);combined.set(iv);combined.set(new Uint8Array(ct),iv.length);
-        return"ENC:"+btoa(String.fromCharCode(...combined));
-    }
-    async function descifrar(encoded){
-        if(!encoded||!encoded.startsWith("ENC:"))return encoded;
-        if(!cryptoKey)return encoded;
-        try{const data=Uint8Array.from(atob(encoded.slice(4)),c=>c.charCodeAt(0));
-        const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:data.slice(0,12)},cryptoKey,data.slice(12));
-        return new TextDecoder().decode(pt)}catch{return encoded}
-    }
-
     /* ═══ SUPABASE AUTH ═══ */
     try{const SU="https://aghojuugmunegqpdjgfm.supabase.co",SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnaG9qdXVnbXVuZWdxcGRqZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzQ1NTgsImV4cCI6MjA4OTQ1MDU1OH0.FMfXxOMxu15IPKRG63uo6z1iG9vUq1P16MSeA2t6Szc";
     if(window.supabase)sbClient=window.supabase.createClient(SU,SK);else console.error("Supabase no cargó")}catch(e){console.error("Supabase init error:",e)}
@@ -417,55 +353,12 @@
     async function iniciarApp(user){
         document.body.classList.add("logged-in");
         verSec("sec-dashboard",$("#btn-dashboard"));
-        cargarSugerenciasPasajeros();
-        if(user){
-            await initCrypto(user.id);
-            const meta=user.user_metadata||{};
-            const nombre=meta.full_name||meta.name||user.email||"";
-            const avatar=meta.avatar_url||meta.picture||"";
-            if(nombre||avatar){
-                $("#perfil-nombre").textContent=nombre;
-                $("#perfil-email").textContent=user.email||"";
-                if(avatar){$("#perfil-avatar").src=avatar;$("#perfil-avatar").alt=nombre}
-                else{$("#perfil-avatar").replaceWith(Object.assign(document.createElement("div"),{className:"w-9 h-9 rounded-full bg-primary/30 flex items-center justify-center text-white text-sm font-bold flex-shrink-0",textContent:nombre.charAt(0).toUpperCase()}))}
-                $("#perfil-usuario").classList.remove("hidden");
-            }
-            checkAdminStatus();
-            cargarUserDashboard();
-        }
+        cargarUserDashboard();
     }
-    async function checkAdminStatus(){try{const r=await fetch(`${URL_BASE}/admin/check`,{headers:authHeaders()});if(r.ok){const d=await r.json();isAdmin=d.is_admin===true;if(isAdmin){$("#btn-admin").classList.remove("hidden");$("#btn-admin").classList.add("flex")}}}catch{}}
 
     /* ═══ NAVIGATION ═══ */
-    function verSec(id,btn){$$(".app-section").forEach(s=>s.classList.remove("activa"));$(`#${id}`).classList.add("activa");$$(".nav-btn").forEach(l=>{const keep=l.id==="btn-admin"&&!isAdmin;l.className="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group";if(keep)l.classList.add("hidden");if(l.id==="btn-comunidad")l.className="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg text-blue-200/30 cursor-default";l.querySelector("span:first-child")?.classList.remove("fill-1")});btn.className="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white shadow-lg shadow-primary/20 transition-all cursor-pointer";btn.querySelector("span:first-child")?.classList.add("fill-1")}
+    function verSec(id,btn){$$(".app-section").forEach(s=>s.classList.remove("activa"));$(`#${id}`).classList.add("activa");$$(".nav-btn").forEach(l=>{const keep=l.id==="btn-admin"&&!isAdmin;l.className="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group";if(keep)l.classList.add("hidden");l.querySelector("span:first-child")?.classList.remove("fill-1")});btn.className="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white shadow-lg shadow-primary/20 transition-all cursor-pointer";btn.querySelector("span:first-child")?.classList.add("fill-1")}
     function toggleI(cb,id){const el=document.getElementById(id);if(cb.checked){el.classList.remove("condicional");el.classList.add("block")}else{el.classList.add("condicional");el.classList.remove("block");el.value=""}}
-
-    /* ═══ USER DASHBOARD ═══ */
-    async function cargarUserDashboard(){try{const r=await fetch(`${URL_BASE}/user/stats`,{headers:authHeaders()});if(!r.ok)return;const d=await r.json();
-        $("#ud-total").textContent=d.total_facturas;
-        $("#ud-mes").textContent=d.facturas_este_mes;
-        $("#ud-importe").textContent=d.total_importe.toLocaleString("es-ES",{minimumFractionDigits:2})+" €";
-        $("#ud-plantillas").textContent=d.total_plantillas;
-        // Chart
-        const ch=$("#ud-chart");const datos=d.facturas_por_mes||[];
-        if(!datos.length){ch.innerHTML='<p class="text-sm text-slate-400 m-auto">Sin datos</p>'}
-        else{const mx=Math.max(...datos.map(x=>x.count),1);ch.innerHTML=datos.map(x=>{const p=Math.max(x.count/mx*100,4);const m=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"][parseInt(x.mes.split("-")[1])-1];return`<div class="flex-1 flex flex-col items-center justify-end h-full min-w-0"><p class="text-[10px] font-bold text-slate-500 mb-1">${x.count}</p><div class="w-full rounded-t-lg bg-primary/80 hover:bg-primary transition-colors" style="height:${p}%"></div><p class="text-[10px] font-bold text-slate-400 mt-2 uppercase">${m}</p></div>`}).join("")}
-        // Plantillas usage
-        const pl=$("#ud-plantillas-list");const pp=d.por_plantilla||[];
-        if(!pp.length){pl.innerHTML='<p class="text-sm text-slate-400">Sin datos</p>'}
-        else{const mx=Math.max(...pp.map(x=>x.count),1);pl.innerHTML=pp.map(x=>{const p=x.count/mx*100;return`<div class="flex items-center gap-3"><span class="text-xs font-bold text-slate-700 w-24 truncate">${esc(x.nombre)}</span><div class="flex-1 bg-slate-100 rounded-full h-2"><div class="bg-amber-400 h-2 rounded-full" style="width:${p}%"></div></div><span class="text-xs text-slate-500 w-8 text-right">${x.count}</span></div>`}).join("")}
-    }catch{}}
-
-    /* ═══ PASAJEROS ═══ */
-    function getPaxHistorial(){return JSON.parse(localStorage.getItem(PAX_KEY)||"[]")}
-    function cargarSugerenciasPasajeros(){$("#sugerencias-pasajeros").innerHTML=getPaxHistorial().map(n=>`<option value="${esc(n)}">`).join("")}
-    function guardarNombreEnHistorial(n){const ns=getPaxHistorial();if(ns.includes(n))return;ns.unshift(n);if(ns.length>200)ns.pop();localStorage.setItem(PAX_KEY,JSON.stringify(ns));cargarSugerenciasPasajeros()}
-
-    /* ═══ TAGS (pasajeros + fechas) ═══ */
-    function crearTag(c,cls,display,raw){const isPax=cls.includes("pasajeros");const t=document.createElement("span");t.className="inline-flex items-center gap-1 text-sm font-medium px-3 py-1.5 rounded-lg "+(isPax?"pax-tag bg-blue-50 border border-blue-100 text-blue-800":"fecha-tag bg-slate-100 border border-slate-200 text-slate-700");t.innerHTML=`<input type="hidden" class="${esc(cls)}" value="${esc(raw)}">${esc(display)} <button type="button" class="${isPax?'text-blue-400':'text-slate-400'} hover:text-red-500 ml-1 leading-none font-bold text-base transition-colors">&times;</button>`;t.querySelector("button").onclick=()=>{t.remove();guardarProgreso()};c.appendChild(t)}
-    function fechaISO_a_ES(iso){const[y,m,d]=iso.split("-");return`${d}/${m}/${y}`}
-    function addP(id){const c=$(`#pax_${id}`);if(c.querySelector(".pax-input-temp")){c.querySelector(".pax-input-temp").focus();return}const i=document.createElement("input");i.className="pax-input-temp flex-shrink-0 min-w-[140px] rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary/30 outline-none";i.setAttribute("list","sugerencias-pasajeros");i.placeholder="Nombre...";const conf=()=>{const n=i.value.trim();i.remove();if(!n)return;guardarNombreEnHistorial(n);crearTag(c,"t-pasajeros",n,n);guardarProgreso()};i.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===","){e.preventDefault();conf()}if(e.key==="Escape")i.remove()});i.addEventListener("blur",()=>setTimeout(()=>{if(i.parentNode)conf()},150));c.appendChild(i);i.focus()}
-    function addFecha(tipo,id){const c=$(`#fechas_${tipo}_${id}`);if(c.querySelector(".fecha-input-temp")){c.querySelector(".fecha-input-temp").focus();return}const i=document.createElement("input");i.type="date";i.className="fecha-input-temp rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary/30 outline-none";const conf=()=>{const v=i.value;i.remove();if(!v)return;crearTag(c,`t-fechas-${tipo}`,fechaISO_a_ES(v),v);guardarProgreso()};i.addEventListener("change",()=>{if(i.value)conf()});i.addEventListener("keydown",e=>{if(e.key==="Escape")i.remove()});i.addEventListener("blur",()=>setTimeout(()=>{if(i.parentNode&&!i.value)i.remove()},200));c.appendChild(i);i.focus()}
 
     /* ═══ MODAL ═══ */
     function abrirModalDescarga(id=null){idDescargaPendiente=id;$("#modal-descarga").classList.remove("hidden");$("#app-layout").classList.add("blur-sm")}
@@ -477,30 +370,63 @@
     function ejecutarDescarga(f){iniciarProgresoModal();if(idDescargaPendiente)redescargar(idDescargaPendiente,f)}
     function restaurarBotonesModal(){["excel","pdf","ambos"].forEach((f,i)=>{const btns=$$("#modal-content-opciones button[type='button']");if(btns[i])btns[i].onclick=()=>ejecutarDescarga(f)})}
 
-    /* ═══ HISTORIAL ═══ */
+    /* ═══ HISTORIAL & DASHBOARD ═══ */
+    async function cargarUserDashboard(){try{const r=await fetch(`${URL_BASE}/user/stats`,{headers:authHeaders()});if(!r.ok)return;const d=await r.json();$("#ud-total").textContent=d.total_facturas;$("#ud-mes").textContent=d.facturas_este_mes;$("#ud-importe").textContent=d.total_importe.toLocaleString("es-ES",{minimumFractionDigits:2})+" €";$("#ud-plantillas").textContent=d.total_plantillas;}catch{}}
     async function cargarHistorial(){const tb=$("#tabla-historial");tb.innerHTML=`<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500">Cargando...</td></tr>`;try{const res=await fetch(`${URL_BASE}/historial`,{headers:authHeaders()});const datos=await res.json();tb.innerHTML="";if(!datos.length){tb.innerHTML=`<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500">No hay facturas.</td></tr>`;return}const frag=document.createDocumentFragment();datos.forEach(f=>{const d=new Date(f.fecha_creacion).toLocaleDateString("es-ES",{year:"numeric",month:"2-digit",day:"2-digit"});const tr=document.createElement("tr");tr.className="hover:bg-slate-50/80 border-b border-slate-50";tr.innerHTML=`<td class="px-6 py-4 text-sm font-medium text-slate-600">${esc(d)}</td><td class="px-6 py-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#e1effe] text-primary uppercase tracking-wider">${esc(f.barco||f.plantilla_nombre||"-")}</span></td><td class="px-6 py-4 text-sm font-semibold text-slate-900">${esc(f.numero_factura)}</td><td class="px-6 py-4 text-sm font-bold text-slate-900">${f.importe_total.toFixed(2)}€</td><td class="px-6 py-4 text-right"><div class="flex items-center justify-end gap-3"><button onclick="abrirModalDescarga(${f.id})" class="text-primary hover:text-blue-800 font-extrabold text-[11px] uppercase tracking-widest"><span class="material-symbols-outlined text-lg">download</span></button><button onclick="eliminarF(${f.id})" class="text-slate-400 hover:text-red-500"><span class="material-symbols-outlined text-[18px]">delete</span></button></div></td>`;frag.appendChild(tr)});tb.appendChild(frag)}catch{tb.innerHTML=`<tr><td colspan="5" class="text-center text-red-500">Error</td></tr>`}}
     async function redescargar(id,f="excel"){try{const res=await fetch(`${URL_BASE}/re-descargar/${id}?formato=${f}`,{headers:authHeaders()});if(res.ok){descargarBlob(await res.blob(),res.headers.get("Content-Disposition"),`Fra_${id}`,f);finalizarProgresoModal()}else{detenerErrorProgresoModal();alert("Error")}}catch{detenerErrorProgresoModal();alert("Error")}}
     async function eliminarF(id){if(!confirm("¿Borrar factura?"))return;await fetch(`${URL_BASE}/eliminar-factura/${id}`,{method:"DELETE",headers:authHeaders()});cargarHistorial()}
     async function vaciarHistorial(){if(!confirm("⚠️ ¿Vaciar todo el historial?"))return;await fetch(`${URL_BASE}/limpiar-historial`,{method:"DELETE",headers:authHeaders()});cargarHistorial()}
 
-    /* ═══ PLANTILLAS ═══ */
+    /* ═══ PLANTILLAS VISUALES ═══ */
     const COL_PRESETS={simple:[{nombre:"Descripción",campo:"descripcion",alineacion:"left",tipo:"texto"},{nombre:"Importe",campo:"importe",alineacion:"right",tipo:"moneda"}],detallado:[{nombre:"Descripción",campo:"descripcion",alineacion:"left",tipo:"texto"},{nombre:"Cantidad",campo:"cantidad",alineacion:"right",tipo:"numero"},{nombre:"Precio Ud.",campo:"precio",alineacion:"right",tipo:"moneda"},{nombre:"Total",campo:"total",alineacion:"right",tipo:"moneda"}],servicios:[{nombre:"Descripción",campo:"descripcion",alineacion:"left",tipo:"texto"},{nombre:"Horas",campo:"horas",alineacion:"right",tipo:"numero"},{nombre:"Tarifa/h",campo:"tarifa",alineacion:"right",tipo:"moneda"},{nombre:"Total",campo:"total",alineacion:"right",tipo:"moneda"}]};
     function getSelectedPreset(){const c=document.querySelector('input[name="tpl-cols-preset"]:checked');return c?c.value:"simple"}
     function getColumnas(){return COL_PRESETS[getSelectedPreset()]||COL_PRESETS.simple}
     function tabPlantilla(t){const v=t==="visual";$("#panel-visual").classList.toggle("hidden",!v);$("#panel-visual").classList.toggle("grid",v);$("#panel-excel").classList.toggle("hidden",v);$("#tab-visual").className=`px-5 py-2 rounded-md text-sm font-bold transition-all ${v?"bg-white text-primary shadow-sm":"text-slate-500"}`;$("#tab-excel").className=`px-5 py-2 rounded-md text-sm font-bold transition-all ${!v?"bg-white text-primary shadow-sm":"text-slate-500"}`}
     async function cargarPlantillas(){const c=$("#lista-plantillas");c.innerHTML='<p class="col-span-3 text-center text-slate-400 py-12">Cargando...</p>';try{const r=await fetch(`${URL_BASE}/plantillas`,{headers:authHeaders()});const data=await r.json();if(!data.length){c.innerHTML=`<div class="col-span-3 text-center py-16"><span class="material-symbols-outlined text-5xl text-slate-200 mb-4 block">draft</span><p class="text-slate-400 font-medium">No hay plantillas</p></div>`;return}c.innerHTML=data.map(p=>`<div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow"><div class="flex items-center justify-between mb-3"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.tipo==="visual"?"bg-violet-100 text-violet-700":"bg-emerald-100 text-emerald-700"}">${esc(p.tipo)}</span></div><h3 class="font-bold text-slate-900 text-lg mb-1">${esc(p.nombre)}</h3><p class="text-xs text-slate-400 mb-4">${new Date(p.created_at).toLocaleDateString("es-ES")}</p><div class="flex items-center gap-2"><button onclick="previewPlantilla(${p.id})" class="flex-1 text-xs font-bold text-primary bg-primary/5 hover:bg-primary/10 rounded-lg py-2 flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">visibility</span> Preview</button><button onclick="eliminarPlantilla(${p.id})" class="text-slate-400 hover:text-red-500 p-2"><span class="material-symbols-outlined text-lg">delete</span></button></div></div>`).join("")}catch{c.innerHTML='<p class="col-span-3 text-center text-red-500">Error</p>'}}
-    function buildVisualConfig(){return{empresa:{nombre:$("#tpl-emp-nombre").value,cif:$("#tpl-emp-cif").value,direccion:$("#tpl-emp-dir").value,telefono:$("#tpl-emp-tel").value,email:$("#tpl-emp-email").value,logo_url:$("#tpl-emp-logo").value},estilo:{color_primario:$("#tpl-color1").value,color_secundario:$("#tpl-color2").value,fuente:$("#tpl-fuente").value,tam_fuente:parseInt($("#tpl-tam").value)||10},pagina:{size:$("#tpl-page-size").value,orientation:$("#tpl-page-orient").value,margenes:{top:parseInt($("#tpl-margin-v").value)||20,right:parseInt($("#tpl-margin-h").value)||15,bottom:parseInt($("#tpl-margin-v").value)||20,left:parseInt($("#tpl-margin-h").value)||15}},cliente:{mostrar:$("#tpl-cli-mostrar").checked},columnas:getColumnas(),columna_importe:getColumnas().at(-1)?.campo||"importe",impuestos:[{nombre:$("#tpl-imp-nombre").value||"IVA",porcentaje:parseInt($("#tpl-imp-pct").value)||21}],moneda:$("#tpl-moneda").value||"€",titulo:$("#tpl-fac-titulo").value||"FACTURA",mostrar_desglose:$("#tpl-desglose").checked,pie:{texto:$("#tpl-pie-texto").value,mostrar_datos_pago:$("#tpl-pie-pago").checked,datos_pago:$("#tpl-pie-pago-texto").value}}}
+    
+    // DINAMIC IMPUESTOS
+    window.addImpuestoTpl = function() {
+        const div = document.createElement("div");
+        div.className = "flex items-center gap-2 tpl-impuesto-row";
+        div.innerHTML = `<input type="text" class="imp-nom tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm flex-1" placeholder="Nombre (ej. IRPF)">
+            <input type="number" class="imp-pct tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm w-20" value="0" placeholder="%">
+            <button type="button" onclick="this.parentElement.remove(); actualizarPreview()" class="text-slate-400 hover:text-red-500"><span class="material-symbols-outlined text-lg">close</span></button>`;
+        div.querySelectorAll("input").forEach(i => i.addEventListener("input", actualizarPreview));
+        document.getElementById("tpl-impuestos-list").appendChild(div);
+        actualizarPreview();
+    }
+    function getImpuestos() {
+        return Array.from(document.querySelectorAll(".tpl-impuesto-row")).map(r => ({
+            nombre: r.querySelector(".imp-nom").value || "Impuesto",
+            porcentaje: parseFloat(r.querySelector(".imp-pct").value) || 0
+        }));
+    }
+
+    function buildVisualConfig(){return{empresa:{nombre:$("#tpl-emp-nombre").value,cif:$("#tpl-emp-cif").value,direccion:$("#tpl-emp-dir").value,telefono:$("#tpl-emp-tel").value,email:$("#tpl-emp-email").value,logo_url:$("#tpl-emp-logo").value},estilo:{color_primario:$("#tpl-color1").value,color_secundario:$("#tpl-color2").value,fuente:$("#tpl-fuente").value,tam_fuente:parseInt($("#tpl-tam").value)||10},pagina:{size:$("#tpl-page-size").value,orientation:$("#tpl-page-orient").value,margenes:{top:parseInt($("#tpl-margin-v").value)||20,right:parseInt($("#tpl-margin-h").value)||15,bottom:parseInt($("#tpl-margin-v").value)||20,left:parseInt($("#tpl-margin-h").value)||15}},cliente:{mostrar:$("#tpl-cli-mostrar").checked},usar_lineas:$("#tpl-usar-lineas").checked,columnas:getColumnas(),columna_importe:getColumnas().at(-1)?.campo||"importe",impuestos:getImpuestos(),moneda:$("#tpl-moneda").value||"€",titulo:$("#tpl-fac-titulo").value||"FACTURA",mostrar_desglose:$("#tpl-desglose").checked,pie:{texto:$("#tpl-pie-texto").value,mostrar_datos_pago:$("#tpl-pie-pago").checked,datos_pago:$("#tpl-pie-pago-texto").value}}}
+    
     function actualizarPreview(){const c=buildVisualConfig(),e=c.empresa,s=c.estilo,cols=c.columnas,moneda=c.moneda,sc=0.7;const logo=e.logo_url?`<img src="${esc(e.logo_url)}" style="max-height:30px;max-width:90px;">`:"";const ejs=[{descripcion:"Servicio profesional",cantidad:"10",horas:"10",precio:"50.00",tarifa:"50.00",importe:"500.00",total:"500.00"},{descripcion:"Material",cantidad:"1",horas:"2",precio:"30.00",tarifa:"30.00",importe:"30.00",total:"30.00"}];const thH=cols.map(col=>`<th style="padding:4px 6px;text-align:${col.alineacion};">${col.nombre}</th>`).join("");const rowsH=ejs.map(ej=>"<tr>"+cols.map(col=>{let v=ej[col.campo]||"";if(col.tipo==="moneda")v+=" "+moneda;return`<td style="padding:4px 6px;border-bottom:1px solid #eee;text-align:${col.alineacion};${col.alineacion==="right"?"font-weight:600;":""}">${v}</td>`}).join("")+"</tr>").join("");const cliH=c.cliente.mostrar?`<div style="margin:8px 0;padding:6px;background:#f8f9fa;border-radius:3px;font-size:${(s.tam_fuente-1)*sc}px;"><span style="color:#999;font-weight:600;">FACTURAR A:</span><br>Empresa Ejemplo S.L.</div>`:"";
-    $("#tpl-preview").innerHTML=`<div style="font-family:${s.fuente};font-size:${s.tam_fuente*sc}px;color:#333;line-height:1.5;"><table style="width:100%;margin-bottom:10px;"><tr><td style="vertical-align:top;width:55%;">${logo}<div style="font-weight:800;color:${s.color_primario};font-size:${(s.tam_fuente+4)*sc}px;margin-top:4px;">${esc(e.nombre||"Tu Empresa")}</div><div style="color:#888;font-size:${(s.tam_fuente-2)*sc}px;">${esc(e.cif)}</div></td><td style="vertical-align:top;text-align:right;"><div style="font-weight:900;color:${s.color_secundario};font-size:${(s.tam_fuente+8)*sc}px;">${esc(c.titulo)}</div><div>Nº: 2026-0001</div><div>Fecha: 19/03/2026</div></td></tr></table>${cliH}<table style="width:100%;border-collapse:collapse;"><tr style="background:${s.color_primario};color:white;font-size:${(s.tam_fuente-1)*sc}px;">${thH}</tr>${rowsH}</table><table style="margin-top:8px;margin-left:auto;">${c.mostrar_desglose?`<tr><td style="padding:2px 8px;color:#888;">Subtotal</td><td style="text-align:right;">530.00 ${esc(moneda)}</td></tr><tr><td style="padding:2px 8px;color:#888;">${esc(c.impuestos[0]?.nombre)} (${c.impuestos[0]?.porcentaje}%)</td><td style="text-align:right;">111.30 ${esc(moneda)}</td></tr>`:""}<tr style="border-top:2px solid ${s.color_primario};"><td style="padding:3px 8px;font-weight:800;color:${s.color_primario};">TOTAL</td><td style="text-align:right;font-weight:800;color:${s.color_primario};">641.30 ${esc(moneda)}</td></tr></table>${c.pie.texto?`<div style="margin-top:12px;padding-top:4px;border-top:1px solid #ddd;color:#aaa;">${esc(c.pie.texto)}</div>`:""}</div>`}
+    let subtotal = c.usar_lineas !== false ? 530.00 : 1000.00;
+    let totales_html = "";
+    let total_final = subtotal;
+    if (c.mostrar_desglose && c.impuestos.length > 0) {
+        totales_html += `<tr><td style="padding:2px 8px;color:#888;">Subtotal</td><td style="text-align:right;">${subtotal.toFixed(2)} ${esc(moneda)}</td></tr>`;
+        c.impuestos.forEach(imp => { const monto = subtotal * imp.porcentaje / 100; total_final += monto; totales_html += `<tr><td style="padding:2px 8px;color:#888;">${esc(imp.nombre)} (${imp.porcentaje}%)</td><td style="text-align:right;">${monto.toFixed(2)} ${esc(moneda)}</td></tr>`; });
+    } else {
+        c.impuestos.forEach(imp => { total_final += subtotal * imp.porcentaje / 100; });
+    }
+    
+    let tablaH = c.usar_lineas !== false ? `<table style="width:100%;border-collapse:collapse;"><tr style="background:${s.color_primario};color:white;font-size:${(s.tam_fuente-1)*sc}px;">${thH}</tr>${rowsH}</table>` : "";
+    
+    $("#tpl-preview").innerHTML=`<div style="font-family:${s.fuente};font-size:${s.tam_fuente*sc}px;color:#333;line-height:1.5;"><table style="width:100%;margin-bottom:10px;"><tr><td style="vertical-align:top;width:55%;">${logo}<div style="font-weight:800;color:${s.color_primario};font-size:${(s.tam_fuente+4)*sc}px;margin-top:4px;">${esc(e.nombre||"Tu Empresa")}</div><div style="color:#888;font-size:${(s.tam_fuente-2)*sc}px;">${esc(e.cif)}</div></td><td style="vertical-align:top;text-align:right;"><div style="font-weight:900;color:${s.color_secundario};font-size:${(s.tam_fuente+8)*sc}px;">${esc(c.titulo)}</div><div>Nº: 2026-0001</div><div>Fecha: 19/03/2026</div></td></tr></table>${cliH}${tablaH}<table style="margin-top:8px;margin-left:auto;">${totales_html}<tr style="border-top:2px solid ${s.color_primario};"><td style="padding:3px 8px;font-weight:800;color:${s.color_primario};">TOTAL</td><td style="text-align:right;font-weight:800;color:${s.color_primario};">${total_final.toFixed(2)} ${esc(moneda)}</td></tr></table>${c.pie.texto?`<div style="margin-top:12px;padding-top:4px;border-top:1px solid #ddd;color:#aaa;">${esc(c.pie.texto)}</div>`:""}</div>`}
     document.addEventListener("input",e=>{if(e.target.closest?.("#panel-visual"))actualizarPreview()});document.addEventListener("change",e=>{if(e.target.closest?.("#panel-visual"))actualizarPreview()});setTimeout(actualizarPreview,500);
+    
     async function guardarPlantillaVisual(){const n=$("#tpl-nombre").value.trim();if(!n){alert("Pon un nombre");return}const cfg=buildVisualConfig();const fd=new FormData();fd.append("nombre",n);fd.append("config_json",JSON.stringify(cfg));try{const r=await fetch(`${URL_BASE}/plantillas/crear-visual`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){alert("✅ Guardada");verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()}else alert("Error")}catch{alert("Error")}}
     async function subirPlantillaExcel(){const n=$("#excel-tpl-nombre").value.trim();const fi=$("#excel-tpl-file");if(!n){alert("Pon un nombre");return}if(!fi.files.length){alert("Selecciona archivo");return}const fd=new FormData();fd.append("nombre",n);fd.append("file",fi.files[0]);fd.append("config_json","{}");try{const r=await fetch(`${URL_BASE}/plantillas/upload-excel`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){const d=await r.json();const tags=d.tags_detectados||[];if(tags.length){const div=$("#excel-tags-resultado");div.classList.remove("hidden");div.innerHTML=`<p class="text-sm font-bold text-emerald-700 mb-2">✅ ${tags.length} tags:</p><div class="flex flex-wrap gap-2">${tags.map(t=>`<span class="bg-emerald-100 text-emerald-800 text-xs font-mono px-2 py-1 rounded">${esc(t)}</span>`).join("")}</div>`}alert("✅ Subida");setTimeout(()=>{verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()},1000)}else{const err=await r.json().catch(()=>({}));alert("Error: "+(err.detail||""))}}catch{alert("Error")}}
     async function previewPlantilla(id){try{const r=await fetch(`${URL_BASE}/plantillas/${id}/preview`,{method:"POST",headers:authHeaders()});if(r.ok){window.open(URL.createObjectURL(await r.blob()),"_blank")}else alert("Error preview")}catch{alert("Error")}}
     async function previewPDF(){const n=$("#tpl-nombre").value.trim()||"Preview";const cfg=buildVisualConfig();const fd=new FormData();fd.append("nombre",n);fd.append("config_json",JSON.stringify(cfg));try{const r=await fetch(`${URL_BASE}/plantillas/crear-visual`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){const d=await r.json();if(d.id)await previewPlantilla(d.id)}}catch{alert("Error")}}
-    async function eliminarPlantilla(id){if(!confirm("¿Eliminar?"))return;try{await fetch(`${URL_BASE}/plantillas/${id}`,{method:"DELETE",headers:authHeaders()});cargarPlantillas();cargarSelectorPlantillas()}catch{alert("Error")}}
+    async function eliminarPlantilla(id){if(!confirm("¿Eliminar?"))return;try{await fetch(`${URL_BASE}/plantillas/${id}`,{method:"DELETE",headers:authHeaders()});cargarPlantillas();}catch{alert("Error")}}
 
-    /* ═══ PLANTILLA → FORM SWITCH ═══ */
-    /* ═══ NUEVA FACTURA: Template selector → Form ═══ */
+    /* ═══ NUEVA FACTURA GENERICA ═══ */
     let selectedPlantillaId = null;
 
     async function cargarGridNuevaFactura() {
@@ -515,12 +441,10 @@
                 <button onclick="seleccionarPlantilla(${p.id},'${esc(p.nombre).replace(/'/g,"\\'")}','${esc(p.tipo)}')" class="bg-white rounded-xl border-2 border-slate-200 p-6 shadow-sm hover:border-primary hover:shadow-md transition-all text-left group">
                     <div class="flex items-center justify-between mb-3">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.tipo === 'visual' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}">${esc(p.tipo)}</span>
-                        <span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">chevron_right</span>
                     </div>
                     <h3 class="font-bold text-slate-900 text-lg">${esc(p.nombre)}</h3>
-                    <p class="text-xs text-slate-400 mt-1">${new Date(p.created_at).toLocaleDateString("es-ES")}</p>
                 </button>`).join("");
-        } catch { grid.innerHTML = '<p class="col-span-3 text-center text-red-500">Error cargando plantillas</p>'; }
+        } catch { grid.innerHTML = '<p class="col-span-3 text-center text-red-500">Error</p>'; }
     }
 
     async function seleccionarPlantilla(id, nombre, tipo) {
@@ -529,8 +453,6 @@
         $("#nueva-paso-form").classList.remove("hidden");
         $("#btn-volver-selector").classList.remove("hidden");
         $("#nueva-plantilla-nombre").textContent = `${nombre} (${tipo})`;
-
-        // Load config and setup form
         try {
             const r = await fetch(`${URL_BASE}/plantillas/${id}`, { headers: authHeaders() });
             if (r.ok) {
@@ -542,65 +464,84 @@
     }
 
     function mostrarSelectorPlantilla() {
-        selectedPlantillaId = null;
-        currentPlantillaConfig = null;
+        selectedPlantillaId = null; currentPlantillaConfig = null;
         $("#nueva-paso-selector").classList.remove("hidden");
         $("#nueva-paso-form").classList.add("hidden");
         $("#btn-volver-selector").classList.add("hidden");
     }
 
-    function setupGenericForm(cfg){const showCli=cfg?.cliente?.mostrar!==false;$("#gen-cliente-sec").style.display=showCli?"":"none";const cols=cfg?.columnas||COL_PRESETS.simple;const h=$("#gen-lineas-header");h.style.gridTemplateColumns=cols.map(c=>c.tipo==="texto"?"2fr":"1fr").join(" ")+" 40px";h.innerHTML=cols.map(c=>`<span>${esc(c.nombre)}</span>`).join("")+"<span></span>";$("#gen-lineas").innerHTML="";addLineaGenerica()}
-    function addLineaGenerica(){const cols=currentPlantillaConfig?.columnas||COL_PRESETS.simple;const c=$("#gen-lineas");const r=document.createElement("div");r.className="gen-linea grid gap-2 items-center";r.style.gridTemplateColumns=cols.map(c=>c.tipo==="texto"?"2fr":"1fr").join(" ")+" 40px";r.innerHTML=cols.map(c=>`<input type="${c.tipo==="texto"?"text":"number"}" step="any" data-campo="${esc(c.campo)}" class="rounded-lg border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" placeholder="${esc(c.nombre)}">`).join("")+`<button type="button" onclick="this.closest('.gen-linea').remove()" class="text-slate-400 hover:text-red-500 flex items-center justify-center"><span class="material-symbols-outlined text-lg">close</span></button>`;c.appendChild(r)}
+    function setupGenericForm(cfg){
+        const showCli = cfg?.cliente?.mostrar!==false;
+        $("#gen-cliente-sec").style.display=showCli?"":"none";
+        
+        const usarLineas = cfg?.usar_lineas !== false;
+        if(usarLineas){
+            $("#gen-lineas-container").classList.remove("hidden");
+            $("#gen-importe-fijo-container").classList.add("hidden");
+            const cols=cfg?.columnas||COL_PRESETS.simple;
+            const h=$("#gen-lineas-header");
+            h.style.gridTemplateColumns=cols.map(c=>c.tipo==="texto"?"2fr":"1fr").join(" ")+" 40px";
+            h.innerHTML=cols.map(c=>`<span>${esc(c.nombre)}</span>`).join("")+"<span></span>";
+            $("#gen-lineas").innerHTML="";
+            addLineaGenerica();
+        } else {
+            $("#gen-lineas-container").classList.add("hidden");
+            $("#gen-importe-fijo-container").classList.remove("hidden");
+        }
+    }
+    
+    function addLineaGenerica(){
+        const cols=currentPlantillaConfig?.columnas||COL_PRESETS.simple;
+        const c=$("#gen-lineas");
+        const r=document.createElement("div");
+        r.className="gen-linea grid gap-2 items-center";
+        r.style.gridTemplateColumns=cols.map(c=>c.tipo==="texto"?"2fr":"1fr").join(" ")+" 40px";
+        r.innerHTML=cols.map(c=>`<input type="${c.tipo==="texto"?"text":"number"}" step="any" data-campo="${esc(c.campo)}" class="calc-input rounded-lg border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" placeholder="${esc(c.nombre)}">`).join("")+`<button type="button" onclick="this.closest('.gen-linea').remove()" class="text-slate-400 hover:text-red-500 flex items-center justify-center"><span class="material-symbols-outlined text-lg">close</span></button>`;
+        
+        // MATEMATICAS AUTOMATICAS EN TICKETS
+        r.querySelectorAll(".calc-input").forEach(inp => {
+            inp.addEventListener("input", () => {
+                const inputs = Array.from(r.querySelectorAll("input"));
+                const getVal = (campo) => parseFloat(inputs.find(i => i.dataset.campo === campo)?.value.replace(',','.')) || 0;
+                const setVal = (campo, val) => { const el = inputs.find(i => i.dataset.campo === campo); if(el && document.activeElement !== el) el.value = val.toFixed(2); };
+                
+                if(inputs.some(i => i.dataset.campo === "cantidad") && inputs.some(i => i.dataset.campo === "precio")) {
+                    setVal("total", getVal("cantidad") * getVal("precio"));
+                }
+                if(inputs.some(i => i.dataset.campo === "horas") && inputs.some(i => i.dataset.campo === "tarifa")) {
+                    setVal("total", getVal("horas") * getVal("tarifa"));
+                }
+            });
+        });
+        c.appendChild(r);
+    }
 
     async function generarConPlantilla(){
         if(!selectedPlantillaId){alert("Selecciona una plantilla primero");return}
-        const cols=currentPlantillaConfig?.columnas||COL_PRESETS.simple;
-        const lineas=$$(".gen-linea").map(r=>{const o={};r.querySelectorAll("input").forEach(i=>{if(i.dataset.campo)o[i.dataset.campo]=i.value});return o}).filter(l=>Object.values(l).some(v=>v));
         const data={
             numero_factura:$("#factura_numero").value,
             fecha:$("#gen-fecha")?.value?new Date($("#gen-fecha").value).toLocaleDateString("es-ES"):"",
             referencia:$("#gen-referencia")?.value||"",
             cliente:{nombre:$("#gen-cli-nombre")?.value||"",cif:$("#gen-cli-cif")?.value||"",direccion:$("#gen-cli-dir")?.value||"",email:$("#gen-cli-email")?.value||"",telefono:$("#gen-cli-tel")?.value||""},
-            lineas,notas:$("#gen-notas")?.value||""
+            notas:$("#gen-notas")?.value||""
         };
+        
+        const usarLineas = currentPlantillaConfig?.usar_lineas !== false;
+        if(usarLineas){
+            data.lineas = $$(".gen-linea").map(r=>{const o={};r.querySelectorAll("input").forEach(i=>{if(i.dataset.campo)o[i.dataset.campo]=i.value});return o}).filter(l=>Object.values(l).some(v=>v));
+            if(!data.lineas.length){alert("Añade al menos una línea");return}
+        } else {
+            data.importe_base = parseFloat($("#gen-importe-base").value) || 0;
+        }
+        
         if(!data.numero_factura){alert("Indica el nº de factura");return}
-        if(!lineas.length){alert("Añade al menos una línea");return}
+        
         abrirModalDescarga();iniciarProgresoModal();
         try{const r=await fetch(`${URL_BASE}/generar-con-plantilla?formato=pdf&plantilla_id=${selectedPlantillaId}`,{method:"POST",headers:authHeaders({"Content-Type":"application/json"}),body:JSON.stringify(data)});
         if(r.ok){descargarBlob(await r.blob(),r.headers.get("Content-Disposition"),`Factura_${data.numero_factura}`,"pdf");finalizarProgresoModal()}
         else{detenerErrorProgresoModal();alert("Error generando factura")}}
         catch{detenerErrorProgresoModal();alert("Error de conexión")}
     }
-
-    /* ═══ ADMIN DASHBOARD ═══ */
-    function adminTab(t){["stats","users","activity","system"].forEach(x=>{$(`#adm-panel-${x}`).classList.toggle("hidden",x!==t);$(`#adm-tab-${x}`).className=`px-4 py-2 rounded-md text-sm font-bold ${x===t?"bg-white text-primary shadow-sm":"text-slate-500"}`})}
-    async function cargarAdminDashboard(){try{
-        // Stats
-        const r1=await fetch(`${URL_BASE}/admin/stats`,{headers:authHeaders()});if(r1.ok){const d=await r1.json();
-            $("#adm-total-facturas").textContent=d.total_facturas;$("#adm-usuarios").textContent=d.usuarios_unicos;
-            $("#adm-hoy").textContent=d.facturas_hoy;$("#adm-plantillas").textContent=d.total_plantillas;
-            const ch=$("#adm-chart-dias");const dias=d.facturas_por_dia||[];
-            if(dias.length){const mx=Math.max(...dias.map(x=>x.count),1);ch.innerHTML=dias.map(x=>{const p=Math.max(x.count/mx*100,4);return`<div class="flex-1 flex flex-col items-center justify-end h-full min-w-0"><p class="text-[9px] font-bold text-slate-500 mb-1">${x.count}</p><div class="w-full rounded-t-md bg-primary/80" style="height:${p}%"></div><p class="text-[8px] text-slate-400 mt-1">${x.dia.slice(5)}</p></div>`}).join("")}
-            const up=$("#adm-uso-plantillas");const usos=d.uso_plantillas||[];
-            if(usos.length){const mx=Math.max(...usos.map(x=>x.count),1);up.innerHTML=usos.map(x=>`<div class="flex items-center gap-3"><span class="text-xs font-bold text-slate-700 w-28 truncate">${esc(x.nombre)}</span><div class="flex-1 bg-slate-100 rounded-full h-2"><div class="bg-amber-400 h-2 rounded-full" style="width:${x.count/mx*100}%"></div></div><span class="text-xs text-slate-500">${x.count}</span></div>`).join("")}
-        }
-        // Users
-        const r2=await fetch(`${URL_BASE}/admin/users`,{headers:authHeaders()});if(r2.ok){const users=await r2.json();const tb=$("#adm-users-table");tb.innerHTML="";users.forEach(u=>{const tr=document.createElement("tr");tr.className="border-b border-slate-50";tr.innerHTML=`<td class="px-6 py-3"><span class="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded">${esc((u.user_id||"").substring(0,12))}…</span></td><td class="px-6 py-3 text-sm font-semibold">${u.facturas}</td><td class="px-6 py-3 text-sm">${u.plantillas}</td><td class="px-6 py-3 text-xs text-slate-500">${u.ultima_actividad?new Date(u.ultima_actividad).toLocaleDateString("es-ES"):"-"}</td><td class="px-6 py-3 text-right"><button onclick="toggleUser('${u.user_id}')" class="text-xs font-bold px-3 py-1 rounded-full ${u.disabled?"bg-red-100 text-red-700":"bg-emerald-100 text-emerald-700"}">${u.disabled?"Desactivado":"Activo"}</button></td>`;tb.appendChild(tr)})}
-        // Activity
-        const r3=await fetch(`${URL_BASE}/admin/activity?limit=50`,{headers:authHeaders()});if(r3.ok){const logs=await r3.json();const tb=$("#adm-activity-table");tb.innerHTML="";logs.forEach(l=>{const tr=document.createElement("tr");tr.className="border-b border-slate-50";tr.innerHTML=`<td class="px-6 py-3 text-xs text-slate-500">${new Date(l.created_at).toLocaleString("es-ES")}</td><td class="px-6 py-3"><span class="text-[10px] font-mono text-slate-400">${esc((l.user_id||"").substring(0,8))}…</span></td><td class="px-6 py-3 text-sm font-semibold">${esc(l.accion)}</td><td class="px-6 py-3 text-xs text-slate-500">${esc(l.meta||"")}</td>`;tb.appendChild(tr)})}
-        // System
-        const r4=await fetch(`${URL_BASE}/admin/system`,{headers:authHeaders()});if(r4.ok){const s=await r4.json();
-            $("#adm-system-cards").innerHTML=`
-                <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase">Facturas en BD</span><p class="text-2xl font-black text-slate-900 mt-2">${s.facturas_en_bd}</p></div>
-                <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase">Plantillas en BD</span><p class="text-2xl font-black text-slate-900 mt-2">${s.plantillas_en_bd}</p></div>
-                <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase">Logs en BD</span><p class="text-2xl font-black text-slate-900 mt-2">${s.logs_en_bd}</p></div>
-                <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase">Temp files</span><p class="text-2xl font-black text-slate-900 mt-2">${s.temp_files_mb} MB</p></div>
-                <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase">Hora servidor</span><p class="text-lg font-bold text-slate-900 mt-2">${new Date(s.server_time).toLocaleString("es-ES")}</p></div>
-                <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase">Admins</span><p class="text-sm font-mono text-slate-700 mt-2">${s.admin_emails.join(", ")}</p></div>`}
-    }catch{alert("Error cargando admin")}}
-    async function toggleUser(uid){try{const r=await fetch(`${URL_BASE}/admin/users/${uid}/toggle`,{method:"PUT",headers:authHeaders()});if(r.ok)cargarAdminDashboard()}catch{alert("Error")}}
-
-    /* ═══ PERSISTENCIA LOCAL ═══ */
     </script>
 </body>
 </html>
