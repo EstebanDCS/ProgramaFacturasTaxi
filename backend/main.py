@@ -51,16 +51,18 @@ async def verificar_usuario(authorization: str = Header(None)):
         res = supabase.auth.get_user(token)
         if not res or not res.user:
             raise HTTPException(status_code=401, detail="Sesión inválida.")
-        # Comprobar si el usuario está desactivado (defensivo: si falla, deja pasar)
-        try:
-            settings = supabase.table("user_settings") \
-                .select("disabled").eq("user_id", res.user.id).execute()
-            if settings.data and len(settings.data) > 0 and settings.data[0].get("disabled"):
-                raise HTTPException(status_code=403, detail="Cuenta desactivada por administrador.")
-        except HTTPException:
-            raise
-        except:
-            pass  # Tabla no existe, sin fila, o cualquier error → no desactivado
+        # Comprobar si el usuario está desactivado (admins son inmunes)
+        email = (res.user.email or "").lower()
+        if email not in ADMIN_EMAILS:
+            try:
+                settings = supabase.table("user_settings") \
+                    .select("disabled").eq("user_id", res.user.id).execute()
+                if settings.data and len(settings.data) > 0 and settings.data[0].get("disabled"):
+                    raise HTTPException(status_code=403, detail="Cuenta desactivada por administrador.")
+            except HTTPException:
+                raise
+            except:
+                pass
         return res.user
     except HTTPException:
         raise
@@ -927,7 +929,10 @@ async def admin_users(user=Depends(verificar_admin)):
 
 @app.put("/admin/users/{uid}/toggle")
 async def admin_toggle_user(uid: str, user=Depends(verificar_admin)):
-    """Activar/desactivar un usuario."""
+    """Activar/desactivar un usuario. No se puede desactivar a un admin."""
+    # Protección: un admin no puede desactivarse a sí mismo
+    if uid == user.id:
+        raise HTTPException(status_code=400, detail="No puedes desactivar tu propia cuenta de administrador.")
     existing = supabase.table("user_settings") \
         .select("disabled").eq("user_id", uid).execute().data
     if existing:
