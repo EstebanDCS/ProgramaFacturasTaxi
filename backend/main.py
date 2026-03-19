@@ -112,6 +112,23 @@ class DatosFactura(BaseModel):
         return sum(t.importe for t in self.tickets)
 
 
+class DatosCliente(BaseModel):
+    nombre: str = ""
+    cif: str = ""
+    direccion: str = ""
+    email: str = ""
+    telefono: str = ""
+
+
+class DatosFacturaGenerica(BaseModel):
+    numero_factura: str
+    fecha: str = ""
+    referencia: str = ""
+    cliente: DatosCliente = DatosCliente()
+    lineas: List[dict] = []   # [{col1: val, col2: val, ...}]
+    notas: str = ""
+
+
 # ─── UTILIDADES ──────────────────────────────────────────────────────────────
 def compact_json(data: dict) -> str:
     """Serializa JSON eliminando valores vacíos (False, '', [], None)."""
@@ -294,79 +311,116 @@ def rellenar_tags_hoja(ws, tags_map: dict):
 
 
 def generar_html_visual(config: dict, datos_dict: dict) -> str:
-    """Genera HTML completo para un template visual + datos de factura."""
+    """Genera HTML de factura genérica desde config de plantilla + datos."""
     emp = config.get("empresa", {})
     est = config.get("estilo", {})
     pag = config.get("pagina", {})
-    sec = config.get("secciones", {})
-    fac = config.get("factura", {})
+    cli_cfg = config.get("cliente", {})
+    cols = config.get("columnas", [{"nombre": "Descripción", "campo": "descripcion", "alineacion": "left"}, {"nombre": "Importe", "campo": "importe", "alineacion": "right"}])
+    col_importe = config.get("columna_importe", cols[-1].get("campo", "importe") if cols else "importe")
+    impuestos = config.get("impuestos", [{"nombre": "IVA", "porcentaje": 21}])
     pie = config.get("pie", {})
 
     color1 = est.get("color_primario", "#1a2e4a")
     color2 = est.get("color_secundario", "#0d6dfd")
     fuente = est.get("fuente", "Helvetica, Arial, sans-serif")
     tam = est.get("tam_fuente", 10)
-    moneda = fac.get("moneda", "€")
-    iva_pct = fac.get("porcentaje_iva", 10)
-    titulo_fac = fac.get("titulo", "FACTURA")
+    moneda = config.get("moneda", "€")
+    titulo = config.get("titulo", "FACTURA")
 
-    # Márgenes en mm
     mg = pag.get("margenes", {})
     mt, mr, mb, ml = mg.get("top", 20), mg.get("right", 15), mg.get("bottom", 20), mg.get("left", 15)
 
-    tickets = datos_dict.get("tickets", [])
-    total = sum(float(t.get("importe", 0)) for t in tickets)
-    base = total / (1 + iva_pct / 100)
-    iva = total - base
-    barco = datos_dict.get("barco", "").upper()
+    fecha = datos_dict.get("fecha", "") or datetime.now().strftime("%d/%m/%Y")
+    cliente = datos_dict.get("cliente", {})
+    lineas = datos_dict.get("lineas", [])
+    notas = datos_dict.get("notas", "")
 
-    # Fecha
-    todas_fechas = []
-    for t in tickets:
-        todas_fechas.extend(t.get("fechas_servicio", []))
-    fecha = datetime.now().strftime("%d/%m/%Y")
-    if todas_fechas:
-        try:
-            fecha = max(datetime.strptime(f, "%Y-%m-%d") for f in todas_fechas if f).strftime("%d/%m/%Y")
-        except Exception:
-            pass
-
-    nums = [str(t.get("numero_ticket", "")).strip() for t in tickets if str(t.get("numero_ticket", "")).strip()]
-
-    # Logo
+    # ── Logo ──
     logo_html = ""
     if emp.get("logo_url"):
         logo_html = f'<img src="{emp["logo_url"]}" style="max-height:60px;max-width:180px;object-fit:contain;" />'
 
-    # Filas de tickets
-    filas_tickets = ""
-    for t in tickets:
-        desc_parts = [f"Ticket {t.get('numero_ticket', '')}"]
-        if sec.get("pasajeros") and t.get("pasajeros"):
-            desc_parts.append(f"Pasajeros: {', '.join(t['pasajeros'])}")
-        if sec.get("origen_destino"):
-            desc_parts.append(f"Origen: {ticket_origen_texto(t)}")
-            desc_parts.append(f"Destino: {ticket_destino_texto(t)}")
-        if sec.get("ida_vuelta") and t.get("ida_vuelta"):
-            desc_parts.append("Ida y Vuelta: Sí")
-        if sec.get("comentarios") and t.get("comentarios"):
-            desc_parts.append(f"Obs: {t['comentarios']}")
+    # ── Cliente ──
+    cliente_html = ""
+    if cli_cfg.get("mostrar") and cliente:
+        campos_cli = []
+        if cliente.get("nombre"): campos_cli.append(f'<strong style="font-size:{tam + 1}px;">{cliente["nombre"]}</strong>')
+        if cliente.get("cif"): campos_cli.append(f'CIF: {cliente["cif"]}')
+        if cliente.get("direccion"): campos_cli.append(cliente["direccion"])
+        if cliente.get("email"): campos_cli.append(cliente["email"])
+        if cliente.get("telefono"): campos_cli.append(cliente["telefono"])
+        if campos_cli:
+            cliente_html = f'''
+            <div style="margin:16px 0;padding:12px;background:#f8f9fa;border-radius:4px;">
+                <p style="font-size:{tam - 1}px;color:#999;margin:0 0 4px;font-weight:600;">FACTURAR A:</p>
+                {"<br>".join(campos_cli)}
+            </div>'''
 
-        desc_html = "<br>".join(desc_parts)
-        imp = float(t.get("importe", 0))
-        filas_tickets += f"""
-        <tr>
-            <td style="padding:8px 10px;border-bottom:1px solid #eee;font-size:{tam}px;line-height:1.5;">{desc_html}</td>
-            <td style="padding:8px 10px;border-bottom:1px solid #eee;text-align:right;font-weight:600;white-space:nowrap;">{imp:.2f} {moneda}</td>
-        </tr>"""
+    # ── Cabecera columnas ──
+    th_html = "".join(
+        f'<th style="padding:10px;text-align:{c.get("alineacion", "left")};font-size:{tam}px;">{c["nombre"]}</th>'
+        for c in cols
+    )
 
-    # Fechas de servicio
-    fechas_html = ""
-    if sec.get("fechas_servicio") and todas_fechas:
-        fechas_fmt = formatear_fechas(todas_fechas)
-        fechas_html = f'<p style="margin:2px 0;color:#666;font-size:{tam - 1}px;">Fechas de servicio: {", ".join(fechas_fmt)}</p>'
+    # ── Filas ──
+    filas_html = ""
+    for linea in lineas:
+        celdas = ""
+        for c in cols:
+            val = linea.get(c.get("campo", ""), "")
+            align = c.get("alineacion", "left")
+            # Formatear números con moneda si es la columna de importe
+            display = val
+            if c.get("campo") == col_importe or c.get("tipo") == "moneda":
+                try:
+                    display = f'{float(val):,.2f} {moneda}'
+                except (ValueError, TypeError):
+                    display = str(val)
+            elif c.get("tipo") == "numero":
+                try:
+                    display = f'{float(val):g}'
+                except (ValueError, TypeError):
+                    display = str(val)
+            else:
+                display = str(val)
+            celdas += f'<td style="padding:8px 10px;border-bottom:1px solid #eee;text-align:{align};{"font-weight:600;" if align == "right" else ""}">{display}</td>'
+        filas_html += f"<tr>{celdas}</tr>"
 
-    # Datos de pago en pie
+    # ── Totales ──
+    subtotal = 0
+    for linea in lineas:
+        try:
+            subtotal += float(linea.get(col_importe, 0))
+        except (ValueError, TypeError):
+            pass
+
+    totales_html = ""
+    total_final = subtotal
+    desglose = config.get("mostrar_desglose", True)
+
+    if desglose and impuestos:
+        totales_html += f'<tr><td style="padding:4px 20px;color:#666;">Subtotal</td><td style="padding:4px 10px;text-align:right;font-weight:600;">{subtotal:,.2f} {moneda}</td></tr>'
+        for imp in impuestos:
+            pct = float(imp.get("porcentaje", 0))
+            nombre_imp = imp.get("nombre", "Impuesto")
+            monto = subtotal * pct / 100
+            total_final = subtotal + monto  # assumes taxes are additive
+            totales_html += f'<tr><td style="padding:4px 20px;color:#666;">{nombre_imp} ({pct:g}%)</td><td style="padding:4px 10px;text-align:right;font-weight:600;">{monto:,.2f} {moneda}</td></tr>'
+
+    totales_html += f'''<tr style="border-top:2px solid {color1};">
+        <td style="padding:8px 20px;font-weight:800;font-size:{tam + 2}px;color:{color1};">TOTAL</td>
+        <td style="padding:8px 10px;text-align:right;font-weight:800;font-size:{tam + 2}px;color:{color1};">{total_final:,.2f} {moneda}</td>
+    </tr>'''
+
+    # ── Referencia ──
+    ref = datos_dict.get("referencia", "")
+    ref_html = f'<p style="margin:2px 0;font-size:{tam + 1}px;"><strong>Ref:</strong> {ref}</p>' if ref else ""
+
+    # ── Notas ──
+    notas_html = f'<p style="margin:8px 0;font-size:{tam - 1}px;color:#555;"><em>{notas}</em></p>' if notas else ""
+
+    # ── Pie ──
     pago_html = ""
     if pie.get("mostrar_datos_pago") and pie.get("datos_pago"):
         pago_html = f'<p style="margin:4px 0;font-size:{tam - 1}px;color:#555;">{pie["datos_pago"]}</p>'
@@ -379,10 +433,8 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
   table {{ border-collapse: collapse; width: 100%; }}
 </style></head><body>
 
-<!-- CABECERA -->
-<table style="margin-bottom:24px;">
-<tr>
-  <td style="vertical-align:top;width:60%;">
+<table style="margin-bottom:16px;"><tr>
+  <td style="vertical-align:top;width:55%;">
     {logo_html}
     <h2 style="margin:8px 0 2px;color:{color1};font-size:{tam + 6}px;">{emp.get("nombre", "")}</h2>
     <p style="margin:2px 0;color:#666;font-size:{tam - 1}px;">{emp.get("cif", "")}</p>
@@ -390,40 +442,24 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
     <p style="margin:2px 0;color:#666;font-size:{tam - 1}px;">{emp.get("telefono", "")} {emp.get("email", "")}</p>
   </td>
   <td style="vertical-align:top;text-align:right;">
-    <h1 style="margin:0;color:{color2};font-size:{tam + 10}px;letter-spacing:2px;">{titulo_fac}</h1>
-    <p style="margin:6px 0 2px;font-size:{tam + 1}px;"><strong>Nº:</strong> {datos_dict.get("factura_numero", "")}</p>
+    <h1 style="margin:0;color:{color2};font-size:{tam + 10}px;letter-spacing:2px;">{titulo}</h1>
+    <p style="margin:6px 0 2px;font-size:{tam + 1}px;"><strong>Nº:</strong> {datos_dict.get("numero_factura", "")}</p>
     <p style="margin:2px 0;font-size:{tam + 1}px;"><strong>Fecha:</strong> {fecha}</p>
-    <p style="margin:2px 0;font-size:{tam + 1}px;"><strong>Ref:</strong> {barco}</p>
+    {ref_html}
   </td>
-</tr>
-</table>
+</tr></table>
 
-{fechas_html}
+{cliente_html}
 
-<!-- TABLA DE LÍNEAS -->
 <table style="margin-top:16px;">
-  <thead>
-    <tr style="background:{color1};color:white;">
-      <th style="padding:10px;text-align:left;font-size:{tam}px;">Descripción</th>
-      <th style="padding:10px;text-align:right;font-size:{tam}px;">Importe</th>
-    </tr>
-  </thead>
-  <tbody>
-    {filas_tickets}
-  </tbody>
+  <thead><tr style="background:{color1};color:white;">{th_html}</tr></thead>
+  <tbody>{filas_html}</tbody>
 </table>
 
-<!-- TOTALES -->
-<table style="margin-top:20px;width:auto;margin-left:auto;">
-  {"<tr><td style='padding:4px 20px;color:#666;'>Base imponible</td><td style='padding:4px 10px;text-align:right;font-weight:600;'>" + f"{base:.2f} {moneda}</td></tr>" if fac.get("mostrar_desglose_iva", True) else ""}
-  {"<tr><td style='padding:4px 20px;color:#666;'>IVA (" + str(iva_pct) + "%)</td><td style='padding:4px 10px;text-align:right;font-weight:600;'>" + f"{iva:.2f} {moneda}</td></tr>" if fac.get("mostrar_desglose_iva", True) else ""}
-  <tr style="border-top:2px solid {color1};">
-    <td style="padding:8px 20px;font-weight:800;font-size:{tam + 2}px;color:{color1};">TOTAL</td>
-    <td style="padding:8px 10px;text-align:right;font-weight:800;font-size:{tam + 2}px;color:{color1};">{total:.2f} {moneda}</td>
-  </tr>
-</table>
+<table style="margin-top:20px;width:auto;margin-left:auto;">{totales_html}</table>
 
-<!-- PIE -->
+{notas_html}
+
 <div style="margin-top:40px;padding-top:12px;border-top:1px solid #ddd;font-size:{tam - 1}px;color:#888;">
   <p>{pie.get("texto", "")}</p>
   {pago_html}
@@ -991,30 +1027,23 @@ async def preview_plantilla(p_id: int, user=Depends(verificar_usuario)):
     if p["user_id"] != user.id and not p.get("es_publica"):
         raise HTTPException(status_code=403)
 
-    # Datos de ejemplo
+    # Datos de ejemplo genéricos
     ejemplo = {
-        "factura_numero": "2026-0001",
-        "barco": "MSC EJEMPLO",
-        "tickets": [
-            {
-                "numero_ticket": "T-001", "importe": 45.00,
-                "contacto_metodo": "whatsapp",
-                "pasajeros": ["John Smith", "Jane Doe"],
-                "fechas_solicitud": ["2026-03-15"],
-                "fechas_servicio": ["2026-03-16"],
-                "o_aeropuerto": True, "d_buque": True,
-                "ida_vuelta": False, "comentarios": "2 maletas",
-            },
-            {
-                "numero_ticket": "T-002", "importe": 35.00,
-                "contacto_metodo": "telefono",
-                "pasajeros": ["María García"],
-                "fechas_solicitud": ["2026-03-16"],
-                "fechas_servicio": ["2026-03-17"],
-                "o_buque": True, "d_hotel": True, "d_hotel_texto": "Hotel Palace",
-                "ida_vuelta": True, "comentarios": "",
-            },
+        "numero_factura": "2026-0001",
+        "fecha": "19/03/2026",
+        "referencia": "REF-EJEMPLO",
+        "cliente": {
+            "nombre": "Empresa Ejemplo S.L.",
+            "cif": "B12345678",
+            "direccion": "Calle Mayor 10, 28001 Madrid",
+            "email": "contacto@ejemplo.com",
+        },
+        "lineas": [
+            {"descripcion": "Servicio profesional — Marzo 2026", "cantidad": "10", "precio": "50.00", "importe": "500.00", "total": "500.00"},
+            {"descripcion": "Desplazamiento", "cantidad": "2", "precio": "25.00", "importe": "50.00", "total": "50.00"},
+            {"descripcion": "Material fungible", "cantidad": "1", "precio": "30.00", "importe": "30.00", "total": "30.00"},
         ],
+        "notas": "Pago a 30 días.",
     }
 
     cleanup = BackgroundTask(limpiar_temp, TEMP_DIR)
@@ -1038,18 +1067,14 @@ async def preview_plantilla(p_id: int, user=Depends(verificar_usuario)):
 
 @app.post("/generar-con-plantilla")
 async def generar_con_plantilla(
-    datos: DatosFactura,
+    datos: DatosFacturaGenerica,
     formato: str = "pdf",
     plantilla_id: Optional[int] = None,
     user=Depends(verificar_usuario),
 ):
-    """Genera factura usando una plantilla específica."""
-    # Guardar en historial
-    supabase.table("facturas").insert(datos_registro(user.id, datos)).execute()
-
-    # Sin plantilla → flujo original
+    """Genera factura genérica usando una plantilla."""
     if not plantilla_id:
-        return procesar_descarga(datos.dict(), formato)
+        raise HTTPException(status_code=400, detail="Se requiere plantilla_id")
 
     # Cargar plantilla
     res = supabase.table("plantillas") \
@@ -1060,7 +1085,7 @@ async def generar_con_plantilla(
     if p["user_id"] != user.id and not p.get("es_publica"):
         raise HTTPException(status_code=403)
 
-    nombre_base = f"{datos.barco.replace(' ', '_').upper()}_{datetime.now().strftime('%d_%m_%Y')}"
+    nombre_base = f"Factura_{datos.numero_factura.replace(' ', '_')}_{datetime.now().strftime('%d_%m_%Y')}"
     cleanup = BackgroundTask(limpiar_temp, TEMP_DIR)
 
     if p["tipo"] == "visual":
@@ -1087,7 +1112,6 @@ async def generar_con_plantilla(
             return FileResponse(final_path, filename=xlsx_name,
                                 headers={"Content-Disposition": f"attachment; filename={xlsx_name}"},
                                 background=cleanup)
-        # Convertir a PDF
         lo_profile = os.path.join(TEMP_DIR, "lo_profile_tpl")
         subprocess.run(
             ["libreoffice", f"-env:UserInstallation=file://{lo_profile}",
@@ -1100,7 +1124,6 @@ async def generar_con_plantilla(
             return FileResponse(pdf_path, filename=pdf_name,
                                 headers={"Content-Disposition": f"attachment; filename={pdf_name}"},
                                 background=cleanup)
-        # ambos → ZIP
         zip_name = f"{nombre_base}.zip"
         zip_path = os.path.join(TEMP_DIR, zip_name)
         with zipfile.ZipFile(zip_path, "w") as zipf:

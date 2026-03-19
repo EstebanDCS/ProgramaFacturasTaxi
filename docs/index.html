@@ -213,24 +213,86 @@
                             <label class="text-sm font-semibold text-slate-600 flex items-center gap-2">
                                 <span class="material-symbols-outlined text-base text-primary">draft</span> Plantilla
                             </label>
-                            <select id="sel-plantilla" class="w-full md:w-1/2 rounded-lg border-slate-200 bg-slate-50 focus:ring-primary focus:border-primary px-4 py-3 text-sm">
+                            <select id="sel-plantilla" onchange="onPlantillaChange()" class="w-full md:w-1/2 rounded-lg border-slate-200 bg-slate-50 focus:ring-primary focus:border-primary px-4 py-3 text-sm">
                                 <option value="">Plantilla original (por defecto)</option>
                             </select>
                         </div>
                     </div>
 
-                    <div id="contenedor-tickets" class="space-y-6"></div>
-
-                    <div class="pt-4 space-y-6">
-                        <button type="button" onclick="agregarTicket()" class="w-full flex items-center justify-center gap-2 px-6 py-4 border-2 border-primary text-primary font-bold rounded-lg hover:bg-primary hover:text-white transition-all bg-white shadow-sm">
-                            <span class="material-symbols-outlined font-bold">add_circle</span> AÑADIR TICKET DETALLADO
-                        </button>
-                        <div class="flex flex-col md:flex-row gap-4">
-                            <button type="button" onclick="enviarProceso('nube')" class="flex-1 flex items-center justify-center gap-2 px-8 py-3 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 shadow-lg shadow-slate-900/20 transition-all">
-                                <span class="material-symbols-outlined">cloud_upload</span> SOLO GUARDAR EN NUBE
+                    <!-- FORM ORIGINAL (taxi-específico) -->
+                    <div id="form-original">
+                        <div id="contenedor-tickets" class="space-y-6"></div>
+                        <div class="pt-4 space-y-6">
+                            <button type="button" onclick="agregarTicket()" class="w-full flex items-center justify-center gap-2 px-6 py-4 border-2 border-primary text-primary font-bold rounded-lg hover:bg-primary hover:text-white transition-all bg-white shadow-sm">
+                                <span class="material-symbols-outlined font-bold">add_circle</span> AÑADIR TICKET DETALLADO
                             </button>
-                            <button type="button" onclick="abrirModalDescarga()" class="flex-1 flex items-center justify-center gap-2 px-8 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all">
-                                <span class="material-symbols-outlined">download</span> DESCARGAR
+                            <div class="flex flex-col md:flex-row gap-4">
+                                <button type="button" onclick="enviarProceso('nube')" class="flex-1 flex items-center justify-center gap-2 px-8 py-3 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 shadow-lg shadow-slate-900/20 transition-all">
+                                    <span class="material-symbols-outlined">cloud_upload</span> SOLO GUARDAR EN NUBE
+                                </button>
+                                <button type="button" onclick="abrirModalDescarga()" class="flex-1 flex items-center justify-center gap-2 px-8 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all">
+                                    <span class="material-symbols-outlined">download</span> DESCARGAR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FORM GENÉRICO (plantilla personalizada) -->
+                    <div id="form-plantilla" class="hidden space-y-6">
+                        <!-- Cliente -->
+                        <div id="gen-cliente-sec" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <div class="flex items-center gap-2 mb-4 text-primary font-bold">
+                                <span class="material-symbols-outlined text-xl">person</span>
+                                <h3 class="text-lg">Datos del Cliente</h3>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <input type="text" id="gen-cli-nombre" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Nombre / Razón social">
+                                <input type="text" id="gen-cli-cif" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="CIF / NIF">
+                                <input type="text" id="gen-cli-dir" class="md:col-span-2 rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Dirección">
+                                <input type="email" id="gen-cli-email" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Email">
+                                <input type="text" id="gen-cli-tel" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Teléfono">
+                            </div>
+                        </div>
+
+                        <!-- Referencia + Fecha -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-sm font-semibold text-slate-600">Referencia (opcional)</label>
+                                    <input type="text" id="gen-referencia" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Ej: Proyecto Alpha">
+                                </div>
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-sm font-semibold text-slate-600">Fecha</label>
+                                    <input type="date" id="gen-fecha" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Líneas -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2 text-primary font-bold">
+                                    <span class="material-symbols-outlined text-xl">list_alt</span>
+                                    <h3 class="text-lg">Líneas de Factura</h3>
+                                </div>
+                                <button type="button" onclick="addLineaGenerica()" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
+                                    <span class="material-symbols-outlined text-sm">add</span> Añadir línea
+                                </button>
+                            </div>
+                            <div id="gen-lineas-header" class="grid gap-2 mb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider"></div>
+                            <div id="gen-lineas" class="space-y-2"></div>
+                        </div>
+
+                        <!-- Notas -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <label class="text-sm font-bold text-slate-600 uppercase tracking-tight">Notas / Observaciones</label>
+                            <textarea id="gen-notas" class="mt-2 w-full rounded-lg border-slate-200 bg-slate-50 focus:ring-primary p-4 min-h-[80px] text-sm" placeholder="Notas para el pie de la factura..."></textarea>
+                        </div>
+
+                        <!-- Botón generar -->
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <button type="button" onclick="generarConPlantilla()" class="flex-1 flex items-center justify-center gap-2 px-8 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all">
+                                <span class="material-symbols-outlined">picture_as_pdf</span> GENERAR PDF
                             </button>
                         </div>
                     </div>
@@ -345,27 +407,45 @@
                             </div>
                         </details>
 
-                        <!-- Secciones -->
+                        <!-- Cliente -->
                         <details class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                            <summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">tune</span> Secciones del Detalle</summary>
-                            <div class="px-5 pb-5 pt-2 grid grid-cols-2 gap-3">
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-sec-fechas" checked class="tpl-field rounded text-primary"> Fechas de servicio</label>
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-sec-pax" checked class="tpl-field rounded text-primary"> Pasajeros</label>
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-sec-ordes" checked class="tpl-field rounded text-primary"> Origen / Destino</label>
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-sec-idavuelta" checked class="tpl-field rounded text-primary"> Ida y vuelta</label>
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-sec-contacto" checked class="tpl-field rounded text-primary"> Contacto</label>
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-sec-comentarios" checked class="tpl-field rounded text-primary"> Observaciones</label>
+                            <summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">person</span> Datos del Cliente</summary>
+                            <div class="px-5 pb-5 pt-2 space-y-3">
+                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-cli-mostrar" checked class="tpl-field rounded text-primary"> Mostrar sección de cliente en la factura</label>
+                                <p class="text-xs text-slate-400">El usuario rellenará los datos del cliente al crear cada factura.</p>
                             </div>
                         </details>
 
-                        <!-- Factura -->
+                        <!-- Columnas de líneas -->
+                        <details open class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">view_column</span> Columnas de la Factura</summary>
+                            <div class="px-5 pb-5 pt-2 space-y-4">
+                                <p class="text-xs text-slate-500">Elige el formato de las líneas de tu factura:</p>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <label class="flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5 border-slate-200">
+                                        <input type="radio" name="tpl-cols-preset" value="simple" checked class="tpl-field mt-0.5 text-primary focus:ring-primary">
+                                        <div><span class="text-sm font-bold text-slate-700">Simple</span><p class="text-[11px] text-slate-400 mt-0.5">Descripción + Importe</p></div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5 border-slate-200">
+                                        <input type="radio" name="tpl-cols-preset" value="detallado" class="tpl-field mt-0.5 text-primary focus:ring-primary">
+                                        <div><span class="text-sm font-bold text-slate-700">Detallado</span><p class="text-[11px] text-slate-400 mt-0.5">Descripción + Cantidad + Precio Ud. + Total</p></div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5 border-slate-200">
+                                        <input type="radio" name="tpl-cols-preset" value="servicios" class="tpl-field mt-0.5 text-primary focus:ring-primary">
+                                        <div><span class="text-sm font-bold text-slate-700">Servicios</span><p class="text-[11px] text-slate-400 mt-0.5">Descripción + Horas + Tarifa/h + Total</p></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </details>
+
+                        <!-- Impuestos -->
                         <details class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                            <summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">receipt</span> Configuración Factura</summary>
+                            <summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">percent</span> Impuestos y Moneda</summary>
                             <div class="px-5 pb-5 pt-2 grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <input type="text" id="tpl-fac-titulo" value="FACTURA" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Título">
-                                <input type="number" id="tpl-fac-iva" value="10" min="0" max="100" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="% IVA">
-                                <input type="text" id="tpl-fac-moneda" value="€" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Moneda">
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-fac-desglose" checked class="tpl-field rounded text-primary"> Desglose IVA</label>
+                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Nombre impuesto</label><input type="text" id="tpl-imp-nombre" value="IVA" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
+                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Porcentaje (%)</label><input type="number" id="tpl-imp-pct" value="21" min="0" max="100" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
+                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Moneda</label><input type="text" id="tpl-moneda" value="€" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
+                                <label class="flex items-center gap-2 text-sm self-end"><input type="checkbox" id="tpl-desglose" checked class="tpl-field rounded text-primary"> Mostrar desglose</label>
                             </div>
                         </details>
 
@@ -1275,6 +1355,39 @@
         } catch { /* silent */ }
     }
 
+    // Column presets
+    const COL_PRESETS = {
+        simple: [
+            {nombre: "Descripción", campo: "descripcion", alineacion: "left", tipo: "texto"},
+            {nombre: "Importe", campo: "importe", alineacion: "right", tipo: "moneda"},
+        ],
+        detallado: [
+            {nombre: "Descripción", campo: "descripcion", alineacion: "left", tipo: "texto"},
+            {nombre: "Cantidad", campo: "cantidad", alineacion: "right", tipo: "numero"},
+            {nombre: "Precio Ud.", campo: "precio", alineacion: "right", tipo: "moneda"},
+            {nombre: "Total", campo: "total", alineacion: "right", tipo: "moneda"},
+        ],
+        servicios: [
+            {nombre: "Descripción", campo: "descripcion", alineacion: "left", tipo: "texto"},
+            {nombre: "Horas", campo: "horas", alineacion: "right", tipo: "numero"},
+            {nombre: "Tarifa/h", campo: "tarifa", alineacion: "right", tipo: "moneda"},
+            {nombre: "Total", campo: "total", alineacion: "right", tipo: "moneda"},
+        ],
+    };
+
+    function getSelectedPreset() {
+        const checked = document.querySelector('input[name="tpl-cols-preset"]:checked');
+        return checked ? checked.value : "simple";
+    }
+
+    function getColumnas() { return COL_PRESETS[getSelectedPreset()] || COL_PRESETS.simple; }
+
+    function getColumnaImporte() {
+        const cols = getColumnas();
+        const last = cols[cols.length - 1];
+        return last?.campo || "importe";
+    }
+
     // Build config JSON from visual builder form
     function buildVisualConfig() {
         return {
@@ -1302,20 +1415,13 @@
                     left: parseInt($("#tpl-margin-h").value) || 15,
                 },
             },
-            secciones: {
-                fechas_servicio: $("#tpl-sec-fechas").checked,
-                pasajeros: $("#tpl-sec-pax").checked,
-                origen_destino: $("#tpl-sec-ordes").checked,
-                ida_vuelta: $("#tpl-sec-idavuelta").checked,
-                contacto: $("#tpl-sec-contacto").checked,
-                comentarios: $("#tpl-sec-comentarios").checked,
-            },
-            factura: {
-                titulo: $("#tpl-fac-titulo").value || "FACTURA",
-                porcentaje_iva: parseInt($("#tpl-fac-iva").value) || 10,
-                moneda: $("#tpl-fac-moneda").value || "€",
-                mostrar_desglose_iva: $("#tpl-fac-desglose").checked,
-            },
+            cliente: { mostrar: $("#tpl-cli-mostrar").checked },
+            columnas: getColumnas(),
+            columna_importe: getColumnaImporte(),
+            impuestos: [{ nombre: $("#tpl-imp-nombre").value || "IVA", porcentaje: parseInt($("#tpl-imp-pct").value) || 21 }],
+            moneda: $("#tpl-moneda").value || "€",
+            titulo: $("#tpl-fac-titulo").value || "FACTURA",
+            mostrar_desglose: $("#tpl-desglose").checked,
             pie: {
                 texto: $("#tpl-pie-texto").value,
                 mostrar_datos_pago: $("#tpl-pie-pago").checked,
@@ -1324,40 +1430,180 @@
         };
     }
 
-    // Live preview generation (client-side HTML)
+    // Live preview generation (client-side)
     function actualizarPreview() {
         const c = buildVisualConfig();
-        const e = c.empresa, s = c.estilo, f = c.factura, p = c.pie;
+        const e = c.empresa, s = c.estilo, cols = c.columnas, moneda = c.moneda;
+        const scale = 0.7;
         const logo = e.logo_url ? `<img src="${esc(e.logo_url)}" style="max-height:30px;max-width:90px;">` : "";
 
+        // Example data matching columns
+        const ejemplos = [
+            {descripcion: "Servicio profesional", cantidad: "10", horas: "10", precio: "50.00", tarifa: "50.00", importe: "500.00", total: "500.00"},
+            {descripcion: "Material", cantidad: "1", horas: "2", precio: "30.00", tarifa: "30.00", importe: "30.00", total: "30.00"},
+        ];
+
+        // Header
+        const thHTML = cols.map(col => `<th style="padding:4px 6px;text-align:${col.alineacion};">${col.nombre}</th>`).join("");
+
+        // Rows
+        const rowsHTML = ejemplos.map(ej => {
+            const tds = cols.map(col => {
+                let val = ej[col.campo] || "";
+                if (col.tipo === "moneda") val = val + " " + moneda;
+                return `<td style="padding:4px 6px;border-bottom:1px solid #eee;text-align:${col.alineacion};${col.alineacion === 'right' ? 'font-weight:600;' : ''}">${val}</td>`;
+            }).join("");
+            return `<tr>${tds}</tr>`;
+        }).join("");
+
+        // Client section
+        const cliHTML = c.cliente.mostrar
+            ? `<div style="margin:8px 0;padding:6px;background:#f8f9fa;border-radius:3px;font-size:${(s.tam_fuente - 1) * scale}px;"><span style="color:#999;font-weight:600;">FACTURAR A:</span><br>Empresa Ejemplo S.L.<br>B12345678</div>`
+            : "";
+
         const previewHTML = `
-        <div style="font-family:${s.fuente};font-size:${s.tam_fuente * 0.7}px;color:#333;line-height:1.5;">
-            <table style="width:100%;margin-bottom:12px;"><tr>
+        <div style="font-family:${s.fuente};font-size:${s.tam_fuente * scale}px;color:#333;line-height:1.5;">
+            <table style="width:100%;margin-bottom:10px;"><tr>
                 <td style="vertical-align:top;width:55%;">${logo}
-                    <div style="font-weight:800;color:${s.color_primario};font-size:${(s.tam_fuente + 4) * 0.7}px;margin-top:4px;">${esc(e.nombre || "Tu Empresa")}</div>
-                    <div style="color:#888;font-size:${(s.tam_fuente - 2) * 0.7}px;">${esc(e.cif)}</div>
-                    <div style="color:#888;font-size:${(s.tam_fuente - 2) * 0.7}px;">${esc(e.direccion)}</div>
+                    <div style="font-weight:800;color:${s.color_primario};font-size:${(s.tam_fuente + 4) * scale}px;margin-top:4px;">${esc(e.nombre || "Tu Empresa")}</div>
+                    <div style="color:#888;font-size:${(s.tam_fuente - 2) * scale}px;">${esc(e.cif)}</div>
+                    <div style="color:#888;font-size:${(s.tam_fuente - 2) * scale}px;">${esc(e.direccion)}</div>
                 </td>
                 <td style="vertical-align:top;text-align:right;">
-                    <div style="font-weight:900;color:${s.color_secundario};font-size:${(s.tam_fuente + 8) * 0.7}px;letter-spacing:1px;">${esc(f.titulo)}</div>
-                    <div style="font-size:${(s.tam_fuente) * 0.7}px;margin-top:3px;"><strong>Nº:</strong> 2026-0001</div>
-                    <div style="font-size:${(s.tam_fuente) * 0.7}px;"><strong>Fecha:</strong> 19/03/2026</div>
-                    <div style="font-size:${(s.tam_fuente) * 0.7}px;"><strong>Ref:</strong> MSC EJEMPLO</div>
+                    <div style="font-weight:900;color:${s.color_secundario};font-size:${(s.tam_fuente + 8) * scale}px;letter-spacing:1px;">${esc(c.titulo)}</div>
+                    <div style="font-size:${s.tam_fuente * scale}px;"><strong>Nº:</strong> 2026-0001</div>
+                    <div style="font-size:${s.tam_fuente * scale}px;"><strong>Fecha:</strong> 19/03/2026</div>
                 </td>
             </tr></table>
-            <table style="width:100%;border-collapse:collapse;">
-                <tr style="background:${s.color_primario};color:white;"><th style="padding:4px 6px;text-align:left;">Descripción</th><th style="padding:4px 6px;text-align:right;">Importe</th></tr>
-                <tr><td style="padding:6px;border-bottom:1px solid #eee;">Ticket T-001${c.secciones.pasajeros ? "<br>Pasajeros: John, Jane" : ""}${c.secciones.origen_destino ? "<br>Origen: Aeropuerto → Destino: Buque" : ""}</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eee;font-weight:600;">45.00 ${esc(f.moneda)}</td></tr>
-                <tr><td style="padding:6px;border-bottom:1px solid #eee;">Ticket T-002${c.secciones.pasajeros ? "<br>Pasajeros: María" : ""}</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eee;font-weight:600;">35.00 ${esc(f.moneda)}</td></tr>
+            ${cliHTML}
+            <table style="width:100%;border-collapse:collapse;margin-top:6px;">
+                <tr style="background:${s.color_primario};color:white;font-size:${(s.tam_fuente - 1) * scale}px;">${thHTML}</tr>
+                ${rowsHTML}
             </table>
-            <table style="margin-top:10px;margin-left:auto;">
-                ${f.mostrar_desglose_iva ? `<tr><td style="padding:2px 10px;color:#888;">Base imponible</td><td style="text-align:right;padding:2px 6px;">72.73 ${esc(f.moneda)}</td></tr><tr><td style="padding:2px 10px;color:#888;">IVA (${f.porcentaje_iva}%)</td><td style="text-align:right;padding:2px 6px;">7.27 ${esc(f.moneda)}</td></tr>` : ""}
-                <tr style="border-top:2px solid ${s.color_primario};"><td style="padding:4px 10px;font-weight:800;color:${s.color_primario};">TOTAL</td><td style="text-align:right;padding:4px 6px;font-weight:800;color:${s.color_primario};">80.00 ${esc(f.moneda)}</td></tr>
+            <table style="margin-top:8px;margin-left:auto;font-size:${s.tam_fuente * scale}px;">
+                ${c.mostrar_desglose ? `<tr><td style="padding:2px 8px;color:#888;">Subtotal</td><td style="text-align:right;padding:2px 4px;">530.00 ${esc(moneda)}</td></tr>
+                <tr><td style="padding:2px 8px;color:#888;">${esc(c.impuestos[0]?.nombre || 'IVA')} (${c.impuestos[0]?.porcentaje || 21}%)</td><td style="text-align:right;padding:2px 4px;">111.30 ${esc(moneda)}</td></tr>` : ""}
+                <tr style="border-top:2px solid ${s.color_primario};"><td style="padding:3px 8px;font-weight:800;color:${s.color_primario};">TOTAL</td><td style="text-align:right;padding:3px 4px;font-weight:800;color:${s.color_primario};">641.30 ${esc(moneda)}</td></tr>
             </table>
-            ${p.texto ? `<div style="margin-top:16px;padding-top:6px;border-top:1px solid #ddd;color:#aaa;font-size:${(s.tam_fuente - 2) * 0.7}px;">${esc(p.texto)}</div>` : ""}
-            ${p.mostrar_datos_pago && p.datos_pago ? `<div style="color:#777;font-size:${(s.tam_fuente - 2) * 0.7}px;">${esc(p.datos_pago)}</div>` : ""}
+            ${c.pie.texto ? `<div style="margin-top:12px;padding-top:4px;border-top:1px solid #ddd;color:#aaa;font-size:${(s.tam_fuente - 2) * scale}px;">${esc(c.pie.texto)}</div>` : ""}
         </div>`;
         $("#tpl-preview").innerHTML = previewHTML;
+    }
+
+    // ── Template selection: switch between original and generic form ──
+    let currentPlantillaConfig = null;
+
+    async function onPlantillaChange() {
+        const val = $("#sel-plantilla").value;
+        if (!val) {
+            // Original taxi form
+            $("#form-original").classList.remove("hidden");
+            $("#form-plantilla").classList.add("hidden");
+            // Show barco field
+            const barcoRow = $("#barco")?.closest(".flex.flex-col");
+            if (barcoRow) barcoRow.style.display = "";
+            currentPlantillaConfig = null;
+            return;
+        }
+        // Custom template → show generic form
+        $("#form-original").classList.add("hidden");
+        $("#form-plantilla").classList.remove("hidden");
+        // Hide barco field (not needed)
+        const barcoRow = $("#barco")?.closest(".flex.flex-col");
+        if (barcoRow) barcoRow.style.display = "none";
+
+        // Load template config to set up the form
+        try {
+            const res = await fetch(`${URL_BASE}/plantillas/${val}`, { headers: authHeaders() });
+            if (res.ok) {
+                const p = await res.json();
+                currentPlantillaConfig = JSON.parse(p.config_json || "{}");
+                setupGenericForm(currentPlantillaConfig);
+            }
+        } catch { /* use defaults */ }
+    }
+
+    function setupGenericForm(config) {
+        // Show/hide client section
+        const showCli = config?.cliente?.mostrar !== false;
+        $("#gen-cliente-sec").style.display = showCli ? "" : "none";
+
+        // Set up line items header based on columns
+        const cols = config?.columnas || COL_PRESETS.simple;
+        const gridCols = cols.length + 1; // +1 for delete button
+        const header = $("#gen-lineas-header");
+        header.style.gridTemplateColumns = cols.map(c => c.tipo === "texto" ? "2fr" : "1fr").join(" ") + " 40px";
+        header.innerHTML = cols.map(c => `<span>${esc(c.nombre)}</span>`).join("") + "<span></span>";
+
+        // Clear existing lines and add one
+        $("#gen-lineas").innerHTML = "";
+        addLineaGenerica();
+    }
+
+    function addLineaGenerica() {
+        const cols = currentPlantillaConfig?.columnas || COL_PRESETS.simple;
+        const container = $("#gen-lineas");
+        const row = document.createElement("div");
+        row.className = "gen-linea grid gap-2 items-center";
+        row.style.gridTemplateColumns = cols.map(c => c.tipo === "texto" ? "2fr" : "1fr").join(" ") + " 40px";
+        row.innerHTML = cols.map(c =>
+            `<input type="${c.tipo === "texto" ? "text" : "number"}" step="any" data-campo="${esc(c.campo)}" class="rounded-lg border-slate-200 bg-slate-50 px-3 py-2.5 text-sm focus:ring-primary" placeholder="${esc(c.nombre)}">`
+        ).join("") + `<button type="button" onclick="this.closest('.gen-linea').remove()" class="text-slate-400 hover:text-red-500 transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-lg">close</span></button>`;
+        container.appendChild(row);
+    }
+
+    // ── Generate with custom template ──
+    async function generarConPlantilla() {
+        const plantillaId = $("#sel-plantilla").value;
+        if (!plantillaId) return;
+
+        const cols = currentPlantillaConfig?.columnas || COL_PRESETS.simple;
+        const lineas = $$(".gen-linea").map(row => {
+            const obj = {};
+            row.querySelectorAll("input").forEach(inp => {
+                const campo = inp.dataset.campo;
+                if (campo) obj[campo] = inp.value;
+            });
+            return obj;
+        }).filter(l => Object.values(l).some(v => v));
+
+        const data = {
+            numero_factura: $("#factura_numero").value,
+            fecha: $("#gen-fecha")?.value ? new Date($("#gen-fecha").value).toLocaleDateString("es-ES") : "",
+            referencia: $("#gen-referencia")?.value || "",
+            cliente: {
+                nombre: $("#gen-cli-nombre")?.value || "",
+                cif: $("#gen-cli-cif")?.value || "",
+                direccion: $("#gen-cli-dir")?.value || "",
+                email: $("#gen-cli-email")?.value || "",
+                telefono: $("#gen-cli-tel")?.value || "",
+            },
+            lineas,
+            notas: $("#gen-notas")?.value || "",
+        };
+
+        if (!data.numero_factura) { alert("Indica el número de factura"); return; }
+        if (!lineas.length) { alert("Añade al menos una línea"); return; }
+
+        abrirModalDescarga();
+        iniciarProgresoModal();
+        try {
+            const res = await fetch(`${URL_BASE}/generar-con-plantilla?formato=pdf&plantilla_id=${plantillaId}`, {
+                method: "POST",
+                headers: authHeaders({ "Content-Type": "application/json" }),
+                body: JSON.stringify(data),
+            });
+            if (res.ok) {
+                descargarBlob(await res.blob(), res.headers.get("Content-Disposition"), `Factura_${data.numero_factura}`, "pdf");
+                finalizarProgresoModal();
+            } else {
+                detenerErrorProgresoModal();
+                alert("Error generando la factura");
+            }
+        } catch {
+            detenerErrorProgresoModal();
+            alert("Error de conexión");
+        }
     }
 
     // Auto-update preview on any form change
