@@ -3,46 +3,60 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>Gestión Facturas</title>
+    <title>Gestión Facturas - Administrador</title>
+    
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>tailwind.config={darkMode:"class",theme:{extend:{colors:{"primary":"#0d6dfd","bg-light":"#f5f7fb","sidebar":"#1a2e4a"},fontFamily:{"display":["Inter","sans-serif"]}}}}</script>
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: { extend: { colors: { "primary": "#0d6dfd", "background-light": "#f5f7fb", "sidebar-dark": "#1a2e4a" }, fontFamily: { "display": ["Inter", "sans-serif"] } } }
+        }
+    </script>
+    
     <style>
-        body{font-family:'Inter',sans-serif}.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}.fill-1{font-variation-settings:'FILL' 1}
-        .app-section{display:none!important;animation:fadeIn .3s ease}.app-section.activa{display:flex!important;flex-direction:column}
-        @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-        #app-layout{display:none}body.logged-in #sec-login-container{display:none!important}body.logged-in #app-layout{display:flex}
-        .condicional{display:none}
-        #aviso-guardado{position:fixed;bottom:24px;right:24px;z-index:5000;background:#1e293b;color:white;padding:12px 24px;border-radius:9999px;font-weight:500;font-size:.875rem;box-shadow:0 10px 15px -3px rgba(0,0,0,.1);display:none}
-        body.modo-pruebas aside::after{content:'DEV';position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;letter-spacing:.15em;color:#f87171;opacity:.5}
-        .animate-spin{animation:spin 1s linear infinite}@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-        .stat-card{background:white;border-radius:12px;border:1px solid #e2e8f0;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .fill-1 { font-variation-settings: 'FILL' 1; }
+        .app-section { display: none !important; animation: fadeIn 0.3s ease-in-out; }
+        .app-section.activa { display: flex !important; flex-direction: column; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        #app-layout { display: none; }
+        body.logged-in #sec-login-container { display: none !important; }
+        body.logged-in #app-layout { display: flex; }
+        .condicional { display: none; }
+        #aviso-guardado { position: fixed; bottom: 24px; right: 24px; z-index: 5000; background-color: #1e293b; color: white; padding: 12px 24px; border-radius: 9999px; font-weight: 500; font-size: 0.875rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: none; }
+        body.modo-pruebas aside::after { content: 'DEV'; position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 800; letter-spacing: 0.15em; color: #f87171; opacity: 0.5; }
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-bg-light text-slate-900 font-display min-h-screen flex flex-col">
+<body class="bg-background-light text-slate-900 font-display min-h-screen flex flex-col">
+
     <div id="aviso-guardado" class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">save</span> Guardado</div>
     <datalist id="sugerencias-pasajeros"></datalist>
 
     <div id="modal-descarga" class="fixed inset-0 z-[9999] hidden flex items-center justify-center">
-        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="if(document.getElementById('modal-content-progreso').classList.contains('hidden')) cerrarModal()"></div>
-        <div class="bg-white rounded-2xl shadow-2xl z-10 p-6 w-full max-w-sm mx-4 relative min-h-[300px] flex flex-col justify-center">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="if(document.getElementById('modal-content-progreso').classList.contains('hidden')) cerrarModal()"></div>
+        <div class="bg-white rounded-2xl shadow-2xl z-10 p-6 w-full max-w-sm mx-4 transform transition-all scale-100 relative min-h-[300px] flex flex-col justify-center">
             <div id="modal-content-opciones" class="w-full">
                 <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2"><span class="material-symbols-outlined text-primary">download</span> Formato de descarga</h3>
                 <div class="space-y-3">
                     <button type="button" onclick="ejecutarDescarga('excel')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 transition-colors group text-left">
                         <span class="material-symbols-outlined text-emerald-600">table_view</span><div><span class="block font-bold text-slate-700 group-hover:text-emerald-700">Solo Excel</span><span class="text-xs text-slate-500">Archivo .xlsm editable</span></div></button>
                     <button type="button" onclick="ejecutarDescarga('pdf')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-red-500 hover:bg-red-50 transition-colors group text-left">
-                        <span class="material-symbols-outlined text-red-600">picture_as_pdf</span><div><span class="block font-bold text-slate-700 group-hover:text-red-700">Solo PDF</span><span class="text-xs text-slate-500">Documento listo para enviar</span></div></button>
+                        <span class="material-symbols-outlined text-red-600">picture_as_pdf</span><div><span class="block font-bold text-slate-700 group-hover:text-red-700">Solo PDF</span><span class="text-xs text-slate-500">Documento listo para imprimir</span></div></button>
                     <button type="button" onclick="ejecutarDescarga('ambos')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-primary hover:bg-blue-50 transition-colors group text-left">
-                        <span class="material-symbols-outlined text-primary">folder_zip</span><div><span class="block font-bold text-slate-700 group-hover:text-blue-700">Ambos (ZIP)</span><span class="text-xs text-slate-500">Excel y PDF juntos</span></div></button>
+                        <span class="material-symbols-outlined text-primary">folder_zip</span><div><span class="block font-bold text-slate-700 group-hover:text-blue-700">Ambos (ZIP)</span><span class="text-xs text-slate-500">Excel y PDF</span></div></button>
                 </div>
                 <div class="mt-6 text-right"><button onclick="cerrarModal()" class="text-sm font-semibold text-slate-500 hover:text-slate-700">Cancelar</button></div>
             </div>
             <div id="modal-content-progreso" class="hidden w-full flex flex-col items-center py-4">
                 <div class="relative flex items-center justify-center">
-                    <svg class="w-32 h-32 transform -rotate-90"><circle cx="64" cy="64" r="52" stroke="currentColor" stroke-width="8" fill="transparent" class="text-slate-100"/><circle id="circulo-progreso" cx="64" cy="64" r="52" stroke="currentColor" stroke-width="8" fill="transparent" stroke-dasharray="326.7" stroke-dashoffset="326.7" class="text-primary transition-all duration-500 ease-out"/></svg>
+                    <svg class="w-32 h-32 transform -rotate-90"><circle cx="64" cy="64" r="52" stroke="currentColor" stroke-width="8" fill="transparent" class="text-slate-100" /><circle id="circulo-progreso" cx="64" cy="64" r="52" stroke="currentColor" stroke-width="8" fill="transparent" stroke-dasharray="326.7" stroke-dashoffset="326.7" class="text-primary transition-all duration-500 ease-out" /></svg>
                     <div class="absolute text-3xl font-black text-slate-700" id="texto-progreso">0%</div>
                 </div>
                 <p class="mt-8 text-base font-bold text-slate-800">Generando archivo...</p>
@@ -55,493 +69,616 @@
         <div class="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 max-w-md w-full text-center">
             <div class="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-6"><span class="material-symbols-outlined text-4xl fill-1">directions_boat</span></div>
             <h2 class="text-2xl font-black tracking-tight text-slate-900 mb-2">Gestión Facturas</h2>
-            <p class="text-slate-500 font-medium text-sm mb-2">Administración Privada</p>
-            <p class="text-xs text-emerald-600 font-semibold mb-8 flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">lock</span> Cifrado de extremo a extremo</p>
+            <p class="text-slate-500 font-medium text-sm mb-8">Administración Privada</p>
             <button id="btn-login-google" onclick="iniciarSesionGoogle()" class="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-xl shadow-sm transition-all flex items-center justify-center gap-3">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5" alt="Google"> Iniciar sesión con Google</button>
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5" alt="Google"> Iniciar sesión con Google
+            </button>
         </div>
     </div>
 
     <div id="app-layout" class="w-full min-h-screen">
-        <aside class="fixed inset-y-0 left-0 w-64 bg-sidebar text-slate-300 flex flex-col shadow-xl z-50">
+        <aside class="fixed inset-y-0 left-0 w-64 bg-sidebar-dark text-slate-300 flex flex-col shadow-xl z-50 transition-colors">
             <div class="p-6">
                 <div class="flex items-center gap-3 mb-8">
                     <div class="bg-primary p-2 rounded-lg"><span class="material-symbols-outlined text-white fill-1">directions_boat</span></div>
-                    <div><h1 class="text-white text-lg font-bold leading-none tracking-tight">Gestión Facturas</h1><p class="text-blue-300/50 text-xs mt-1 uppercase tracking-wider font-semibold">v2 · E2E Encrypted</p></div>
+                    <div><h1 class="text-white text-lg font-bold leading-none tracking-tight">Gestión Facturas</h1><p class="text-blue-300/50 text-xs mt-1 uppercase tracking-wider font-semibold">Admin Dashboard</p></div>
                 </div>
                 <nav class="flex flex-col gap-2">
-                    <a id="btn-dashboard" onclick="verSec('sec-dashboard',this);cargarUserDashboard()" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white shadow-lg shadow-primary/20 transition-all cursor-pointer">
-                        <span class="material-symbols-outlined fill-1">dashboard</span><span class="text-sm font-medium">Dashboard</span></a>
-                    <a id="btn-plantillas" onclick="verSec('sec-plantillas',this);cargarPlantillas()" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group">
-                        <span class="material-symbols-outlined group-hover:fill-1">draft</span><span class="text-sm font-medium">Plantillas</span></a>
-                    <a id="btn-nueva" onclick="verSec('sec-nueva',this);cargarGridNuevaFactura()" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group">
-                        <span class="material-symbols-outlined group-hover:fill-1">description</span><span class="text-sm font-medium">Nueva Factura</span></a>
-                    <a id="btn-historial" onclick="verSec('sec-historial',this);cargarHistorial()" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group">
-                        <span class="material-symbols-outlined group-hover:fill-1">cloud_done</span><span class="text-sm font-medium">Historial</span></a>
-                    <a id="btn-comunidad" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg text-blue-200/30 cursor-default">
-                        <span class="material-symbols-outlined">storefront</span><span class="text-sm font-medium">Comunidad <span class="text-[9px] ml-1 bg-white/10 px-1.5 py-0.5 rounded">pronto</span></span></a>
-                    <a id="btn-admin" onclick="verSec('sec-admin',this);cargarAdminDashboard()" class="nav-btn hidden flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-amber-300/70 hover:text-amber-200 cursor-pointer group">
-                        <span class="material-symbols-outlined group-hover:fill-1">admin_panel_settings</span><span class="text-sm font-medium">Admin</span></a>
+                    <a id="btn-nueva" onclick="verSec('sec-nueva', this)" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white shadow-lg shadow-primary/20 transition-all cursor-pointer">
+                        <span class="material-symbols-outlined fill-1">description</span><span class="text-sm font-medium">Nueva Factura</span></a>
+                    <a id="btn-historial" onclick="verSec('sec-historial', this); cargarHistorial();" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group">
+                        <span class="material-symbols-outlined group-hover:fill-1 transition-colors">cloud_done</span><span class="text-sm font-medium">Historial Cloud</span></a>
                 </nav>
             </div>
-            <div class="mt-auto border-t border-white/10">
-                <div id="perfil-usuario" class="hidden px-6 pt-5 pb-3"><div class="flex items-center gap-3">
-                    <img id="perfil-avatar" src="" alt="" class="w-9 h-9 rounded-full object-cover ring-2 ring-white/20 flex-shrink-0">
-                    <div class="min-w-0"><p id="perfil-nombre" class="text-sm font-semibold text-white truncate"></p><p id="perfil-email" class="text-[11px] text-blue-300/50 truncate"></p></div>
-                </div></div>
-                <div class="px-6 pb-5 pt-2"><a onclick="cerrarSesion()" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-500/20 text-blue-200/60 hover:text-red-300 transition-all cursor-pointer">
-                    <span class="material-symbols-outlined">logout</span><span class="text-sm font-medium">Cerrar Sesión</span></a></div>
+            <div class="mt-auto p-6 border-t border-white/10">
+                <a onclick="cerrarSesion()" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-500/20 text-blue-200/60 hover:text-red-300 transition-all cursor-pointer">
+                    <span class="material-symbols-outlined">logout</span><span class="text-sm font-medium">Cerrar Sesión</span></a>
             </div>
         </aside>
 
         <main class="flex-1 ml-64 p-4 md:pl-8 md:pr-8 md:pt-6">
-
-            <div id="sec-dashboard" class="app-section activa w-full max-w-[1400px]">
+            <div id="sec-nueva" class="app-section activa w-full max-w-[1400px]">
                 <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
-                    <div class="flex items-center gap-4"><div class="p-2 bg-primary/10 rounded-lg text-primary"><span class="material-symbols-outlined fill-1">dashboard</span></div>
-                    <h2 class="text-2xl font-bold tracking-tight text-slate-900">Mi Dashboard</h2></div>
-                </header>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-                    <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Mis facturas</span><p class="text-3xl font-black text-slate-900 mt-2" id="ud-total">—</p></div>
-                    <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Este mes</span><p class="text-3xl font-black text-slate-900 mt-2" id="ud-mes">—</p></div>
-                    <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Facturado total</span><p class="text-3xl font-black text-slate-900 mt-2" id="ud-importe">—</p></div>
-                    <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Mis plantillas</span><p class="text-3xl font-black text-slate-900 mt-2" id="ud-plantillas">—</p></div>
-                </div>
-            </div>
-
-            <div id="sec-plantillas" class="app-section w-full max-w-[1400px]">
-                <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
-                    <div class="flex items-center gap-4"><div class="p-2 bg-primary/10 rounded-lg text-primary"><span class="material-symbols-outlined fill-1">draft</span></div><div>
-                        <h2 class="text-2xl font-bold tracking-tight text-slate-900">Mis Plantillas</h2></div></div>
-                    <button onclick="verSec('sec-crear-plantilla',document.getElementById('btn-plantillas'));setTimeout(actualizarPreview,100)" class="flex items-center gap-2 bg-primary hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm">
-                        <span class="material-symbols-outlined text-lg">add</span> Nueva Plantilla</button>
-                </header>
-                <div id="lista-plantillas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
-            </div>
-
-            <div id="sec-crear-plantilla" class="app-section w-full max-w-[1400px]">
-                <header class="flex items-center justify-between mb-6 pb-6 border-b border-slate-200">
                     <div class="flex items-center gap-4">
-                        <button onclick="verSec('sec-plantillas',document.getElementById('btn-plantillas'));cargarPlantillas()" class="p-2 rounded-lg hover:bg-slate-100 text-slate-400"><span class="material-symbols-outlined">arrow_back</span></button>
-                        <h2 class="text-2xl font-bold tracking-tight text-slate-900">Nueva Plantilla</h2></div>
-                </header>
-                <div class="flex gap-1 mb-6 bg-slate-100 p-1 rounded-lg w-fit">
-                    <button onclick="tabPlantilla('visual')" id="tab-visual" class="px-5 py-2 rounded-md text-sm font-bold bg-white text-primary shadow-sm transition-all">Crear Visual</button>
-                    <button onclick="tabPlantilla('excel')" id="tab-excel" class="px-5 py-2 rounded-md text-sm font-bold text-slate-500 hover:text-slate-700 transition-all">Subir Excel</button>
-                </div>
-
-                <div id="panel-visual" class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                    <div class="lg:col-span-3 space-y-5">
-                        <div class="flex flex-col gap-2"><label class="text-sm font-bold text-slate-700">Nombre de la plantilla</label><input type="text" id="tpl-nombre" class="rounded-lg border-slate-200 bg-white px-4 py-3 focus:ring-primary" placeholder="Ej: Factura estándar"></div>
-                        <details open class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">business</span> Datos de Empresa</summary>
-                            <div class="px-5 pb-5 pt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input type="text" id="tpl-emp-nombre" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Nombre empresa">
-                                <input type="text" id="tpl-emp-cif" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="CIF / NIF">
-                                <input type="text" id="tpl-emp-dir" class="tpl-field md:col-span-2 rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Dirección completa">
-                                <input type="text" id="tpl-emp-tel" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Teléfono">
-                                <input type="email" id="tpl-emp-email" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Email">
-                                <input type="url" id="tpl-emp-logo" class="tpl-field md:col-span-2 rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="URL del logo (opcional)">
-                            </div></details>
-                        <details class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">palette</span> Estilo y Página</summary>
-                            <div class="px-5 pb-5 pt-2 grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Color primario</label><input type="color" id="tpl-color1" value="#1a2e4a" class="tpl-field w-full h-10 rounded-lg border-slate-200 cursor-pointer"></div>
-                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Color secundario</label><input type="color" id="tpl-color2" value="#0d6dfd" class="tpl-field w-full h-10 rounded-lg border-slate-200 cursor-pointer"></div>
-                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Fuente</label><select id="tpl-fuente" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm"><option value="Helvetica, Arial, sans-serif">Helvetica</option><option value="Georgia, serif">Georgia</option><option value="Verdana, sans-serif">Verdana</option><option value="'Times New Roman', serif">Times</option></select></div>
-                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Tamaño texto</label><input type="number" id="tpl-tam" value="10" min="8" max="14" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm"></div>
-                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Página</label><select id="tpl-page-size" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm"><option value="A4">A4</option><option value="Letter">Carta</option></select></div>
-                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Orientación</label><select id="tpl-page-orient" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm"><option value="portrait">Vertical</option><option value="landscape">Horizontal</option></select></div>
-                            </div></details>
-                        <details class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">person</span> Datos del Cliente</summary>
-                            <div class="px-5 pb-5 pt-2"><label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-cli-mostrar" checked class="tpl-field rounded text-primary"> Mostrar sección de cliente en la factura</label></div></details>
-                        
-                        <details open class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                            <summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">view_column</span> Líneas / Tickets</summary>
-                            <div class="px-5 pb-5 pt-2">
-                                <label class="flex items-center gap-2 text-sm mb-4 font-bold text-slate-700">
-                                    <input type="checkbox" id="tpl-usar-lineas" checked class="tpl-field rounded text-primary" onchange="toggleI(this, 'tpl-cols-config')"> 
-                                    Activar tabla de tickets / desglose de líneas
-                                </label>
-                                <div id="tpl-cols-config" class="block">
-                                    <p class="text-xs text-slate-500 mb-3">Las líneas se sumarán automáticamente en el total. Elige el formato:</p>
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        <label class="flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 border-slate-200"><input type="radio" name="tpl-cols-preset" value="simple" checked class="tpl-field mt-0.5 text-primary"><div><span class="text-sm font-bold text-slate-700">Simple</span><p class="text-[11px] text-slate-400 mt-0.5">Descripción + Importe</p></div></label>
-                                        <label class="flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 border-slate-200"><input type="radio" name="tpl-cols-preset" value="detallado" class="tpl-field mt-0.5 text-primary"><div><span class="text-sm font-bold text-slate-700">Detallado</span><p class="text-[11px] text-slate-400 mt-0.5">Desc. + Cant. + Precio + Total</p></div></label>
-                                        <label class="flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 border-slate-200"><input type="radio" name="tpl-cols-preset" value="servicios" class="tpl-field mt-0.5 text-primary"><div><span class="text-sm font-bold text-slate-700">Servicios</span><p class="text-[11px] text-slate-400 mt-0.5">Desc. + Horas + Tarifa + Total</p></div></label>
-                                    </div>
-                                </div>
-                            </div>
-                        </details>
-
-                        <details class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                            <summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">percent</span> Impuestos y Moneda</summary>
-                            <div class="px-5 pb-5 pt-2 space-y-4">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Título Factura</label><input type="text" id="tpl-fac-titulo" value="FACTURA" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
-                                    <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Moneda</label><input type="text" id="tpl-moneda" value="€" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
-                                </div>
-                                <div>
-                                    <div class="flex items-center justify-between mb-2">
-                                        <label class="text-xs font-bold text-slate-700 uppercase">Impuestos a aplicar</label>
-                                        <button type="button" onclick="addImpuestoTpl()" class="text-xs font-bold text-primary flex items-center gap-1"><span class="material-symbols-outlined text-sm">add</span> Añadir</button>
-                                    </div>
-                                    <div id="tpl-impuestos-list" class="space-y-2">
-                                        <div class="flex items-center gap-2 tpl-impuesto-row">
-                                            <input type="text" class="imp-nom tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm flex-1" value="IVA" placeholder="Nombre (ej. IRPF)">
-                                            <input type="number" class="imp-pct tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm w-20" value="21" placeholder="%">
-                                            <button type="button" onclick="this.parentElement.remove(); actualizarPreview()" class="text-slate-400 hover:text-red-500"><span class="material-symbols-outlined text-lg">close</span></button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-desglose" checked class="tpl-field rounded text-primary"> Mostrar desglose de impuestos</label>
-                            </div>
-                        </details>
-                        
-                        <details class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">sticky_note_2</span> Pie de Página</summary>
-                            <div class="px-5 pb-5 pt-2 space-y-3">
-                                <textarea id="tpl-pie-texto" class="tpl-field w-full rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm min-h-[60px]" placeholder="Texto del pie"></textarea>
-                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-pie-pago" class="tpl-field rounded text-primary"> Datos de pago</label>
-                                <input type="text" id="tpl-pie-pago-texto" class="tpl-field w-full rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="IBAN / Datos bancarios...">
-                            </div></details>
-                        <button onclick="guardarPlantillaVisual()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2"><span class="material-symbols-outlined">save</span> Guardar Plantilla</button>
+                        <div class="p-2 bg-primary/10 rounded-lg text-primary"><span class="material-symbols-outlined fill-1">receipt_long</span></div>
+                        <h2 class="text-2xl font-bold tracking-tight text-slate-900">Generar Factura</h2>
                     </div>
-                    <div class="lg:col-span-2 sticky top-6 self-start">
-                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                            <div class="flex items-center justify-between mb-3"><span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Vista previa</span><button onclick="previewPDF()" class="text-xs font-bold text-primary hover:underline flex items-center gap-1"><span class="material-symbols-outlined text-sm">picture_as_pdf</span> Ver PDF</button></div>
-                            <div id="tpl-preview" class="border border-slate-100 rounded-lg bg-white overflow-auto" style="height:500px;font-size:7px;padding:12px;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="panel-excel" class="hidden space-y-6">
-                    <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-                        <h3 class="font-bold text-lg text-slate-900 flex items-center gap-2 mb-4"><span class="material-symbols-outlined text-primary">menu_book</span> Guía: Preparar tu Excel</h3>
-                        <div class="text-sm text-slate-600 space-y-3 leading-relaxed">
-                            <p>Coloca <strong>marcadores</strong> (tags) en las celdas donde quieras insertar datos. Formato: <code class="bg-slate-100 px-1.5 py-0.5 rounded text-primary font-mono text-xs">{{nombre_del_campo}}</code></p>
-                            <p>Puedes usar <strong>cualquier nombre de campo</strong> — el sistema detectará automáticamente los tags al subir. Ejemplos:</p>
-                            <div class="bg-slate-50 rounded-lg p-4 font-mono text-xs grid grid-cols-2 gap-2">
-                                <span><span class="text-primary">{{empresa}}</span> — Nombre de empresa</span>
-                                <span><span class="text-primary">{{cif}}</span> — CIF / NIF</span>
-                                <span><span class="text-primary">{{fecha}}</span> — Fecha de la factura</span>
-                                <span><span class="text-primary">{{numero}}</span> — Nº de factura</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
-                        <input type="text" id="excel-tpl-nombre" class="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Nombre de la plantilla">
-                        <div class="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center hover:border-primary transition-colors">
-                            <input type="file" id="excel-tpl-file" accept=".xlsx,.xlsm" class="hidden" onchange="document.getElementById('excel-file-label').textContent=this.files[0]?.name||'Seleccionar...'">
-                            <label for="excel-tpl-file" class="cursor-pointer"><span class="material-symbols-outlined text-4xl text-slate-300 mb-2 block">upload_file</span><p class="text-sm font-semibold text-slate-600" id="excel-file-label">Clic para seleccionar .xlsx o .xlsm</p></label>
-                        </div>
-                        <div id="excel-tags-resultado" class="hidden bg-emerald-50 border border-emerald-200 rounded-lg p-4"></div>
-                        <button onclick="subirPlantillaExcel()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2"><span class="material-symbols-outlined">cloud_upload</span> Subir Plantilla</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="sec-nueva" class="app-section w-full max-w-[1400px]">
-                <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
-                    <div class="flex items-center gap-4"><div class="p-2 bg-primary/10 rounded-lg text-primary"><span class="material-symbols-outlined fill-1">receipt_long</span></div><h2 class="text-2xl font-bold tracking-tight text-slate-900">Nueva Factura</h2></div>
-                    <button id="btn-volver-selector" onclick="mostrarSelectorPlantilla()" class="hidden flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all"><span class="material-symbols-outlined text-sm">arrow_back</span> Cambiar plantilla</button>
+                    <button onclick="limpiarBorrador(true)" class="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+                        <span class="material-symbols-outlined text-sm">delete_sweep</span> Limpiar Borrador
+                    </button>
                 </header>
 
-                <div id="nueva-paso-selector">
-                    <p class="text-slate-500 text-sm mb-6">Selecciona una plantilla para crear tu factura:</p>
-                    <div id="nueva-plantillas-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-6"></div>
+                <div id="edit-banner" class="hidden mb-6 flex items-center justify-between gap-4 bg-amber-50 border border-amber-200 text-amber-800 px-5 py-3.5 rounded-xl">
+                    <div class="flex items-center gap-3"><span class="material-symbols-outlined fill-1 text-amber-500">edit_note</span><span id="edit-banner-texto" class="text-sm font-semibold"></span></div>
+                    <button onclick="cancelarEdicion()" class="text-xs font-bold text-amber-600 hover:text-amber-900 flex items-center gap-1 transition-colors"><span class="material-symbols-outlined text-sm">close</span> Cancelar edición</button>
                 </div>
 
-                <div id="nueva-paso-form" class="hidden space-y-6">
+                <form id="formTaxi" class="space-y-6 pb-12">
+                    
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                         <div class="flex items-center gap-2 mb-6 text-primary font-bold"><span class="material-symbols-outlined text-xl">info</span><h3 class="text-lg">Detalles de Factura</h3></div>
-                        <div class="flex items-center gap-3 mb-6 bg-violet-50 border border-violet-200 px-4 py-3 rounded-lg">
-                            <span class="material-symbols-outlined text-violet-600">draft</span>
-                            <span class="text-sm font-semibold text-violet-700" id="nueva-plantilla-nombre">Plantilla</span>
-                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="flex flex-col gap-2"><label class="text-sm font-semibold text-slate-600">Nº Factura</label><input type="text" id="factura_numero" required class="w-full rounded-lg border-slate-200 bg-slate-50 focus:ring-primary px-4 py-3" placeholder="Ej: 2026-0001"></div>
-                            <div class="flex flex-col gap-2"><label class="text-sm font-semibold text-slate-600">Fecha</label><input type="date" id="gen-fecha" class="w-full rounded-lg border-slate-200 bg-slate-50 focus:ring-primary px-4 py-3"></div>
-                        </div>
-                    </div>
-
-                    <div id="gen-cliente-sec" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                        <div class="flex items-center gap-2 mb-4 text-primary font-bold"><span class="material-symbols-outlined text-xl">person</span><h3 class="text-lg">Datos del Cliente</h3></div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input type="text" id="gen-cli-nombre" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Nombre / Razón social">
-                            <input type="text" id="gen-cli-cif" class="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="CIF / NIF">
-                            <input type="text" id="gen-cli-dir" class="md:col-span-2 rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Dirección">
+                            <div class="flex flex-col gap-2"><label class="text-sm font-semibold text-slate-600">Nº Factura / Servicio</label><input type="text" id="factura_numero" required class="w-full rounded-lg border-slate-200 bg-slate-50 focus:ring-primary px-4 py-3" placeholder="Ej: 2024-0001"></div>
+                            <div class="flex flex-col gap-2"><label class="text-sm font-semibold text-slate-600">Nombre del Barco / Cliente</label><input type="text" id="barco" required class="w-full rounded-lg border-slate-200 bg-slate-50 focus:ring-primary px-4 py-3" placeholder="Nombre"></div>
                         </div>
                     </div>
 
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                        <div id="gen-lineas-container">
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="flex items-center gap-2 text-primary font-bold"><span class="material-symbols-outlined text-xl">list_alt</span><h3 class="text-lg">Líneas de Factura (Tickets)</h3></div>
-                                <button type="button" onclick="addLineaGenerica()" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-sm">add</span> Añadir línea</button>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2 text-primary font-bold">
+                                <span class="material-symbols-outlined text-xl">list_alt</span><h3 class="text-lg">Líneas de la Factura</h3>
                             </div>
-                            <div id="gen-lineas-header" class="grid gap-2 mb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider"></div>
-                            <div id="gen-lineas" class="space-y-2"></div>
+                            <button type="button" onclick="addLinea()" class="text-primary text-xs font-bold flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors">
+                                <span class="material-symbols-outlined text-sm">add</span> Añadir Línea
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-12 gap-2 mb-2 px-2">
+                            <div class="col-span-8 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Concepto / Descripción</div>
+                            <div class="col-span-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Importe Base (€)</div>
+                        </div>
+                        <div id="contenedor-lineas" class="space-y-2"></div>
+                        
+                        <div class="mt-8 pt-6 border-t border-slate-100">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2 text-primary font-bold"><span class="material-symbols-outlined text-xl">account_balance</span><h3 class="text-lg">Impuestos</h3></div>
+                                <button type="button" onclick="addImpuesto()" class="text-primary text-xs font-bold flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors">
+                                    <span class="material-symbols-outlined text-sm">add</span> Añadir Impuesto
+                                </button>
+                            </div>
+                            <div id="contenedor-impuestos" class="space-y-2 lg:w-1/2 ml-auto"></div>
+                            
+                            <div class="mt-6 flex justify-end">
+                                <div class="bg-slate-50 border border-slate-200 rounded-xl px-6 py-4 min-w-[250px] shadow-inner">
+                                    <div class="flex justify-between text-sm text-slate-500 mb-1"><span>Base Imponible:</span> <span id="lbl-base" class="font-bold text-slate-700">0.00 €</span></div>
+                                    <div class="flex justify-between text-sm text-slate-500 mb-2"><span>Total Impuestos:</span> <span id="lbl-impuestos" class="font-bold text-slate-700">0.00 €</span></div>
+                                    <div class="flex justify-between text-xl font-black text-slate-900 border-t border-slate-200 pt-2"><span>TOTAL:</span> <span id="lbl-total">0.00 €</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2"><span class="material-symbols-outlined text-primary">note_add</span> Adjuntar Bonos / Tickets</h3>
+                                <p class="text-sm text-slate-500 mt-1">Activa esto para añadir hojas extra al Excel y PDF con los detalles de los servicios.</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="toggle-tickets" class="sr-only peer" onchange="toggleTicketsView()">
+                                <div class="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary shadow-sm"></div>
+                            </label>
                         </div>
                         
-                        <div id="gen-importe-fijo-container" class="hidden">
-                            <div class="flex items-center gap-2 mb-4 text-primary font-bold"><span class="material-symbols-outlined text-xl">payments</span><h3 class="text-lg">Importe Base</h3></div>
-                            <div class="flex flex-col gap-2">
-                                <label class="text-sm font-semibold text-slate-600">Base imponible (antes de impuestos)</label>
-                                <input type="number" step="0.01" id="gen-importe-base" class="w-full md:w-1/2 rounded-lg border-slate-200 bg-slate-50 focus:ring-primary px-4 py-3" placeholder="Ej: 1500.00">
-                            </div>
+                        <div id="zona-tickets" class="hidden mt-6 space-y-6 pt-6 border-t border-slate-100">
+                            <div id="contenedor-tickets" class="space-y-6"></div>
+                            <button type="button" onclick="agregarTicket()" class="w-full flex items-center justify-center gap-2 px-6 py-4 border-2 border-primary text-primary font-bold rounded-lg hover:bg-primary hover:text-white transition-all bg-white shadow-sm">
+                                <span class="material-symbols-outlined font-bold">add_circle</span> AÑADIR TICKET DETALLADO
+                            </button>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                        <label class="text-sm font-bold text-slate-600">Notas / Observaciones</label>
-                        <textarea id="gen-notas" class="mt-2 w-full rounded-lg border-slate-200 bg-slate-50 p-4 min-h-[80px] text-sm" placeholder="Condiciones de pago, notas adicionales..."></textarea>
+                    <div class="pt-4 flex flex-col md:flex-row gap-4">
+                        <button type="button" onclick="enviarProceso('nube')" class="flex-1 flex items-center justify-center gap-2 px-8 py-3 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 shadow-lg shadow-slate-900/20 transition-all">
+                            <span class="material-symbols-outlined">cloud_upload</span> SOLO GUARDAR EN NUBE
+                        </button>
+                        <button type="button" onclick="abrirModalDescarga()" class="flex-1 flex items-center justify-center gap-2 px-8 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all">
+                            <span class="material-symbols-outlined">download</span> DESCARGAR FACTURA
+                        </button>
                     </div>
-
-                    <button type="button" onclick="generarConPlantilla()" class="w-full flex items-center justify-center gap-2 px-8 py-4 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all text-lg">
-                        <span class="material-symbols-outlined">picture_as_pdf</span> GENERAR FACTURA
-                    </button>
-                </div>
+                </form>
             </div>
 
             <div id="sec-historial" class="app-section w-full max-w-[1400px]">
                 <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
-                    <div><h2 class="text-2xl font-bold tracking-tight text-slate-900">Historial</h2></div>
-                    <button onclick="vaciarHistorial()" class="bg-[#f04444] hover:bg-red-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm">Vaciar</button>
+                    <div><h2 class="text-2xl font-bold tracking-tight text-slate-900">Historial en la Nube</h2><p class="text-slate-500 text-sm mt-1 font-medium">Gestione sus facturas almacenadas de forma segura</p></div>
+                    <button onclick="vaciarHistorial()" class="bg-[#f04444] hover:bg-red-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 shadow-sm"><span class="material-symbols-outlined text-lg">delete_sweep</span> Vaciar Nube</button>
                 </header>
-                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm"><table class="w-full text-left">
-                    <thead class="bg-slate-50 border-b border-slate-100"><tr>
-                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Fecha</th>
-                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Plantilla</th>
-                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Nº Fra.</th>
-                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Importe</th>
-                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em] text-right">Acciones</th>
-                    </tr></thead>
-                    <tbody id="tabla-historial" class="divide-y divide-slate-50"></tbody>
-                </table></div>
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 border-b border-slate-100"><tr>
+                            <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Fecha</th>
+                            <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Barco</th>
+                            <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Nº Fra.</th>
+                            <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Importe</th>
+                            <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em] text-right">Acciones</th>
+                        </tr></thead>
+                        <tbody id="tabla-historial" class="divide-y divide-slate-50"></tbody>
+                    </table>
+                </div>
             </div>
-            
-            <div id="sec-admin" class="app-section w-full max-w-[1400px]"></div>
-
         </main>
     </div>
 
     <script>
-    /* ═══ GLOBALS ═══ */
-    const PROD_HOSTNAME="programa-facturas-taxi.vercel.app";
-    const esProd=location.hostname===PROD_HOSTNAME;
-    const URL_BASE=esProd?"https://programafacturas.onrender.com":"https://programafacturas-dev.onrender.com";
-    const PAX_KEY="taxi_pasajeros_historial";
-    let ticketCount=0,sessionToken=null,sbClient=null,isAdmin=false;
-    let idDescargaPendiente=null,progressInterval=null,currentPlantillaConfig=null,cryptoKey=null;
-    if(!esProd)document.body.classList.add("modo-pruebas");
+        // CONFIGURACIÓN GLOBAL
+        const PROD_HOSTNAME = "programa-facturas-taxi.vercel.app";
+        const esProd = window.location.hostname === PROD_HOSTNAME;
+        let URL_BASE = esProd ? 'https://programafacturas.onrender.com' : 'https://programafacturas-dev.onrender.com';
 
-    const $=(s,c=document)=>c.querySelector(s);
-    const $$=(s,c=document)=>Array.from(c.querySelectorAll(s));
-    function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
-    function authHeaders(x={}){return{"Authorization":`Bearer ${sessionToken}`,...x}}
-    function descargarBlob(b,h,n,f){let fn=n;if(h?.includes("filename="))fn=h.split("filename=")[1].replace(/["']/g,"");else fn+=f==="excel"?".xlsm":f==="pdf"?".pdf":".zip";const u=URL.createObjectURL(b);Object.assign(document.createElement("a"),{href:u,download:fn}).click();URL.revokeObjectURL(u)}
+        if (!esProd) { document.body.classList.add('modo-pruebas'); }
 
-    /* ═══ SUPABASE AUTH ═══ */
-    try{const SU="https://aghojuugmunegqpdjgfm.supabase.co",SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnaG9qdXVnbXVuZWdxcGRqZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzQ1NTgsImV4cCI6MjA4OTQ1MDU1OH0.FMfXxOMxu15IPKRG63uo6z1iG9vUq1P16MSeA2t6Szc";
-    if(window.supabase)sbClient=window.supabase.createClient(SU,SK);else console.error("Supabase no cargó")}catch(e){console.error("Supabase init error:",e)}
+        let ticketCount = 0; 
+        let sessionToken = null;
+        let sbClient = null;
 
-    window.onload=()=>{if(!sbClient)return;
-        sbClient.auth.getSession().then(({data:{session}})=>{if(session){sessionToken=session.access_token;iniciarApp(session.user)}}).catch(e=>console.error(e));
-        sbClient.auth.onAuthStateChange((ev,session)=>{if(ev==="SIGNED_IN"&&session){sessionToken=session.access_token;iniciarApp(session.user)}else if(ev==="SIGNED_OUT"){sessionToken=null;document.body.classList.remove("logged-in")}});
-    };
-    async function iniciarSesionGoogle(){const btn=$("#btn-login-google");const orig=btn?.innerHTML||"";try{if(btn){btn.innerHTML='<span class="material-symbols-outlined animate-spin mr-2 text-base">refresh</span> Conectando...';btn.classList.add("opacity-70","cursor-wait");btn.disabled=true}if(!sbClient)throw new Error("Conexión no disponible. Recarga con Ctrl+F5.");const{error}=await sbClient.auth.signInWithOAuth({provider:"google",options:{redirectTo:esProd?`https://${PROD_HOSTNAME}`:location.href}});if(error)throw error}catch(err){alert("Atención: "+err.message);if(btn){btn.innerHTML=orig;btn.classList.remove("opacity-70","cursor-wait");btn.disabled=false}}}
-    async function cerrarSesion(){if(sbClient)await sbClient.auth.signOut();location.reload()}
-
-    async function iniciarApp(user){
-        document.body.classList.add("logged-in");
-        verSec("sec-dashboard",$("#btn-dashboard"));
-        cargarUserDashboard();
-    }
-
-    /* ═══ NAVIGATION ═══ */
-    function verSec(id,btn){$$(".app-section").forEach(s=>s.classList.remove("activa"));$(`#${id}`).classList.add("activa");$$(".nav-btn").forEach(l=>{const keep=l.id==="btn-admin"&&!isAdmin;l.className="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group";if(keep)l.classList.add("hidden");l.querySelector("span:first-child")?.classList.remove("fill-1")});btn.className="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white shadow-lg shadow-primary/20 transition-all cursor-pointer";btn.querySelector("span:first-child")?.classList.add("fill-1")}
-    function toggleI(cb,id){const el=document.getElementById(id);if(cb.checked){el.classList.remove("condicional");el.classList.add("block")}else{el.classList.add("condicional");el.classList.remove("block");el.value=""}}
-
-    /* ═══ MODAL ═══ */
-    function abrirModalDescarga(id=null){idDescargaPendiente=id;$("#modal-descarga").classList.remove("hidden");$("#app-layout").classList.add("blur-sm")}
-    function cerrarModal(){$("#modal-descarga").classList.add("hidden");$("#app-layout").classList.remove("blur-sm");restaurarBotonesModal()}
-    function iniciarProgresoModal(){$("#modal-content-opciones").classList.add("hidden");$("#modal-content-progreso").classList.remove("hidden");let p=0;const ci=$("#circulo-progreso"),tx=$("#texto-progreso");ci.style.strokeDashoffset=326.7;tx.innerText="0%";progressInterval=setInterval(()=>{if(p<90){p+=Math.floor(Math.random()*8)+2;if(p>90)p=90;ci.style.strokeDashoffset=326.7-(p/100)*326.7;tx.innerText=p+"%"}},500)}
-    function finalizarProgresoModal(){clearInterval(progressInterval);$("#circulo-progreso").style.strokeDashoffset=0;$("#texto-progreso").innerText="100%";setTimeout(()=>{cerrarModal();setTimeout(resetearModalVisual,400)},600)}
-    function detenerErrorProgresoModal(){clearInterval(progressInterval);cerrarModal();setTimeout(resetearModalVisual,400)}
-    function resetearModalVisual(){$("#modal-content-opciones").classList.remove("hidden");$("#modal-content-progreso").classList.add("hidden");$("#circulo-progreso").style.strokeDashoffset=326.7;$("#texto-progreso").innerText="0%"}
-    function ejecutarDescarga(f){iniciarProgresoModal();if(idDescargaPendiente)redescargar(idDescargaPendiente,f)}
-    function restaurarBotonesModal(){["excel","pdf","ambos"].forEach((f,i)=>{const btns=$$("#modal-content-opciones button[type='button']");if(btns[i])btns[i].onclick=()=>ejecutarDescarga(f)})}
-
-    /* ═══ HISTORIAL & DASHBOARD ═══ */
-    async function cargarUserDashboard(){try{const r=await fetch(`${URL_BASE}/user/stats`,{headers:authHeaders()});if(!r.ok)return;const d=await r.json();$("#ud-total").textContent=d.total_facturas;$("#ud-mes").textContent=d.facturas_este_mes;$("#ud-importe").textContent=d.total_importe.toLocaleString("es-ES",{minimumFractionDigits:2})+" €";$("#ud-plantillas").textContent=d.total_plantillas;}catch{}}
-    async function cargarHistorial(){const tb=$("#tabla-historial");tb.innerHTML=`<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500">Cargando...</td></tr>`;try{const res=await fetch(`${URL_BASE}/historial`,{headers:authHeaders()});const datos=await res.json();tb.innerHTML="";if(!datos.length){tb.innerHTML=`<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500">No hay facturas.</td></tr>`;return}const frag=document.createDocumentFragment();datos.forEach(f=>{const d=new Date(f.fecha_creacion).toLocaleDateString("es-ES",{year:"numeric",month:"2-digit",day:"2-digit"});const tr=document.createElement("tr");tr.className="hover:bg-slate-50/80 border-b border-slate-50";tr.innerHTML=`<td class="px-6 py-4 text-sm font-medium text-slate-600">${esc(d)}</td><td class="px-6 py-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#e1effe] text-primary uppercase tracking-wider">${esc(f.barco||f.plantilla_nombre||"-")}</span></td><td class="px-6 py-4 text-sm font-semibold text-slate-900">${esc(f.numero_factura)}</td><td class="px-6 py-4 text-sm font-bold text-slate-900">${f.importe_total.toFixed(2)}€</td><td class="px-6 py-4 text-right"><div class="flex items-center justify-end gap-3"><button onclick="abrirModalDescarga(${f.id})" class="text-primary hover:text-blue-800 font-extrabold text-[11px] uppercase tracking-widest"><span class="material-symbols-outlined text-lg">download</span></button><button onclick="eliminarF(${f.id})" class="text-slate-400 hover:text-red-500"><span class="material-symbols-outlined text-[18px]">delete</span></button></div></td>`;frag.appendChild(tr)});tb.appendChild(frag)}catch{tb.innerHTML=`<tr><td colspan="5" class="text-center text-red-500">Error</td></tr>`}}
-    async function redescargar(id,f="excel"){try{const res=await fetch(`${URL_BASE}/re-descargar/${id}?formato=${f}`,{headers:authHeaders()});if(res.ok){descargarBlob(await res.blob(),res.headers.get("Content-Disposition"),`Fra_${id}`,f);finalizarProgresoModal()}else{detenerErrorProgresoModal();alert("Error")}}catch{detenerErrorProgresoModal();alert("Error")}}
-    async function eliminarF(id){if(!confirm("¿Borrar factura?"))return;await fetch(`${URL_BASE}/eliminar-factura/${id}`,{method:"DELETE",headers:authHeaders()});cargarHistorial()}
-    async function vaciarHistorial(){if(!confirm("⚠️ ¿Vaciar todo el historial?"))return;await fetch(`${URL_BASE}/limpiar-historial`,{method:"DELETE",headers:authHeaders()});cargarHistorial()}
-
-    /* ═══ PLANTILLAS VISUALES ═══ */
-    const COL_PRESETS={simple:[{nombre:"Descripción",campo:"descripcion",alineacion:"left",tipo:"texto"},{nombre:"Importe",campo:"importe",alineacion:"right",tipo:"moneda"}],detallado:[{nombre:"Descripción",campo:"descripcion",alineacion:"left",tipo:"texto"},{nombre:"Cantidad",campo:"cantidad",alineacion:"right",tipo:"numero"},{nombre:"Precio Ud.",campo:"precio",alineacion:"right",tipo:"moneda"},{nombre:"Total",campo:"total",alineacion:"right",tipo:"moneda"}],servicios:[{nombre:"Descripción",campo:"descripcion",alineacion:"left",tipo:"texto"},{nombre:"Horas",campo:"horas",alineacion:"right",tipo:"numero"},{nombre:"Tarifa/h",campo:"tarifa",alineacion:"right",tipo:"moneda"},{nombre:"Total",campo:"total",alineacion:"right",tipo:"moneda"}]};
-    function getSelectedPreset(){const c=document.querySelector('input[name="tpl-cols-preset"]:checked');return c?c.value:"simple"}
-    function getColumnas(){return COL_PRESETS[getSelectedPreset()]||COL_PRESETS.simple}
-    function tabPlantilla(t){const v=t==="visual";$("#panel-visual").classList.toggle("hidden",!v);$("#panel-visual").classList.toggle("grid",v);$("#panel-excel").classList.toggle("hidden",v);$("#tab-visual").className=`px-5 py-2 rounded-md text-sm font-bold transition-all ${v?"bg-white text-primary shadow-sm":"text-slate-500"}`;$("#tab-excel").className=`px-5 py-2 rounded-md text-sm font-bold transition-all ${!v?"bg-white text-primary shadow-sm":"text-slate-500"}`}
-    async function cargarPlantillas(){const c=$("#lista-plantillas");c.innerHTML='<p class="col-span-3 text-center text-slate-400 py-12">Cargando...</p>';try{const r=await fetch(`${URL_BASE}/plantillas`,{headers:authHeaders()});const data=await r.json();if(!data.length){c.innerHTML=`<div class="col-span-3 text-center py-16"><span class="material-symbols-outlined text-5xl text-slate-200 mb-4 block">draft</span><p class="text-slate-400 font-medium">No hay plantillas</p></div>`;return}c.innerHTML=data.map(p=>`<div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow"><div class="flex items-center justify-between mb-3"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.tipo==="visual"?"bg-violet-100 text-violet-700":"bg-emerald-100 text-emerald-700"}">${esc(p.tipo)}</span></div><h3 class="font-bold text-slate-900 text-lg mb-1">${esc(p.nombre)}</h3><p class="text-xs text-slate-400 mb-4">${new Date(p.created_at).toLocaleDateString("es-ES")}</p><div class="flex items-center gap-2"><button onclick="previewPlantilla(${p.id})" class="flex-1 text-xs font-bold text-primary bg-primary/5 hover:bg-primary/10 rounded-lg py-2 flex items-center justify-center gap-1"><span class="material-symbols-outlined text-sm">visibility</span> Preview</button><button onclick="eliminarPlantilla(${p.id})" class="text-slate-400 hover:text-red-500 p-2"><span class="material-symbols-outlined text-lg">delete</span></button></div></div>`).join("")}catch{c.innerHTML='<p class="col-span-3 text-center text-red-500">Error</p>'}}
-    
-    // DINAMIC IMPUESTOS
-    window.addImpuestoTpl = function() {
-        const div = document.createElement("div");
-        div.className = "flex items-center gap-2 tpl-impuesto-row";
-        div.innerHTML = `<input type="text" class="imp-nom tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm flex-1" placeholder="Nombre (ej. IRPF)">
-            <input type="number" class="imp-pct tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm w-20" value="0" placeholder="%">
-            <button type="button" onclick="this.parentElement.remove(); actualizarPreview()" class="text-slate-400 hover:text-red-500"><span class="material-symbols-outlined text-lg">close</span></button>`;
-        div.querySelectorAll("input").forEach(i => i.addEventListener("input", actualizarPreview));
-        document.getElementById("tpl-impuestos-list").appendChild(div);
-        actualizarPreview();
-    }
-    function getImpuestos() {
-        return Array.from(document.querySelectorAll(".tpl-impuesto-row")).map(r => ({
-            nombre: r.querySelector(".imp-nom").value || "Impuesto",
-            porcentaje: parseFloat(r.querySelector(".imp-pct").value) || 0
-        }));
-    }
-
-    function buildVisualConfig(){return{empresa:{nombre:$("#tpl-emp-nombre").value,cif:$("#tpl-emp-cif").value,direccion:$("#tpl-emp-dir").value,telefono:$("#tpl-emp-tel").value,email:$("#tpl-emp-email").value,logo_url:$("#tpl-emp-logo").value},estilo:{color_primario:$("#tpl-color1").value,color_secundario:$("#tpl-color2").value,fuente:$("#tpl-fuente").value,tam_fuente:parseInt($("#tpl-tam").value)||10},pagina:{size:$("#tpl-page-size").value,orientation:$("#tpl-page-orient").value,margenes:{top:parseInt($("#tpl-margin-v").value)||20,right:parseInt($("#tpl-margin-h").value)||15,bottom:parseInt($("#tpl-margin-v").value)||20,left:parseInt($("#tpl-margin-h").value)||15}},cliente:{mostrar:$("#tpl-cli-mostrar").checked},usar_lineas:$("#tpl-usar-lineas").checked,columnas:getColumnas(),columna_importe:getColumnas().at(-1)?.campo||"importe",impuestos:getImpuestos(),moneda:$("#tpl-moneda").value||"€",titulo:$("#tpl-fac-titulo").value||"FACTURA",mostrar_desglose:$("#tpl-desglose").checked,pie:{texto:$("#tpl-pie-texto").value,mostrar_datos_pago:$("#tpl-pie-pago").checked,datos_pago:$("#tpl-pie-pago-texto").value}}}
-    
-    function actualizarPreview(){const c=buildVisualConfig(),e=c.empresa,s=c.estilo,cols=c.columnas,moneda=c.moneda,sc=0.7;const logo=e.logo_url?`<img src="${esc(e.logo_url)}" style="max-height:30px;max-width:90px;">`:"";const ejs=[{descripcion:"Servicio profesional",cantidad:"10",horas:"10",precio:"50.00",tarifa:"50.00",importe:"500.00",total:"500.00"},{descripcion:"Material",cantidad:"1",horas:"2",precio:"30.00",tarifa:"30.00",importe:"30.00",total:"30.00"}];const thH=cols.map(col=>`<th style="padding:4px 6px;text-align:${col.alineacion};">${col.nombre}</th>`).join("");const rowsH=ejs.map(ej=>"<tr>"+cols.map(col=>{let v=ej[col.campo]||"";if(col.tipo==="moneda")v+=" "+moneda;return`<td style="padding:4px 6px;border-bottom:1px solid #eee;text-align:${col.alineacion};${col.alineacion==="right"?"font-weight:600;":""}">${v}</td>`}).join("")+"</tr>").join("");const cliH=c.cliente.mostrar?`<div style="margin:8px 0;padding:6px;background:#f8f9fa;border-radius:3px;font-size:${(s.tam_fuente-1)*sc}px;"><span style="color:#999;font-weight:600;">FACTURAR A:</span><br>Empresa Ejemplo S.L.</div>`:"";
-    let subtotal = c.usar_lineas !== false ? 530.00 : 1000.00;
-    let totales_html = "";
-    let total_final = subtotal;
-    if (c.mostrar_desglose && c.impuestos.length > 0) {
-        totales_html += `<tr><td style="padding:2px 8px;color:#888;">Subtotal</td><td style="text-align:right;">${subtotal.toFixed(2)} ${esc(moneda)}</td></tr>`;
-        c.impuestos.forEach(imp => { const monto = subtotal * imp.porcentaje / 100; total_final += monto; totales_html += `<tr><td style="padding:2px 8px;color:#888;">${esc(imp.nombre)} (${imp.porcentaje}%)</td><td style="text-align:right;">${monto.toFixed(2)} ${esc(moneda)}</td></tr>`; });
-    } else {
-        c.impuestos.forEach(imp => { total_final += subtotal * imp.porcentaje / 100; });
-    }
-    
-    let tablaH = c.usar_lineas !== false ? `<table style="width:100%;border-collapse:collapse;"><tr style="background:${s.color_primario};color:white;font-size:${(s.tam_fuente-1)*sc}px;">${thH}</tr>${rowsH}</table>` : "";
-    
-    $("#tpl-preview").innerHTML=`<div style="font-family:${s.fuente};font-size:${s.tam_fuente*sc}px;color:#333;line-height:1.5;"><table style="width:100%;margin-bottom:10px;"><tr><td style="vertical-align:top;width:55%;">${logo}<div style="font-weight:800;color:${s.color_primario};font-size:${(s.tam_fuente+4)*sc}px;margin-top:4px;">${esc(e.nombre||"Tu Empresa")}</div><div style="color:#888;font-size:${(s.tam_fuente-2)*sc}px;">${esc(e.cif)}</div></td><td style="vertical-align:top;text-align:right;"><div style="font-weight:900;color:${s.color_secundario};font-size:${(s.tam_fuente+8)*sc}px;">${esc(c.titulo)}</div><div>Nº: 2026-0001</div><div>Fecha: 19/03/2026</div></td></tr></table>${cliH}${tablaH}<table style="margin-top:8px;margin-left:auto;">${totales_html}<tr style="border-top:2px solid ${s.color_primario};"><td style="padding:3px 8px;font-weight:800;color:${s.color_primario};">TOTAL</td><td style="text-align:right;font-weight:800;color:${s.color_primario};">${total_final.toFixed(2)} ${esc(moneda)}</td></tr></table>${c.pie.texto?`<div style="margin-top:12px;padding-top:4px;border-top:1px solid #ddd;color:#aaa;">${esc(c.pie.texto)}</div>`:""}</div>`}
-    document.addEventListener("input",e=>{if(e.target.closest?.("#panel-visual"))actualizarPreview()});document.addEventListener("change",e=>{if(e.target.closest?.("#panel-visual"))actualizarPreview()});setTimeout(actualizarPreview,500);
-    
-    async function guardarPlantillaVisual(){const n=$("#tpl-nombre").value.trim();if(!n){alert("Pon un nombre");return}const cfg=buildVisualConfig();const fd=new FormData();fd.append("nombre",n);fd.append("config_json",JSON.stringify(cfg));try{const r=await fetch(`${URL_BASE}/plantillas/crear-visual`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){alert("✅ Guardada");verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()}else alert("Error")}catch{alert("Error")}}
-    async function subirPlantillaExcel(){const n=$("#excel-tpl-nombre").value.trim();const fi=$("#excel-tpl-file");if(!n){alert("Pon un nombre");return}if(!fi.files.length){alert("Selecciona archivo");return}const fd=new FormData();fd.append("nombre",n);fd.append("file",fi.files[0]);fd.append("config_json","{}");try{const r=await fetch(`${URL_BASE}/plantillas/upload-excel`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){const d=await r.json();const tags=d.tags_detectados||[];if(tags.length){const div=$("#excel-tags-resultado");div.classList.remove("hidden");div.innerHTML=`<p class="text-sm font-bold text-emerald-700 mb-2">✅ ${tags.length} tags:</p><div class="flex flex-wrap gap-2">${tags.map(t=>`<span class="bg-emerald-100 text-emerald-800 text-xs font-mono px-2 py-1 rounded">${esc(t)}</span>`).join("")}</div>`}alert("✅ Subida");setTimeout(()=>{verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()},1000)}else{const err=await r.json().catch(()=>({}));alert("Error: "+(err.detail||""))}}catch{alert("Error")}}
-    async function previewPlantilla(id){try{const r=await fetch(`${URL_BASE}/plantillas/${id}/preview`,{method:"POST",headers:authHeaders()});if(r.ok){window.open(URL.createObjectURL(await r.blob()),"_blank")}else alert("Error preview")}catch{alert("Error")}}
-    async function previewPDF(){const n=$("#tpl-nombre").value.trim()||"Preview";const cfg=buildVisualConfig();const fd=new FormData();fd.append("nombre",n);fd.append("config_json",JSON.stringify(cfg));try{const r=await fetch(`${URL_BASE}/plantillas/crear-visual`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){const d=await r.json();if(d.id)await previewPlantilla(d.id)}}catch{alert("Error")}}
-    async function eliminarPlantilla(id){if(!confirm("¿Eliminar?"))return;try{await fetch(`${URL_BASE}/plantillas/${id}`,{method:"DELETE",headers:authHeaders()});cargarPlantillas();}catch{alert("Error")}}
-
-    /* ═══ NUEVA FACTURA GENERICA ═══ */
-    let selectedPlantillaId = null;
-
-    async function cargarGridNuevaFactura() {
-        mostrarSelectorPlantilla();
-        const grid = $("#nueva-plantillas-grid");
-        grid.innerHTML = '<p class="col-span-3 text-center text-slate-400 py-6">Cargando plantillas...</p>';
+        // INICIALIZACIÓN PROTEGIDA DE SUPABASE
         try {
-            const r = await fetch(`${URL_BASE}/plantillas`, { headers: authHeaders() });
-            const data = await r.json();
-            if (!data.length) { grid.innerHTML = ''; return; }
-            grid.innerHTML = data.map(p => `
-                <button onclick="seleccionarPlantilla(${p.id},'${esc(p.nombre).replace(/'/g,"\\'")}','${esc(p.tipo)}')" class="bg-white rounded-xl border-2 border-slate-200 p-6 shadow-sm hover:border-primary hover:shadow-md transition-all text-left group">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.tipo === 'visual' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}">${esc(p.tipo)}</span>
-                    </div>
-                    <h3 class="font-bold text-slate-900 text-lg">${esc(p.nombre)}</h3>
-                </button>`).join("");
-        } catch { grid.innerHTML = '<p class="col-span-3 text-center text-red-500">Error</p>'; }
-    }
+            const SUPABASE_URL = 'https://aghojuugmunegqpdjgfm.supabase.co';
+            const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnaG9qdXVnbXVuZWdxcGRqZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzQ1NTgsImV4cCI6MjA4OTQ1MDU1OH0.FMfXxOMxu15IPKRG63uo6z1iG9vUq1P16MSeA2t6Szc';
+            if (window.supabase) sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch(e) { console.error("Fallo Supabase:", e); }
 
-    async function seleccionarPlantilla(id, nombre, tipo) {
-        selectedPlantillaId = id;
-        $("#nueva-paso-selector").classList.add("hidden");
-        $("#nueva-paso-form").classList.remove("hidden");
-        $("#btn-volver-selector").classList.remove("hidden");
-        $("#nueva-plantilla-nombre").textContent = `${nombre} (${tipo})`;
-        try {
-            const r = await fetch(`${URL_BASE}/plantillas/${id}`, { headers: authHeaders() });
-            if (r.ok) {
-                const p = await r.json();
-                currentPlantillaConfig = JSON.parse(p.config_json || "{}");
-                setupGenericForm(currentPlantillaConfig);
-            }
-        } catch { currentPlantillaConfig = null; setupGenericForm(null); }
-    }
-
-    function mostrarSelectorPlantilla() {
-        selectedPlantillaId = null; currentPlantillaConfig = null;
-        $("#nueva-paso-selector").classList.remove("hidden");
-        $("#nueva-paso-form").classList.add("hidden");
-        $("#btn-volver-selector").classList.add("hidden");
-    }
-
-    function setupGenericForm(cfg){
-        const showCli = cfg?.cliente?.mostrar!==false;
-        $("#gen-cliente-sec").style.display=showCli?"":"none";
-        
-        const usarLineas = cfg?.usar_lineas !== false;
-        if(usarLineas){
-            $("#gen-lineas-container").classList.remove("hidden");
-            $("#gen-importe-fijo-container").classList.add("hidden");
-            const cols=cfg?.columnas||COL_PRESETS.simple;
-            const h=$("#gen-lineas-header");
-            h.style.gridTemplateColumns=cols.map(c=>c.tipo==="texto"?"2fr":"1fr").join(" ")+" 40px";
-            h.innerHTML=cols.map(c=>`<span>${esc(c.nombre)}</span>`).join("")+"<span></span>";
-            $("#gen-lineas").innerHTML="";
-            addLineaGenerica();
-        } else {
-            $("#gen-lineas-container").classList.add("hidden");
-            $("#gen-importe-fijo-container").classList.remove("hidden");
-        }
-    }
-    
-    function addLineaGenerica(){
-        const cols=currentPlantillaConfig?.columnas||COL_PRESETS.simple;
-        const c=$("#gen-lineas");
-        const r=document.createElement("div");
-        r.className="gen-linea grid gap-2 items-center";
-        r.style.gridTemplateColumns=cols.map(c=>c.tipo==="texto"?"2fr":"1fr").join(" ")+" 40px";
-        r.innerHTML=cols.map(c=>`<input type="${c.tipo==="texto"?"text":"number"}" step="any" data-campo="${esc(c.campo)}" class="calc-input rounded-lg border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" placeholder="${esc(c.nombre)}">`).join("")+`<button type="button" onclick="this.closest('.gen-linea').remove()" class="text-slate-400 hover:text-red-500 flex items-center justify-center"><span class="material-symbols-outlined text-lg">close</span></button>`;
-        
-        // MATEMATICAS AUTOMATICAS EN TICKETS
-        r.querySelectorAll(".calc-input").forEach(inp => {
-            inp.addEventListener("input", () => {
-                const inputs = Array.from(r.querySelectorAll("input"));
-                const getVal = (campo) => parseFloat(inputs.find(i => i.dataset.campo === campo)?.value.replace(',','.')) || 0;
-                const setVal = (campo, val) => { const el = inputs.find(i => i.dataset.campo === campo); if(el && document.activeElement !== el) el.value = val.toFixed(2); };
-                
-                if(inputs.some(i => i.dataset.campo === "cantidad") && inputs.some(i => i.dataset.campo === "precio")) {
-                    setVal("total", getVal("cantidad") * getVal("precio"));
-                }
-                if(inputs.some(i => i.dataset.campo === "horas") && inputs.some(i => i.dataset.campo === "tarifa")) {
-                    setVal("total", getVal("horas") * getVal("tarifa"));
-                }
+        window.onload = () => {
+            if(!sbClient) return;
+            sbClient.auth.getSession().then(({ data: { session } }) => {
+                if (session) { sessionToken = session.access_token; iniciarApp(); }
+            }).catch(e => console.error(e));
+            sbClient.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_IN' && session) { sessionToken = session.access_token; iniciarApp(); } 
+                else if (event === 'SIGNED_OUT') { sessionToken = null; document.body.classList.remove('logged-in'); }
             });
-        });
-        c.appendChild(r);
-    }
-
-    async function generarConPlantilla(){
-        if(!selectedPlantillaId){alert("Selecciona una plantilla primero");return}
-        const data={
-            numero_factura:$("#factura_numero").value,
-            fecha:$("#gen-fecha")?.value?new Date($("#gen-fecha").value).toLocaleDateString("es-ES"):"",
-            referencia:$("#gen-referencia")?.value||"",
-            cliente:{nombre:$("#gen-cli-nombre")?.value||"",cif:$("#gen-cli-cif")?.value||"",direccion:$("#gen-cli-dir")?.value||"",email:$("#gen-cli-email")?.value||"",telefono:$("#gen-cli-tel")?.value||""},
-            notas:$("#gen-notas")?.value||""
         };
-        
-        const usarLineas = currentPlantillaConfig?.usar_lineas !== false;
-        if(usarLineas){
-            data.lineas = $$(".gen-linea").map(r=>{const o={};r.querySelectorAll("input").forEach(i=>{if(i.dataset.campo)o[i.dataset.campo]=i.value});return o}).filter(l=>Object.values(l).some(v=>v));
-            if(!data.lineas.length){alert("Añade al menos una línea");return}
-        } else {
-            data.importe_base = parseFloat($("#gen-importe-base").value) || 0;
+
+        async function iniciarSesionGoogle() {
+            const btn = document.getElementById('btn-login-google');
+            const textoOriginal = btn ? btn.innerHTML : 'Iniciar sesión';
+            try {
+                if(btn) { btn.innerHTML = '<span class="material-symbols-outlined animate-spin mr-2 text-base">refresh</span> Conectando...'; btn.classList.add('opacity-70', 'cursor-wait'); btn.disabled = true; }
+                if (!sbClient) throw new Error("Conexión bloqueada por tu navegador. Desactiva AdBlocks.");
+                const { error } = await sbClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: esProd ? 'https://programa-facturas-taxi.vercel.app' : window.location.href } });
+                if (error) throw error;
+            } catch (err) {
+                alert("Error: " + err.message);
+                if(btn) { btn.innerHTML = textoOriginal; btn.classList.remove('opacity-70', 'cursor-wait'); btn.disabled = false; }
+            }
         }
+
+        async function cerrarSesion() { if(sbClient) await sbClient.auth.signOut(); location.reload(); }
+
+        function iniciarApp() {
+            document.body.classList.add('logged-in');
+            verSec('sec-nueva', document.getElementById('btn-nueva'));
+            cargarSugerenciasPasajeros();
+            if(!cargarProgreso()) {
+                addLinea();
+                addImpuesto();
+            }
+        }
+
+        function verSec(id, btn) {
+            document.querySelectorAll('.app-section').forEach(s => s.classList.remove('activa'));
+            document.getElementById(id).classList.add('activa');
+            document.querySelectorAll('.nav-btn').forEach(l => {
+                l.className = "nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group";
+                l.querySelector('span:first-child').classList.remove('fill-1');
+            });
+            btn.className = "nav-btn flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white shadow-lg shadow-primary/20 transition-all cursor-pointer";
+            btn.querySelector('span:first-child').classList.add('fill-1');
+        }
+
+        // ================= LÍNEAS E IMPUESTOS DINÁMICOS =================
+        function addLinea(desc='', imp='') {
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-2 linea-row';
+            div.innerHTML = `
+                <input type="text" class="l-desc col-span-8 w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:ring-primary" placeholder="Ej: Ticket 123" value="${desc}" oninput="calcularTotales()">
+                <div class="col-span-3 relative w-full max-w-[180px] ml-auto">
+                    <input type="number" step="0.01" class="l-imp w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-2.5 pr-8 text-sm focus:ring-primary text-right font-bold" placeholder="0.00" value="${imp}" oninput="calcularTotales()">
+                    <span class="absolute right-3 top-2.5 text-slate-400 text-sm font-bold">€</span>
+                </div>
+                <button type="button" onclick="this.parentElement.remove(); calcularTotales()" class="col-span-1 text-slate-400 hover:text-red-500 p-2"><span class="material-symbols-outlined">delete</span></button>
+            `;
+            document.getElementById('contenedor-lineas').appendChild(div);
+            calcularTotales();
+        }
+
+        function addImpuesto(nom='IVA', pct='10') {
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-2 imp-row';
+            div.innerHTML = `
+                <input type="text" class="i-nom w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:ring-primary" placeholder="Nombre (ej. IRPF)" value="${nom}" oninput="calcularTotales()">
+                <div class="relative w-24 flex-shrink-0">
+                    <input type="number" step="0.1" class="i-pct w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-2 pr-6 text-sm focus:ring-primary text-right font-bold" placeholder="0" value="${pct}" oninput="calcularTotales()">
+                    <span class="absolute right-2 top-2 text-slate-400 text-sm font-bold">%</span>
+                </div>
+                <button type="button" onclick="this.parentElement.remove(); calcularTotales()" class="text-slate-400 hover:text-red-500 p-2"><span class="material-symbols-outlined">delete</span></button>
+            `;
+            document.getElementById('contenedor-impuestos').appendChild(div);
+            calcularTotales();
+        }
+
+        function calcularTotales() {
+            let base = 0;
+            document.querySelectorAll('.linea-row .l-imp').forEach(el => { base += parseFloat(el.value) || 0; });
+            let imps = 0;
+            document.querySelectorAll('.imp-row').forEach(row => {
+                const pct = parseFloat(row.querySelector('.i-pct').value) || 0;
+                imps += base * (pct / 100);
+            });
+            document.getElementById('lbl-base').textContent = base.toFixed(2) + ' €';
+            document.getElementById('lbl-impuestos').textContent = imps.toFixed(2) + ' €';
+            document.getElementById('lbl-total').textContent = (base + imps).toFixed(2) + ' €';
+            triggerAutoSave();
+        }
+
+        function toggleTicketsView() {
+            const z = document.getElementById('zona-tickets');
+            if(document.getElementById('toggle-tickets').checked) {
+                z.classList.remove('hidden');
+                if(document.querySelectorAll('.ticket-card').length === 0) agregarTicket();
+            } else {
+                z.classList.add('hidden');
+            }
+            triggerAutoSave();
+        }
+
+        // ================= TAGS Y PASAJEROS =================
+        function toggleI(cb, id) { const el = document.getElementById(id); if(cb.checked) { el.classList.remove('condicional'); el.classList.add('block'); } else { el.classList.add('condicional'); el.remove('block'); el.value = ''; } }
         
-        if(!data.numero_factura){alert("Indica el nº de factura");return}
-        
-        abrirModalDescarga();iniciarProgresoModal();
-        try{const r=await fetch(`${URL_BASE}/generar-con-plantilla?formato=pdf&plantilla_id=${selectedPlantillaId}`,{method:"POST",headers:authHeaders({"Content-Type":"application/json"}),body:JSON.stringify(data)});
-        if(r.ok){descargarBlob(await r.blob(),r.headers.get("Content-Disposition"),`Factura_${data.numero_factura}`,"pdf");finalizarProgresoModal()}
-        else{detenerErrorProgresoModal();alert("Error generando factura")}}
-        catch{detenerErrorProgresoModal();alert("Error de conexión")}
-    }
+        function cargarSugerenciasPasajeros() { const nombres = JSON.parse(localStorage.getItem(PAX_KEY) || '[]'); document.getElementById('sugerencias-pasajeros').innerHTML = nombres.map(n => `<option value="${n}">`).join(''); }
+        function guardarNombreEnHistorial(nombre) { const nombres = JSON.parse(localStorage.getItem(PAX_KEY) || '[]'); if (!nombres.includes(nombre)) { nombres.unshift(nombre); if (nombres.length > 200) nombres.pop(); localStorage.setItem(PAX_KEY, JSON.stringify(nombres)); cargarSugerenciasPasajeros(); } }
+
+        function addP(id) { const container = document.getElementById(`pax_${id}`); if (container.querySelector('.pax-input-temp')) { container.querySelector('.pax-input-temp').focus(); return; } const i = document.createElement('input'); i.className = 'pax-input-temp flex-shrink-0 min-w-[140px] rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:ring-primary outline-none'; i.list = "sugerencias-pasajeros"; i.placeholder = "Nombre..."; i.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); confirmarPax(id, i); } if (e.key === 'Escape') { i.remove(); } }); i.addEventListener('blur', () => { setTimeout(() => { if(i.value.trim()) confirmarPax(id, i); else i.remove(); }, 150); }); container.appendChild(i); i.focus(); }
+        function confirmarPax(id, inputEl) { const nombre = inputEl.value.trim(); inputEl.remove(); if (!nombre) return; guardarNombreEnHistorial(nombre); const container = document.getElementById(`pax_${id}`); const tag = document.createElement('span'); tag.className = 'pax-tag inline-flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-800 text-sm font-medium px-3 py-1.5 rounded-lg'; tag.innerHTML = `<input type="hidden" class="t-pasajeros" value="${nombre.replace(/"/g,'&quot;')}">${nombre} <button type="button" onclick="this.closest('.pax-tag').remove(); triggerAutoSave();" class="text-blue-400 hover:text-red-500 ml-1 leading-none font-bold text-base">&times;</button>`; container.appendChild(tag); triggerAutoSave(); }
+
+        function addFecha(tipo, id) { const container = document.getElementById(`fechas_${tipo}_${id}`); if (container.querySelector('.fecha-input-temp')) { container.querySelector('.fecha-input-temp').focus(); return; } const i = document.createElement('input'); i.type = 'date'; i.className = 'fecha-input-temp rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:ring-primary outline-none'; i.addEventListener('change', () => { if(i.value) confirmarFecha(tipo, id, i); }); i.addEventListener('keydown', (e) => { if (e.key === 'Escape') i.remove(); }); i.addEventListener('blur', () => { setTimeout(() => { if(!i.value) i.remove(); }, 200); }); container.appendChild(i); i.focus(); }
+        function confirmarFecha(tipo, id, inputEl) { const val = inputEl.value; inputEl.remove(); if (!val) return; const container = document.getElementById(`fechas_${tipo}_${id}`); const [y, m, d] = val.split('-'); const tag = document.createElement('span'); tag.className = 'fecha-tag inline-flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg'; tag.innerHTML = `<input type="hidden" class="t-fechas-${tipo}" value="${val}">${d}/${m}/${y} <button type="button" onclick="this.closest('.fecha-tag').remove(); triggerAutoSave();" class="text-slate-400 hover:text-red-500 ml-1 leading-none font-bold text-base">&times;</button>`; container.appendChild(tag); triggerAutoSave(); }
+
+        // ================= TICKET =================
+        function agregarTicket() {
+            ticketCount++; const id = ticketCount;
+            const div = document.createElement('div');
+            div.className = 'bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ticket-card';
+            div.innerHTML = `
+                <details class="group" open>
+                    <summary class="flex items-center justify-between p-6 cursor-pointer hover:bg-slate-50 transition-colors list-none select-none">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 flex items-center justify-center rounded-lg bg-primary/10 text-primary"><span class="material-symbols-outlined fill-1">confirmation_number</span></div>
+                            <div><h3 class="font-bold text-lg text-slate-900">Detalles Bono #${id}</h3><p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-0.5">Añadirá una hoja extra</p></div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <button type="button" onclick="this.closest('.ticket-card').remove(); triggerAutoSave();" class="text-slate-400 hover:text-red-500 transition-colors" title="Borrar ticket"><span class="material-symbols-outlined">delete</span></button>
+                            <span class="material-symbols-outlined group-open:rotate-180 transition-transform text-slate-400">expand_more</span>
+                        </div>
+                    </summary>
+                    <div class="p-6 border-t border-slate-100 space-y-8">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="flex flex-col gap-2"><label class="text-sm font-bold text-red-500 uppercase tracking-tight">Nº Ticket</label><input type="text" required class="t-numero-ticket rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary font-medium" placeholder="Referencia"></div>
+                            <div class="flex flex-col gap-2"><label class="text-sm font-bold text-slate-600 uppercase tracking-tight">Contacto</label><select class="t-contacto rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary font-medium"><option value="whatsapp">WhatsApp</option><option value="telefono">Teléfono</option><option value="telefono y whatsapp">Teléfono y WhatsApp</option></select></div>
+                            <div class="flex flex-col gap-2"><label class="text-sm font-bold text-emerald-600 uppercase tracking-tight">Importe Base (€)</label><div class="relative"><input type="number" step="0.01" class="t-importe w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 pr-10 focus:ring-primary font-bold text-slate-900" placeholder="0.00"><span class="absolute right-4 top-3.5 text-slate-400 font-bold">€</span></div><p class="text-[10px] text-slate-400">El importe aquí es solo informativo para el bono.</p></div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="space-y-2"><div class="flex items-center justify-between"><label class="text-sm font-bold text-slate-600 uppercase tracking-tight">Pasajeros</label><button type="button" onclick="addP(${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-sm">person_add</span> Añadir</button></div><div id="pax_${id}" class="flex flex-wrap gap-2 items-center min-h-[50px] p-2 rounded-lg border border-slate-200 bg-slate-50"></div></div>
+                            <div class="space-y-2"><div class="flex items-center justify-between"><label class="text-sm font-bold text-slate-600 uppercase tracking-tight">F. Solicitud</label><button type="button" onclick="addFecha('solicitud', ${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-sm">add</span> Añadir</button></div><div id="fechas_solicitud_${id}" class="flex flex-wrap gap-2 items-center min-h-[50px] p-2 rounded-lg border border-slate-200 bg-slate-50"></div></div>
+                            <div class="space-y-2"><div class="flex items-center justify-between"><label class="text-sm font-bold text-slate-600 uppercase tracking-tight">F. Servicio</label><button type="button" onclick="addFecha('servicio', ${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-sm">add</span> Añadir</button></div><div id="fechas_servicio_${id}" class="flex flex-wrap gap-2 items-center min-h-[50px] p-2 rounded-lg border border-slate-200 bg-slate-50"></div></div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-4"><label class="text-sm font-bold text-slate-600 uppercase tracking-tight text-primary">Recogida</label>
+                                <div class="space-y-2"><label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors"><input type="checkbox" class="t-o-aero rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary"><span class="text-sm font-medium text-slate-700">Aeropuerto</span></label><label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors"><input type="checkbox" class="t-o-buque rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary"><span class="text-sm font-medium text-slate-700">Buque</span></label>
+                                    <div class="space-y-2"><label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors"><input type="checkbox" class="t-o-hotel rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'oh_${id}')"><span class="text-sm font-medium text-slate-700">Hotel</span></label><input type="text" id="oh_${id}" class="t-o-hotel-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 shadow-inner focus:ring-primary" placeholder="Especificar hotel..."></div>
+                                    <div class="space-y-2"><label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors"><input type="checkbox" class="t-o-otros rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'oo_${id}')"><span class="text-sm font-medium text-slate-700">Otros</span></label><input type="text" id="oo_${id}" class="t-o-otros-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 shadow-inner focus:ring-primary" placeholder="Especificar..."></div>
+                                </div></div>
+                            <div class="space-y-4"><label class="text-sm font-bold text-slate-600 uppercase tracking-tight text-primary">Destino</label>
+                                <div class="space-y-2"><label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors"><input type="checkbox" class="t-d-aero rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary"><span class="text-sm font-medium text-slate-700">Aeropuerto</span></label><label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors"><input type="checkbox" class="t-d-buque rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary"><span class="text-sm font-medium text-slate-700">Buque</span></label>
+                                    <div class="space-y-2"><label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors"><input type="checkbox" class="t-d-hotel rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dh_${id}')"><span class="text-sm font-medium text-slate-700">Hotel</span></label><input type="text" id="dh_${id}" class="t-d-hotel-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 shadow-inner focus:ring-primary" placeholder="Especificar hotel..."></div>
+                                    <div class="space-y-2"><label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors"><input type="checkbox" class="t-d-hosp rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dhosp_${id}')"><span class="text-sm font-medium text-slate-700">Hospital</span></label><input type="text" id="dhosp_${id}" class="t-d-hosp-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 shadow-inner focus:ring-primary" placeholder="Especificar hospital..."></div>
+                                    <div class="space-y-2"><label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors"><input type="checkbox" class="t-d-clin rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'dclin_${id}')"><span class="text-sm font-medium text-slate-700">Clínica</span></label><input type="text" id="dclin_${id}" class="t-d-clin-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 shadow-inner focus:ring-primary" placeholder="Especificar clínica..."></div>
+                                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors"><input type="checkbox" class="t-d-inmi rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary"><span class="text-sm font-medium text-slate-700">Inmigración</span></label>
+                                    <div class="space-y-2"><label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors"><input type="checkbox" class="t-d-otros rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary" onchange="toggleI(this, 'do_${id}')"><span class="text-sm font-medium text-slate-700">Otros</span></label><input type="text" id="do_${id}" class="t-d-otros-texto condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 shadow-inner focus:ring-primary" placeholder="Especificar..."></div>
+                                </div></div>
+                        </div>
+                        <div class="grid grid-cols-1 gap-6"><div class="flex items-center justify-between py-4 border-y border-slate-100"><div class="flex flex-col"><span class="text-sm font-bold text-slate-700">Servicio Ida y Vuelta</span><p class="text-xs text-slate-500">Activar si incluye el trayecto de regreso</p></div><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="t-ida-vuelta sr-only peer"><div class="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary shadow-sm"></div></label></div><div class="flex flex-col gap-2"><label class="text-sm font-bold text-slate-600 uppercase tracking-tight">Observaciones</label><textarea class="t-comentarios rounded-lg border-slate-200 bg-slate-50 focus:ring-primary p-4 min-h-[100px] text-sm" placeholder="Detalles adicionales..."></textarea></div></div>
+                    </div>
+                </details>
+            `;
+            document.getElementById('contenedor-tickets').appendChild(div);
+            triggerAutoSave();
+        }
+
+        // ================= MODAL DESCARGA =================
+        let idDescargaPendiente = null;
+        let progressInterval = null;
+
+        function abrirModalDescarga(id = null) {
+            if (id === null) {
+                const form = document.getElementById('formTaxi');
+                if(!form.checkValidity()) { form.reportValidity(); return; }
+                const base = parseFloat(document.getElementById('lbl-base').textContent) || 0;
+                if(base === 0) { alert("¡Añade al menos una línea con importe a la factura principal!"); return; }
+            }
+            idDescargaPendiente = id;
+            document.getElementById('modal-descarga').classList.remove('hidden');
+            document.getElementById('app-layout').classList.add('blur-sm');
+        }
+        function cerrarModal() { document.getElementById('modal-descarga').classList.add('hidden'); document.getElementById('app-layout').classList.remove('blur-sm'); }
+
+        function iniciarProgresoModal() {
+            document.getElementById('modal-content-opciones').classList.add('hidden');
+            document.getElementById('modal-content-progreso').classList.remove('hidden');
+            let p = 0; const c = document.getElementById('circulo-progreso'); const t = document.getElementById('texto-progreso');
+            c.style.strokeDashoffset = 326.7; t.innerText = '0%';
+            progressInterval = setInterval(() => { if (p < 90) { p += Math.floor(Math.random() * 8) + 2; if (p > 90) p = 90; c.style.strokeDashoffset = 326.7 - (p / 100) * 326.7; t.innerText = p + '%'; } }, 500);
+        }
+
+        function finalizarProgresoModal() {
+            clearInterval(progressInterval);
+            document.getElementById('circulo-progreso').style.strokeDashoffset = 0; document.getElementById('texto-progreso').innerText = '100%';
+            setTimeout(() => { cerrarModal(); setTimeout(() => { document.getElementById('modal-content-opciones').classList.remove('hidden'); document.getElementById('modal-content-progreso').classList.add('hidden'); document.getElementById('circulo-progreso').style.strokeDashoffset = 326.7; document.getElementById('texto-progreso').innerText = '0%'; }, 400); }, 600);
+        }
+
+        function detenerErrorProgresoModal(msg) {
+            clearInterval(progressInterval);
+            cerrarModal();
+            setTimeout(() => { document.getElementById('modal-content-opciones').classList.remove('hidden'); document.getElementById('modal-content-progreso').classList.add('hidden'); }, 400);
+            if(msg) alert(msg);
+        }
+
+        function ejecutarDescarga(formato) {
+            iniciarProgresoModal(); 
+            if (idDescargaPendiente) redescargar(idDescargaPendiente, formato); else enviarProceso('descarga', formato);
+        }
+
+        // ================= CONEXIÓN CON EL SERVIDOR =================
+        async function enviarProceso(modo, formato = 'excel') {
+            const form = document.getElementById('formTaxi');
+            if(!form.checkValidity()) { form.reportValidity(); return; }
+
+            const lineas = Array.from(document.querySelectorAll('.linea-row')).map(r => ({
+                descripcion: r.querySelector('.l-desc').value,
+                importe: parseFloat(r.querySelector('.l-imp').value) || 0
+            })).filter(l => l.descripcion || l.importe > 0);
+
+            if(lineas.length === 0) { 
+                if(modo==='descarga') detenerErrorProgresoModal();
+                alert("Añade al menos una línea a la factura."); return; 
+            }
+
+            const impuestos = Array.from(document.querySelectorAll('.imp-row')).map(r => ({
+                nombre: r.querySelector('.i-nom').value,
+                porcentaje: parseFloat(r.querySelector('.i-pct').value) || 0
+            }));
+
+            const incluir_tickets = document.getElementById('toggle-tickets').checked;
+
+            const tickets = !incluir_tickets ? [] : Array.from(document.querySelectorAll('.ticket-card')).map(item => ({
+                numero_ticket: item.querySelector('.t-numero-ticket').value,
+                importe: parseFloat(item.querySelector('.t-importe').value) || 0,
+                contacto_metodo: item.querySelector('.t-contacto').value,
+                pasajeros: Array.from(item.querySelectorAll('.t-pasajeros')).map(i => i.value).filter(v => v),
+                fechas_solicitud: Array.from(item.querySelectorAll('.t-fechas-solicitud')).map(i => i.value).filter(v => v),
+                fechas_servicio: Array.from(item.querySelectorAll('.t-fechas-servicio')).map(i => i.value).filter(v => v),
+                o_aeropuerto: item.querySelector('.t-o-aero').checked, o_buque: item.querySelector('.t-o-buque').checked,
+                o_hotel: item.querySelector('.t-o-hotel').checked, o_hotel_texto: item.querySelector('.t-o-hotel-texto').value,
+                o_otros: item.querySelector('.t-o-otros').checked, o_otros_texto: item.querySelector('.t-o-otros-texto').value,
+                d_aeropuerto: item.querySelector('.t-d-aero').checked, d_buque: item.querySelector('.t-d-buque').checked,
+                d_hotel: item.querySelector('.t-d-hotel').checked, d_hotel_texto: item.querySelector('.t-d-hotel-texto').value,
+                d_hospital: item.querySelector('.t-d-hosp').checked, d_hospital_texto: item.querySelector('.t-d-hosp-texto') ? item.querySelector('.t-d-hosp-texto').value : '',
+                d_clinica: item.querySelector('.t-d-clin').checked, d_clinica_texto: item.querySelector('.t-d-clin-texto') ? item.querySelector('.t-d-clin-texto').value : '',
+                d_inmigracion: item.querySelector('.t-d-inmi').checked, d_otros: item.querySelector('.t-d-otros').checked, d_otros_texto: item.querySelector('.t-d-otros-texto').value,
+                ida_vuelta: item.querySelector('.t-ida-vuelta').checked, comentarios: item.querySelector('.t-comentarios').value
+            }));
+
+            const data = {
+                factura_numero: document.getElementById('factura_numero').value,
+                barco: document.getElementById('barco').value,
+                lineas: lineas,
+                impuestos: impuestos,
+                incluir_tickets: incluir_tickets,
+                tickets: tickets
+            };
+
+            const editId = document.getElementById('formTaxi').dataset.editId;
+            let endpoint = editId ? (modo === 'nube' ? `/actualizar/${editId}` : `/actualizar-generar/${editId}?formato=${formato}`) : (modo === 'nube' ? '/solo-guardar' : `/generar?formato=${formato}`);
+            let method = editId ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(`${URL_BASE}${endpoint}`, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionToken}` }, body: JSON.stringify(data) });
+                if(res.ok) {
+                    if(modo === 'descarga') {
+                        const blob = await res.blob();
+                        const head = res.headers.get('Content-Disposition');
+                        let filename = `${data.barco.replace(/ /g,"_")}`;
+                        if(head && head.includes('filename=')) filename = head.split('filename=')[1].replace(/["']/g, ''); else filename += (formato === 'excel') ? '.xlsm' : ((formato === 'pdf') ? '.pdf' : '.zip');
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(url);
+                        finalizarProgresoModal();
+                    }
+                    limpiarBorrador(false);
+                    if(modo === 'nube') alert(editId ? "☁️ Factura actualizada en la nube" : "☁️ Guardado en la nube");
+                } else {
+                    const errorJson = await res.json().catch(() => ({}));
+                    detenerErrorProgresoModal(`Error del servidor: ${errorJson.detail || res.statusText}`);
+                }
+            } catch(e) { detenerErrorProgresoModal(`Fallo de conexión: ${e.message}`); }
+        }
+
+        async function cargarHistorial() {
+            const tb = document.getElementById('tabla-historial');
+            tb.innerHTML = `<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500 font-medium">Cargando...</td></tr>`;
+            try {
+                const res = await fetch(`${URL_BASE}/historial`, { headers: {'Authorization': `Bearer ${sessionToken}`} });
+                if(!res.ok) throw new Error(await res.text());
+                const datos = await res.json();
+                tb.innerHTML = "";
+                if(datos.length === 0) { tb.innerHTML = `<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500 font-medium">No hay facturas.</td></tr>`; return; }
+                datos.forEach(f => {
+                    const d = new Date(f.fecha_creacion).toLocaleDateString('es-ES', {year: 'numeric', month: '2-digit', day: '2-digit'});
+                    tb.innerHTML += `
+                        <tr class="hover:bg-slate-50/80 transition-colors group border-b border-slate-50">
+                            <td class="px-6 py-4 text-sm font-medium text-slate-600">${d}</td>
+                            <td class="px-6 py-4"><span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-[#e1effe] text-primary uppercase tracking-wider">${f.barco}</span></td>
+                            <td class="px-6 py-4 text-sm font-semibold text-slate-900">${f.numero_factura}</td>
+                            <td class="px-6 py-4 text-sm font-bold text-slate-900">${f.importe_total.toFixed(2)}€</td>
+                            <td class="px-6 py-4 text-right">
+                                <div class="flex items-center justify-end gap-3">
+                                    <button onclick="editarFactura(${f.id})" class="inline-flex items-center gap-1.5 text-amber-600 hover:text-amber-800 font-extrabold text-[11px] uppercase tracking-widest"><span class="material-symbols-outlined text-lg">edit</span> EDITAR</button>
+                                    <button onclick="abrirModalDescarga(${f.id})" class="inline-flex items-center gap-1.5 text-primary hover:text-blue-800 font-extrabold text-[11px] uppercase tracking-widest"><span class="material-symbols-outlined text-lg">download</span> RE-DESCARGAR</button>
+                                    <button onclick="eliminarF(${f.id})" class="text-slate-400 hover:text-red-500" title="Eliminar"><span class="material-symbols-outlined text-[18px]">delete</span></button>
+                                </div>
+                            </td>
+                        </tr>`;
+                });
+            } catch(e) { tb.innerHTML = `<tr><td colspan="5" class="text-center text-red-500">Error cargando historial</td></tr>`; }
+        }
+
+        async function redescargar(id, formato = 'excel') {
+            try {
+                const res = await fetch(`${URL_BASE}/re-descargar/${id}?formato=${formato}`, { headers: {'Authorization': `Bearer ${sessionToken}`} });
+                if(res.ok) {
+                    const blob = await res.blob();
+                    const head = res.headers.get('Content-Disposition');
+                    let filename = `Fra_Antigua_${id}`;
+                    if(head && head.includes('filename=')) filename = head.split('filename=')[1].replace(/["']/g, ''); else filename += (formato === 'excel') ? '.xlsm' : ((formato === 'pdf') ? '.pdf' : '.zip');
+                    const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); a.remove();
+                    finalizarProgresoModal();
+                } else {
+                    const err = await res.json().catch(()=>({}));
+                    detenerErrorProgresoModal(`Error del servidor: ${err.detail || res.statusText}`);
+                }
+            } catch(e) { detenerErrorProgresoModal(`Fallo al descargar: ${e.message}`); }
+        }
+
+        async function editarFactura(id) {
+            try {
+                const res = await fetch(`${URL_BASE}/factura/${id}`, { headers: {'Authorization': `Bearer ${sessionToken}`} });
+                if (!res.ok) { alert("No se pudo cargar la factura"); return; }
+                const datos = await res.json();
+                localStorage.removeItem('taxi_t1');
+                
+                document.getElementById('contenedor-lineas').innerHTML = '';
+                document.getElementById('contenedor-impuestos').innerHTML = '';
+                document.getElementById('contenedor-tickets').innerHTML = '';
+                ticketCount = 0;
+                
+                document.getElementById('factura_numero').value = datos.factura_numero || '';
+                document.getElementById('barco').value = datos.barco || '';
+                document.getElementById('formTaxi').dataset.editId = id;
+                document.getElementById('edit-banner').classList.remove('hidden');
+                document.getElementById('edit-banner-texto').textContent = `Editando: ${datos.barco} — ${datos.factura_numero || datos.numero_factura}`;
+
+                // RETROCOMPATIBILIDAD (Migrar facturas viejas al nuevo formato visual)
+                let lineas = datos.lineas || [];
+                let impuestos = datos.impuestos || [];
+                let incluir_tickets = datos.incluir_tickets || false;
+                
+                if (!datos.lineas && datos.tickets && datos.tickets.length > 0) {
+                    lineas = datos.tickets.map(t => ({ descripcion: t.numero_ticket || 'Ticket', importe: t.importe || 0 }));
+                    impuestos = [{ nombre: 'IVA', porcentaje: 10 }];
+                    incluir_tickets = true;
+                }
+
+                if(lineas.length === 0) addLinea(); else lineas.forEach(l => addLinea(l.descripcion, l.importe));
+                if(impuestos.length === 0) addImpuesto(); else impuestos.forEach(i => addImpuesto(i.nombre, i.porcentaje));
+
+                document.getElementById('toggle-tickets').checked = incluir_tickets;
+                toggleTicketsView();
+
+                if(incluir_tickets && datos.tickets) {
+                    for (const t of datos.tickets) {
+                        agregarTicket();
+                        const card = document.querySelectorAll('.ticket-card')[ticketCount - 1];
+                        card.querySelector('.t-numero-ticket').value = t.numero_ticket || ''; card.querySelector('.t-importe').value = t.importe || 0; card.querySelector('.t-contacto').value = t.contacto_metodo || 'whatsapp';
+                        (t.pasajeros || []).forEach(nombre => { guardarNombreEnHistorial(nombre); const c = card.querySelector('[id^="pax_"]'); const tag = document.createElement('span'); tag.className = 'pax-tag inline-flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-800 text-sm font-medium px-3 py-1.5 rounded-lg'; tag.innerHTML = `<input type="hidden" class="t-pasajeros" value="${nombre.replace(/"/g,'&quot;')}">${nombre} <button type="button" onclick="this.closest('.pax-tag').remove();" class="text-blue-400 hover:text-red-500 ml-1 leading-none">&times;</button>`; c.appendChild(tag); });
+                        (t.fechas_solicitud || []).forEach(val => { const c = card.querySelector('[id^="fechas_solicitud_"]'); const [y, m, d] = val.split('-'); const tag = document.createElement('span'); tag.className = 'fecha-tag inline-flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg'; tag.innerHTML = `<input type="hidden" class="t-fechas-solicitud" value="${val}">${d}/${m}/${y} <button type="button" onclick="this.closest('.fecha-tag').remove();" class="text-slate-400 hover:text-red-500 ml-1 leading-none">&times;</button>`; c.appendChild(tag); });
+                        (t.fechas_servicio || []).forEach(val => { const c = card.querySelector('[id^="fechas_servicio_"]'); const [y, m, d] = val.split('-'); const tag = document.createElement('span'); tag.className = 'fecha-tag inline-flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg'; tag.innerHTML = `<input type="hidden" class="t-fechas-servicio" value="${val}">${d}/${m}/${y} <button type="button" onclick="this.closest('.fecha-tag').remove();" class="text-slate-400 hover:text-red-500 ml-1 leading-none">&times;</button>`; c.appendChild(tag); });
+                        const campos = { '.t-o-aero': t.o_aeropuerto, '.t-o-buque': t.o_buque, '.t-o-hotel': t.o_hotel, '.t-o-otros': t.o_otros, '.t-d-aero': t.d_aeropuerto, '.t-d-buque': t.d_buque, '.t-d-hotel': t.d_hotel, '.t-d-hosp': t.d_hospital, '.t-d-clin': t.d_clinica, '.t-d-inmi': t.d_inmigracion, '.t-d-otros': t.d_otros, '.t-ida-vuelta': t.ida_vuelta };
+                        for (const [sel, val] of Object.entries(campos)) { const el = card.querySelector(sel); if (el && val) { el.checked = true; if (el.onchange) el.onchange.call(el); } }
+                        const textos = { '.t-o-hotel-texto': t.o_hotel_texto, '.t-o-otros-texto': t.o_otros_texto, '.t-d-hotel-texto': t.d_hotel_texto, '.t-d-hosp-texto': t.d_hospital_texto, '.t-d-clin-texto': t.d_clinica_texto, '.t-d-otros-texto': t.d_otros_texto };
+                        for (const [sel, val] of Object.entries(textos)) { const el = card.querySelector(sel); if (el && val) el.value = val; }
+                        if (t.comentarios) card.querySelector('.t-comentarios').value = t.comentarios;
+                    }
+                }
+                verSec('sec-nueva', document.getElementById('btn-nueva'));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch(e) { alert("Error al cargar la factura para editar"); }
+        }
+
+        function cancelarEdicion() { document.getElementById('formTaxi').removeAttribute('data-edit-id'); document.getElementById('edit-banner').classList.add('hidden'); limpiarFormularioLocal(); }
+        async function eliminarF(id) { if(!confirm("¿Borrar factura de la nube?")) return; await fetch(`${URL_BASE}/eliminar-factura/${id}`, { method: 'DELETE', headers: {'Authorization': `Bearer ${sessionToken}`} }); cargarHistorial(); }
+        async function vaciarHistorial() { if(!confirm("⚠️ ATENCIÓN: Vaciarás todo el historial de la nube. ¿Continuar?")) return; await fetch(`${URL_BASE}/limpiar-historial`, { method: 'DELETE', headers: {'Authorization': `Bearer ${sessionToken}`} }); cargarHistorial(); }
+
+        // --- PERSISTENCIA LOCAL (Solo estructura básica, mejorable a futuro) ---
+        document.getElementById('formTaxi').addEventListener('input', triggerAutoSave);
+        document.getElementById('formTaxi').addEventListener('change', triggerAutoSave);
+        let tSave; function triggerAutoSave() { clearTimeout(tSave); tSave = setTimeout(guardarProgreso, 500); }
+
+        function guardarProgreso() { 
+            const d = { 
+                factura_numero: document.getElementById('factura_numero').value,
+                barco: document.getElementById('barco').value,
+                lineas: Array.from(document.querySelectorAll('.linea-row')).map(r => ({ descripcion: r.querySelector('.l-desc').value, importe: r.querySelector('.l-imp').value })),
+                impuestos: Array.from(document.querySelectorAll('.imp-row')).map(r => ({ nombre: r.querySelector('.i-nom').value, porcentaje: r.querySelector('.i-pct').value })),
+                incluir_tickets: document.getElementById('toggle-tickets').checked,
+                tickets_html: document.getElementById('contenedor-tickets').innerHTML,
+                count: ticketCount,
+                tickets_data: Array.from(document.querySelectorAll('#contenedor-tickets input, #contenedor-tickets select, #contenedor-tickets textarea')).map(i => ({ type: i.type, value: i.value, checked: i.checked }))
+            };
+            localStorage.setItem('taxi_t2', JSON.stringify(d)); 
+            const av = document.getElementById('aviso-guardado'); av.style.display = 'flex'; setTimeout(() => av.style.display = 'none', 1500);
+        }
+
+        function cargarProgreso() {
+            const s = localStorage.getItem('taxi_t2'); if(!s) return false;
+            try {
+                const p = JSON.parse(s); 
+                document.getElementById('factura_numero').value = p.factura_numero || '';
+                document.getElementById('barco').value = p.barco || '';
+                
+                document.getElementById('contenedor-lineas').innerHTML = '';
+                if(p.lineas && p.lineas.length > 0) p.lineas.forEach(l => addLinea(l.descripcion, l.importe)); else addLinea();
+                
+                document.getElementById('contenedor-impuestos').innerHTML = '';
+                if(p.impuestos && p.impuestos.length > 0) p.impuestos.forEach(i => addImpuesto(i.nombre, i.porcentaje)); else addImpuesto();
+                
+                document.getElementById('toggle-tickets').checked = p.incluir_tickets || false;
+                toggleTicketsView();
+
+                if(p.tickets_html) {
+                    document.getElementById('contenedor-tickets').innerHTML = p.tickets_html; 
+                    ticketCount = p.count; 
+                    const inputs = document.querySelectorAll('#contenedor-tickets input, #contenedor-tickets select, #contenedor-tickets textarea');
+                    inputs.forEach((input, index) => { if(p.tickets_data[index]) { if(input.type === 'checkbox' || input.type === 'radio') input.checked = p.tickets_data[index].checked; else input.value = p.tickets_data[index].value; } });
+                }
+                return true;
+            } catch(e) { return false; }
+        }
+
+        function limpiarFormularioLocal() {
+            localStorage.removeItem('taxi_t2');
+            document.getElementById('formTaxi').reset();
+            document.getElementById('contenedor-lineas').innerHTML = ''; addLinea();
+            document.getElementById('contenedor-impuestos').innerHTML = ''; addImpuesto();
+            document.getElementById('toggle-tickets').checked = false; toggleTicketsView();
+            document.getElementById('contenedor-tickets').innerHTML = ''; ticketCount = 0;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function limpiarBorrador(q) { 
+            if(q && !confirm("¿Borrar todo el borrador en curso?")) return; 
+            limpiarFormularioLocal();
+            document.getElementById('formTaxi').removeAttribute('data-edit-id');
+            document.getElementById('edit-banner').classList.add('hidden');
+        }
     </script>
 </body>
 </html>
