@@ -3,11 +3,12 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>Taxi App Pro - Administrador</title>
+    <title>Gestión Facturas - Administrador</title>
     
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
         tailwind.config = {
@@ -51,16 +52,55 @@
     <div id="aviso-guardado" class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">save</span> Guardado</div>
     <datalist id="sugerencias-pasajeros"></datalist>
 
-    <!-- ═══ MODAL DESCARGA ═══ -->
+    <!-- ═══ MODAL DESCARGA + PROGRESO ═══ -->
     <div id="modal-descarga" class="fixed inset-0 z-[9999] hidden flex items-center justify-center">
-        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="cerrarModal()"></div>
-        <div class="bg-white rounded-2xl shadow-2xl z-10 p-6 w-full max-w-sm mx-4">
-            <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary">download</span> Formato de descarga
-            </h3>
-            <div class="space-y-3" id="modal-opciones"></div>
-            <div class="mt-6 text-right">
-                <button onclick="cerrarModal()" class="text-sm font-semibold text-slate-500 hover:text-slate-700">Cancelar</button>
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="if(document.getElementById('modal-content-progreso').classList.contains('hidden')) cerrarModal()"></div>
+        <div class="bg-white rounded-2xl shadow-2xl z-10 p-6 w-full max-w-sm mx-4 relative min-h-[300px] flex flex-col justify-center">
+            
+            <!-- Opciones de formato -->
+            <div id="modal-content-opciones" class="w-full">
+                <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">download</span> Formato de descarga
+                </h3>
+                <div class="space-y-3">
+                    <button type="button" onclick="ejecutarDescarga('excel')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 transition-colors group text-left">
+                        <span class="material-symbols-outlined text-emerald-600">table_view</span>
+                        <div>
+                            <span class="block font-bold text-slate-700 group-hover:text-emerald-700">Solo Excel</span>
+                            <span class="text-xs text-slate-500">Archivo .xlsm editable</span>
+                        </div>
+                    </button>
+                    <button type="button" onclick="ejecutarDescarga('pdf')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-red-500 hover:bg-red-50 transition-colors group text-left">
+                        <span class="material-symbols-outlined text-red-600">picture_as_pdf</span>
+                        <div>
+                            <span class="block font-bold text-slate-700 group-hover:text-red-700">Solo PDF</span>
+                            <span class="text-xs text-slate-500">Documento listo para enviar/imprimir</span>
+                        </div>
+                    </button>
+                    <button type="button" onclick="ejecutarDescarga('ambos')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-primary hover:bg-blue-50 transition-colors group text-left">
+                        <span class="material-symbols-outlined text-primary">folder_zip</span>
+                        <div>
+                            <span class="block font-bold text-slate-700 group-hover:text-blue-700">Ambos (ZIP)</span>
+                            <span class="text-xs text-slate-500">Carpeta con el Excel y el PDF</span>
+                        </div>
+                    </button>
+                </div>
+                <div class="mt-6 text-right">
+                    <button onclick="cerrarModal()" class="text-sm font-semibold text-slate-500 hover:text-slate-700">Cancelar</button>
+                </div>
+            </div>
+
+            <!-- Animación de progreso -->
+            <div id="modal-content-progreso" class="hidden w-full flex flex-col items-center py-4">
+                <div class="relative flex items-center justify-center">
+                    <svg class="w-32 h-32 transform -rotate-90">
+                        <circle cx="64" cy="64" r="52" stroke="currentColor" stroke-width="8" fill="transparent" class="text-slate-100" />
+                        <circle id="circulo-progreso" cx="64" cy="64" r="52" stroke="currentColor" stroke-width="8" fill="transparent" stroke-dasharray="326.7" stroke-dashoffset="326.7" class="text-primary transition-all duration-500 ease-out" />
+                    </svg>
+                    <div class="absolute text-3xl font-black text-slate-700" id="texto-progreso">0%</div>
+                </div>
+                <p class="mt-8 text-base font-bold text-slate-800">Generando archivo...</p>
+                <p class="text-xs font-semibold text-slate-400 mt-1 text-center">Dependiendo del servidor de PDF,<br>puede tardar unos segundos.</p>
             </div>
         </div>
     </div>
@@ -69,16 +109,15 @@
     <div id="sec-login-container" class="flex-1 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 max-w-md w-full text-center">
             <div class="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <span class="material-symbols-outlined text-4xl fill-1">local_taxi</span>
+                <span class="material-symbols-outlined text-4xl fill-1">directions_boat</span>
             </div>
-            <h2 class="text-2xl font-black tracking-tight text-slate-900 mb-2">Taxi App Pro</h2>
-            <p class="text-slate-500 font-medium text-sm mb-8">Administración y Facturación</p>
+            <h2 class="text-2xl font-black tracking-tight text-slate-900 mb-2">Gestión Facturas</h2>
+            <p class="text-slate-500 font-medium text-sm mb-8">Administración Privada</p>
             <div class="space-y-4">
-                <div class="relative">
-                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">lock</span>
-                    <input type="password" id="pass-maestra" class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-center font-medium placeholder:text-slate-400" placeholder="Contraseña maestra" onkeypress="if(event.key==='Enter')iniciarSesion()">
-                </div>
-                <button id="btn-login" onclick="iniciarSesion()" class="w-full bg-primary hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-primary/30 transition-all flex items-center justify-center gap-2">Ingresar</button>
+                <button id="btn-login-google" onclick="iniciarSesionGoogle()" class="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-xl shadow-sm transition-all flex items-center justify-center gap-3">
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5" alt="Google">
+                    Iniciar sesión con Google
+                </button>
             </div>
         </div>
     </div>
@@ -90,9 +129,9 @@
         <aside class="fixed inset-y-0 left-0 w-64 bg-sidebar-dark text-slate-300 flex flex-col shadow-xl z-50">
             <div class="p-6">
                 <div class="flex items-center gap-3 mb-8">
-                    <div class="bg-primary p-2 rounded-lg"><span class="material-symbols-outlined text-white fill-1">local_taxi</span></div>
+                    <div class="bg-primary p-2 rounded-lg"><span class="material-symbols-outlined text-white fill-1">directions_boat</span></div>
                     <div>
-                        <h1 class="text-white text-lg font-bold leading-none tracking-tight">Taxi App Pro</h1>
+                        <h1 class="text-white text-lg font-bold leading-none tracking-tight">Gestión Facturas</h1>
                         <p class="text-blue-300/50 text-xs mt-1 uppercase tracking-wider font-semibold">Admin Dashboard</p>
                     </div>
                 </div>
@@ -106,7 +145,7 @@
                 </nav>
             </div>
             <div class="mt-auto p-6 border-t border-white/10">
-                <a onclick="location.reload()" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-500/20 text-blue-200/60 hover:text-red-300 transition-all cursor-pointer">
+                <a onclick="cerrarSesion()" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-500/20 text-blue-200/60 hover:text-red-300 transition-all cursor-pointer">
                     <span class="material-symbols-outlined">logout</span><span class="text-sm font-medium">Cerrar Sesión</span>
                 </a>
             </div>
@@ -178,7 +217,7 @@
                 <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
                     <div>
                         <h2 class="text-2xl font-bold tracking-tight text-slate-900">Historial en la Nube</h2>
-                        <p class="text-slate-500 text-sm mt-1 font-medium">Gestione sus facturas almacenadas en Frankfurt</p>
+                        <p class="text-slate-500 text-sm mt-1 font-medium">Gestione sus facturas almacenadas de forma segura</p>
                     </div>
                     <button onclick="vaciarHistorial()" class="bg-[#f04444] hover:bg-red-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 shadow-sm">
                         <span class="material-symbols-outlined text-lg">delete_sweep</span> Vaciar Nube
@@ -207,16 +246,18 @@
     /* ═══════════════════════════════════════════════════════════════════════
        ESTADO GLOBAL
        ═══════════════════════════════════════════════════════════════════════ */
-    let ticketCount = 0;
-    let tokenSeguridad = "";
-    let idDescargaPendiente = null;
-
     const PROD_HOSTNAME = "programa-facturas-taxi.vercel.app";
     const esProd = location.hostname === PROD_HOSTNAME;
     const URL_BASE = esProd
         ? "https://programafacturas.onrender.com"
         : "https://programafacturas-dev.onrender.com";
     const PAX_KEY = "taxi_pasajeros_historial";
+
+    let ticketCount = 0;
+    let sessionToken = null;
+    let sbClient = null;
+    let idDescargaPendiente = null;
+    let progressInterval = null;
 
     if (!esProd) document.body.classList.add("modo-pruebas");
 
@@ -226,6 +267,7 @@
     const $ = (sel, ctx = document) => ctx.querySelector(sel);
     const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
 
+    /** Escapa HTML para prevenir XSS */
     function esc(str) {
         const d = document.createElement("div");
         d.textContent = str;
@@ -237,11 +279,83 @@
         return `${d}/${m}/${y}`;
     }
 
-    function mostrarAviso(texto = "Guardado") {
-        const av = $("#aviso-guardado");
-        av.textContent = texto;
-        av.style.display = "flex";
-        setTimeout(() => (av.style.display = "none"), 1500);
+    function authHeaders(extra = {}) {
+        return { "Authorization": `Bearer ${sessionToken}`, ...extra };
+    }
+
+    function descargarBlob(blob, headDisposition, fallbackName, formato) {
+        let filename = fallbackName;
+        if (headDisposition?.includes("filename=")) {
+            filename = headDisposition.split("filename=")[1].replace(/["']/g, "");
+        } else {
+            filename += formato === "excel" ? ".xlsm" : formato === "pdf" ? ".pdf" : ".zip";
+        }
+        const url = URL.createObjectURL(blob);
+        const a = Object.assign(document.createElement("a"), { href: url, download: filename });
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       SUPABASE + GOOGLE AUTH
+       ═══════════════════════════════════════════════════════════════════════ */
+    try {
+        const SUPABASE_URL = "https://aghojuugmunegqpdjgfm.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnaG9qdXVnbXVuZWdxcGRqZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NzQ1NTgsImV4cCI6MjA4OTQ1MDU1OH0.FMfXxOMxu15IPKRG63uo6z1iG9vUq1P16MSeA2t6Szc";
+        if (window.supabase) {
+            sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } else {
+            console.error("La librería Supabase no se descargó de internet.");
+        }
+    } catch (e) {
+        console.error("Fallo grave al inicializar Supabase:", e);
+    }
+
+    window.onload = () => {
+        if (!sbClient) return;
+        sbClient.auth.getSession().then(({ data: { session } }) => {
+            if (session) { sessionToken = session.access_token; iniciarApp(); }
+        }).catch(e => console.error("Error recuperando sesión:", e));
+
+        sbClient.auth.onAuthStateChange((event, session) => {
+            if (event === "SIGNED_IN" && session) { sessionToken = session.access_token; iniciarApp(); }
+            else if (event === "SIGNED_OUT") { sessionToken = null; document.body.classList.remove("logged-in"); }
+        });
+    };
+
+    async function iniciarSesionGoogle() {
+        const btn = $("#btn-login-google");
+        const textoOriginal = btn?.innerHTML || "Iniciar sesión";
+        try {
+            if (btn) {
+                btn.innerHTML = '<span class="material-symbols-outlined animate-spin mr-2 text-base">refresh</span> Conectando...';
+                btn.classList.add("opacity-70", "cursor-wait");
+                btn.disabled = true;
+            }
+            if (!sbClient) throw new Error("No se pudo cargar la conexión segura. Desactiva tu bloqueador de anuncios o pulsa Ctrl + F5 para recargar la caché.");
+            const { error } = await sbClient.auth.signInWithOAuth({
+                provider: "google",
+                options: { redirectTo: esProd ? `https://${PROD_HOSTNAME}` : location.href },
+            });
+            if (error) throw error;
+        } catch (err) {
+            alert("Atención: " + err.message);
+            if (btn) { btn.innerHTML = textoOriginal; btn.classList.remove("opacity-70", "cursor-wait"); btn.disabled = false; }
+        }
+    }
+
+    async function cerrarSesion() {
+        if (sbClient) await sbClient.auth.signOut();
+        location.reload();
+    }
+
+    function iniciarApp() {
+        document.body.classList.add("logged-in");
+        verSec("sec-nueva", $("#btn-nueva"));
+        cargarSugerenciasPasajeros();
+        if (!cargarProgreso()) agregarTicket();
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
@@ -249,8 +363,7 @@
        ═══════════════════════════════════════════════════════════════════════ */
     function verSec(id, btn) {
         $$(".app-section").forEach(s => s.classList.remove("activa"));
-        $(`.app-section#${id}`).classList.add("activa");
-
+        $(`#${id}`).classList.add("activa");
         $$(".nav-btn").forEach(l => {
             l.className = "nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group";
             l.querySelector("span:first-child").classList.remove("fill-1");
@@ -260,49 +373,21 @@
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
-       AUTENTICACIÓN
+       CHECKBOX CONDICIONAL (BUG CORREGIDO: era el.remove('block'))
        ═══════════════════════════════════════════════════════════════════════ */
-    async function iniciarSesion() {
-        const p = $("#pass-maestra").value;
-        if (!p) return;
-
-        const btn = $("#btn-login");
-        const textoOriginal = btn.innerHTML;
-        btn.innerHTML = '<span class="material-symbols-outlined animate-spin mr-2 text-base">refresh</span> Despertando servidor...';
-        btn.classList.add("opacity-70", "cursor-wait");
-        btn.disabled = true;
-
-        try {
-            const res = await fetch(`${URL_BASE}/login`, { headers: { "x-password": p } });
-            if (res.ok) {
-                tokenSeguridad = p;
-                document.body.classList.add("logged-in");
-                verSec("sec-nueva", $("#btn-nueva"));
-                cargarSugerenciasPasajeros();
-                if (!cargarProgreso()) agregarTicket();
-            } else {
-                alert("Contraseña incorrecta");
-            }
-        } catch {
-            alert("Error de conexión con el servidor. Puede que aún se esté iniciando.");
-        } finally {
-            btn.innerHTML = textoOriginal;
-            btn.classList.remove("opacity-70", "cursor-wait");
-            btn.disabled = false;
-        }
+    function toggleI(cb, id) {
+        const el = document.getElementById(id);
+        if (cb.checked) { el.classList.remove("condicional"); el.classList.add("block"); }
+        else { el.classList.add("condicional"); el.classList.remove("block"); el.value = ""; }
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
        HISTORIAL DE PASAJEROS (SUGERENCIAS)
        ═══════════════════════════════════════════════════════════════════════ */
-    function getPaxHistorial() {
-        return JSON.parse(localStorage.getItem(PAX_KEY) || "[]");
-    }
+    function getPaxHistorial() { return JSON.parse(localStorage.getItem(PAX_KEY) || "[]"); }
 
     function cargarSugerenciasPasajeros() {
-        $("#sugerencias-pasajeros").innerHTML = getPaxHistorial()
-            .map(n => `<option value="${esc(n)}">`)
-            .join("");
+        $("#sugerencias-pasajeros").innerHTML = getPaxHistorial().map(n => `<option value="${esc(n)}">`).join("");
     }
 
     function guardarNombreEnHistorial(nombre) {
@@ -315,95 +400,62 @@
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
-       TAGS GENÉRICOS (pasajeros y fechas comparten la misma lógica)
+       TAGS GENÉRICOS (pasajeros y fechas)
        ═══════════════════════════════════════════════════════════════════════ */
     function crearTag(container, hiddenClass, displayText, rawValue) {
+        const esPax = hiddenClass.includes("pasajeros");
         const tag = document.createElement("span");
         tag.className = "inline-flex items-center gap-1 text-sm font-medium px-3 py-1.5 rounded-lg " +
-            (hiddenClass.includes("pasajeros")
-                ? "bg-blue-50 border border-blue-100 text-blue-800"
-                : "bg-slate-100 border border-slate-200 text-slate-700");
+            (esPax ? "pax-tag bg-blue-50 border border-blue-100 text-blue-800" : "fecha-tag bg-slate-100 border border-slate-200 text-slate-700");
         tag.innerHTML =
             `<input type="hidden" class="${esc(hiddenClass)}" value="${esc(rawValue)}">` +
             `${esc(displayText)} ` +
-            `<button type="button" class="hover:text-red-500 ml-1 leading-none font-bold text-base transition-colors ${hiddenClass.includes("pasajeros") ? "text-blue-400" : "text-slate-400"}">&times;</button>`;
+            `<button type="button" class="${esPax ? 'text-blue-400' : 'text-slate-400'} hover:text-red-500 ml-1 leading-none font-bold text-base transition-colors">&times;</button>`;
         tag.querySelector("button").onclick = () => { tag.remove(); guardarProgreso(); };
         container.appendChild(tag);
     }
 
-    /* ── Pasajeros ── */
     function addP(id) {
         const container = $(`#pax_${id}`);
         if (container.querySelector(".pax-input-temp")) { container.querySelector(".pax-input-temp").focus(); return; }
-
         const i = document.createElement("input");
         i.className = "pax-input-temp flex-shrink-0 min-w-[140px] rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none";
         i.setAttribute("list", "sugerencias-pasajeros");
         i.placeholder = "Nombre...";
-
         const confirmar = () => {
-            const nombre = i.value.trim();
-            i.remove();
+            const nombre = i.value.trim(); i.remove();
             if (!nombre) return;
             guardarNombreEnHistorial(nombre);
             crearTag(container, "t-pasajeros", nombre, nombre);
             guardarProgreso();
         };
-
-        i.addEventListener("keydown", e => {
-            if (e.key === "Enter" || e.key === ",") { e.preventDefault(); confirmar(); }
-            if (e.key === "Escape") i.remove();
-        });
+        i.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); confirmar(); } if (e.key === "Escape") i.remove(); });
         i.addEventListener("blur", () => setTimeout(() => { if (i.parentNode) confirmar(); }, 150));
-        container.appendChild(i);
-        i.focus();
+        container.appendChild(i); i.focus();
     }
 
-    /* ── Fechas ── */
     function addFecha(tipo, id) {
         const container = $(`#fechas_${tipo}_${id}`);
         if (container.querySelector(".fecha-input-temp")) { container.querySelector(".fecha-input-temp").focus(); return; }
-
         const i = document.createElement("input");
         i.type = "date";
         i.className = "fecha-input-temp rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none";
-
-        const confirmar = () => {
-            const val = i.value;
-            i.remove();
-            if (!val) return;
-            crearTag(container, `t-fechas-${tipo}`, fechaISO_a_ES(val), val);
-            guardarProgreso();
-        };
-
+        const confirmar = () => { const val = i.value; i.remove(); if (!val) return; crearTag(container, `t-fechas-${tipo}`, fechaISO_a_ES(val), val); guardarProgreso(); };
         i.addEventListener("change", () => { if (i.value) confirmar(); });
         i.addEventListener("keydown", e => { if (e.key === "Escape") i.remove(); });
         i.addEventListener("blur", () => setTimeout(() => { if (i.parentNode && !i.value) i.remove(); }, 200));
-        container.appendChild(i);
-        i.focus();
-    }
-
-    /* ═══════════════════════════════════════════════════════════════════════
-       CHECKBOX CONDICIONAL
-       ═══════════════════════════════════════════════════════════════════════ */
-    function toggleI(cb, id) {
-        const el = document.getElementById(id);
-        if (cb.checked) { el.classList.remove("condicional"); el.classList.add("block"); }
-        else { el.classList.add("condicional"); el.classList.remove("block"); el.value = ""; }
+        container.appendChild(i); i.focus();
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
        GENERACIÓN DE TICKET (HTML)
        ═══════════════════════════════════════════════════════════════════════ */
-    function _checkboxHTML(cls, label, condicionalId = null, condicionalCls = null, placeholder = "") {
-        let html = `<label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
-            <input type="checkbox" class="${cls} rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary"${condicionalId ? ` onchange="toggleI(this,'${condicionalId}')"` : ""}>
-            <span class="text-sm font-medium text-slate-700">${label}</span>
-        </label>`;
-        if (condicionalId) {
-            html += `<input type="text" id="${condicionalId}" class="${condicionalCls} condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 shadow-inner focus:ring-primary" placeholder="${placeholder}">`;
-        }
-        return html;
+    function _cb(cls, label, condId = null, condCls = null, ph = "") {
+        let h = `<label class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+            <input type="checkbox" class="${cls} rounded-full w-5 h-5 border-slate-300 text-primary focus:ring-primary"${condId ? ` onchange="toggleI(this,'${condId}')"` : ""}>
+            <span class="text-sm font-medium text-slate-700">${label}</span></label>`;
+        if (condId) h += `<input type="text" id="${condId}" class="${condCls} condicional w-full text-sm rounded-lg border-slate-200 bg-white px-4 py-2.5 shadow-inner focus:ring-primary" placeholder="${ph}">`;
+        return h;
     }
 
     function agregarTicket() {
@@ -429,8 +481,6 @@
                     </div>
                 </summary>
                 <div class="p-6 border-t border-slate-100 space-y-8">
-
-                    <!-- Fila principal -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="flex flex-col gap-2">
                             <label class="text-sm font-bold text-red-500 uppercase tracking-tight">Nº Ticket</label>
@@ -441,6 +491,7 @@
                             <select class="t-contacto rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary font-medium">
                                 <option value="whatsapp">WhatsApp</option>
                                 <option value="telefono">Teléfono</option>
+                                <option value="telefono y whatsapp">Teléfono y WhatsApp</option>
                             </select>
                         </div>
                         <div class="flex flex-col gap-2">
@@ -451,64 +502,52 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Pasajeros + Fechas -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">
                                 <label class="text-sm font-bold text-slate-600 uppercase tracking-tight">Pasajeros</label>
-                                <button type="button" onclick="addP(${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
-                                    <span class="material-symbols-outlined text-sm">person_add</span> Añadir
-                                </button>
+                                <button type="button" onclick="addP(${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-sm">person_add</span> Añadir</button>
                             </div>
                             <div id="pax_${id}" class="flex flex-wrap gap-2 items-center min-h-[50px] p-2 rounded-lg border border-slate-200 bg-slate-50"></div>
                         </div>
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">
                                 <label class="text-sm font-bold text-slate-600 uppercase tracking-tight">F. Solicitud</label>
-                                <button type="button" onclick="addFecha('solicitud',${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
-                                    <span class="material-symbols-outlined text-sm">add</span> Añadir
-                                </button>
+                                <button type="button" onclick="addFecha('solicitud',${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-sm">add</span> Añadir</button>
                             </div>
                             <div id="fechas_solicitud_${id}" class="flex flex-wrap gap-2 items-center min-h-[50px] p-2 rounded-lg border border-slate-200 bg-slate-50"></div>
                         </div>
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">
                                 <label class="text-sm font-bold text-slate-600 uppercase tracking-tight">F. Servicio</label>
-                                <button type="button" onclick="addFecha('servicio',${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
-                                    <span class="material-symbols-outlined text-sm">add</span> Añadir
-                                </button>
+                                <button type="button" onclick="addFecha('servicio',${id})" class="text-primary text-xs font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-sm">add</span> Añadir</button>
                             </div>
                             <div id="fechas_servicio_${id}" class="flex flex-wrap gap-2 items-center min-h-[50px] p-2 rounded-lg border border-slate-200 bg-slate-50"></div>
                         </div>
                     </div>
-
-                    <!-- Recogida / Destino -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div class="space-y-4">
                             <label class="text-sm font-bold uppercase tracking-tight text-primary">Recogida</label>
                             <div class="space-y-2">
-                                ${_checkboxHTML("t-o-aero", "Aeropuerto")}
-                                ${_checkboxHTML("t-o-buque", "Buque")}
-                                ${_checkboxHTML("t-o-hotel", "Hotel", `oh_${id}`, "t-o-hotel-texto", "Especificar hotel...")}
-                                ${_checkboxHTML("t-o-otros", "Otros", `oo_${id}`, "t-o-otros-texto", "Especificar...")}
+                                ${_cb("t-o-aero", "Aeropuerto")}
+                                ${_cb("t-o-buque", "Buque")}
+                                ${_cb("t-o-hotel", "Hotel", `oh_${id}`, "t-o-hotel-texto", "Especificar hotel...")}
+                                ${_cb("t-o-otros", "Otros", `oo_${id}`, "t-o-otros-texto", "Especificar...")}
                             </div>
                         </div>
                         <div class="space-y-4">
                             <label class="text-sm font-bold uppercase tracking-tight text-primary">Destino</label>
                             <div class="space-y-2">
-                                ${_checkboxHTML("t-d-aero", "Aeropuerto")}
-                                ${_checkboxHTML("t-d-buque", "Buque")}
-                                ${_checkboxHTML("t-d-hotel", "Hotel", `dh_${id}`, "t-d-hotel-texto", "Especificar hotel...")}
-                                ${_checkboxHTML("t-d-hosp", "Hospital", `dhosp_${id}`, "t-d-hosp-texto", "Especificar hospital...")}
-                                ${_checkboxHTML("t-d-clin", "Clínica", `dclin_${id}`, "t-d-clin-texto", "Especificar clínica...")}
-                                ${_checkboxHTML("t-d-inmi", "Inmigración")}
-                                ${_checkboxHTML("t-d-otros", "Otros", `do_${id}`, "t-d-otros-texto", "Especificar...")}
+                                ${_cb("t-d-aero", "Aeropuerto")}
+                                ${_cb("t-d-buque", "Buque")}
+                                ${_cb("t-d-hotel", "Hotel", `dh_${id}`, "t-d-hotel-texto", "Especificar hotel...")}
+                                ${_cb("t-d-hosp", "Hospital", `dhosp_${id}`, "t-d-hosp-texto", "Especificar hospital...")}
+                                ${_cb("t-d-clin", "Clínica", `dclin_${id}`, "t-d-clin-texto", "Especificar clínica...")}
+                                ${_cb("t-d-inmi", "Inmigración")}
+                                ${_cb("t-d-otros", "Otros", `do_${id}`, "t-d-otros-texto", "Especificar...")}
                             </div>
                         </div>
                     </div>
-
-                    <!-- Ida y vuelta + Observaciones -->
                     <div class="grid grid-cols-1 gap-6">
                         <div class="flex items-center justify-between py-4 border-y border-slate-100">
                             <div class="flex flex-col">
@@ -535,70 +574,45 @@
        RECOGER DATOS DEL FORMULARIO
        ═══════════════════════════════════════════════════════════════════════ */
     function recogerDatos() {
-        const tickets = $$(".ticket-card").map(card => ({
-            numero_ticket:   $(".t-numero-ticket", card).value,
-            importe:         parseFloat($(".t-importe", card).value) || 0,
-            contacto_metodo: $(".t-contacto", card).value,
-            pasajeros:       $$(".t-pasajeros", card).map(i => i.value).filter(Boolean),
-            fechas_solicitud:$$(".t-fechas-solicitud", card).map(i => i.value).filter(Boolean),
-            fechas_servicio: $$(".t-fechas-servicio", card).map(i => i.value).filter(Boolean),
-            o_aeropuerto:    $(".t-o-aero", card)?.checked || false,
-            o_buque:         $(".t-o-buque", card)?.checked || false,
-            o_hotel:         $(".t-o-hotel", card)?.checked || false,
-            o_hotel_texto:   $(".t-o-hotel-texto", card)?.value || "",
-            o_otros:         $(".t-o-otros", card)?.checked || false,
-            o_otros_texto:   $(".t-o-otros-texto", card)?.value || "",
-            d_aeropuerto:    $(".t-d-aero", card)?.checked || false,
-            d_buque:         $(".t-d-buque", card)?.checked || false,
-            d_hotel:         $(".t-d-hotel", card)?.checked || false,
-            d_hotel_texto:   $(".t-d-hotel-texto", card)?.value || "",
-            d_hospital:      $(".t-d-hosp", card)?.checked || false,
-            d_hospital_texto:$(".t-d-hosp-texto", card)?.value || "",
-            d_clinica:       $(".t-d-clin", card)?.checked || false,
-            d_clinica_texto: $(".t-d-clin-texto", card)?.value || "",
-            d_inmigracion:   $(".t-d-inmi", card)?.checked || false,
-            d_otros:         $(".t-d-otros", card)?.checked || false,
-            d_otros_texto:   $(".t-d-otros-texto", card)?.value || "",
-            ida_vuelta:      $(".t-ida-vuelta", card)?.checked || false,
-            comentarios:     $(".t-comentarios", card)?.value || "",
+        const tickets = $$(".ticket-card").map(c => ({
+            numero_ticket:    $(".t-numero-ticket", c).value,
+            importe:          parseFloat($(".t-importe", c).value) || 0,
+            contacto_metodo:  $(".t-contacto", c).value,
+            pasajeros:        $$(".t-pasajeros", c).map(i => i.value).filter(Boolean),
+            fechas_solicitud: $$(".t-fechas-solicitud", c).map(i => i.value).filter(Boolean),
+            fechas_servicio:  $$(".t-fechas-servicio", c).map(i => i.value).filter(Boolean),
+            o_aeropuerto:     $(".t-o-aero", c)?.checked || false,
+            o_buque:          $(".t-o-buque", c)?.checked || false,
+            o_hotel:          $(".t-o-hotel", c)?.checked || false,
+            o_hotel_texto:    $(".t-o-hotel-texto", c)?.value || "",
+            o_otros:          $(".t-o-otros", c)?.checked || false,
+            o_otros_texto:    $(".t-o-otros-texto", c)?.value || "",
+            d_aeropuerto:     $(".t-d-aero", c)?.checked || false,
+            d_buque:          $(".t-d-buque", c)?.checked || false,
+            d_hotel:          $(".t-d-hotel", c)?.checked || false,
+            d_hotel_texto:    $(".t-d-hotel-texto", c)?.value || "",
+            d_hospital:       $(".t-d-hosp", c)?.checked || false,
+            d_hospital_texto: $(".t-d-hosp-texto", c)?.value || "",
+            d_clinica:        $(".t-d-clin", c)?.checked || false,
+            d_clinica_texto:  $(".t-d-clin-texto", c)?.value || "",
+            d_inmigracion:    $(".t-d-inmi", c)?.checked || false,
+            d_otros:          $(".t-d-otros", c)?.checked || false,
+            d_otros_texto:    $(".t-d-otros-texto", c)?.value || "",
+            ida_vuelta:       $(".t-ida-vuelta", c)?.checked || false,
+            comentarios:      $(".t-comentarios", c)?.value || "",
         }));
-
-        return {
-            factura_numero: $("#factura_numero").value,
-            barco: $("#barco").value,
-            tickets,
-        };
+        return { factura_numero: $("#factura_numero").value, barco: $("#barco").value, tickets };
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
-       MODAL DE DESCARGA
+       MODAL ANIMADO DE DESCARGA
        ═══════════════════════════════════════════════════════════════════════ */
-    const FORMATOS = [
-        { id: "excel", icon: "table_view", color: "emerald", label: "Solo Excel", desc: "Archivo .xlsm editable" },
-        { id: "pdf",   icon: "picture_as_pdf", color: "red",  label: "Solo PDF",   desc: "Documento listo para enviar/imprimir" },
-        { id: "ambos", icon: "folder_zip", color: "blue",     label: "Ambos (ZIP)",desc: "Carpeta con el Excel y el PDF" },
-    ];
-
     function abrirModalDescarga(id = null) {
         if (id === null) {
             const form = $("#formTaxi");
             if (!form.checkValidity()) { form.reportValidity(); return; }
         }
         idDescargaPendiente = id;
-
-        // Generar botones dinámicamente
-        const colorMap = { emerald: ["emerald-500","emerald-50","emerald-600","emerald-700"], red: ["red-500","red-50","red-600","red-700"], blue: ["primary","blue-50","primary","blue-700"] };
-        $("#modal-opciones").innerHTML = FORMATOS.map(f => {
-            const c = colorMap[f.color];
-            return `<button type="button" onclick="ejecutarDescarga('${f.id}')" class="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-${c[0]} hover:bg-${c[1]} transition-colors group text-left">
-                <span class="material-symbols-outlined text-${c[2]}">${f.icon}</span>
-                <div>
-                    <span class="block font-bold text-slate-700 group-hover:text-${c[3]}">${f.label}</span>
-                    <span class="text-xs text-slate-500">${f.desc}</span>
-                </div>
-            </button>`;
-        }).join("");
-
         $("#modal-descarga").classList.remove("hidden");
         $("#app-layout").classList.add("blur-sm");
     }
@@ -608,8 +622,51 @@
         $("#app-layout").classList.remove("blur-sm");
     }
 
-    function ejecutarDescarga(formato) {
+    function iniciarProgresoModal() {
+        $("#modal-content-opciones").classList.add("hidden");
+        $("#modal-content-progreso").classList.remove("hidden");
+        let percent = 0;
+        const circle = $("#circulo-progreso");
+        const text = $("#texto-progreso");
+        circle.style.strokeDashoffset = 326.7;
+        text.innerText = "0%";
+        progressInterval = setInterval(() => {
+            if (percent < 90) {
+                percent += Math.floor(Math.random() * 8) + 2;
+                if (percent > 90) percent = 90;
+                circle.style.strokeDashoffset = 326.7 - (percent / 100) * 326.7;
+                text.innerText = percent + "%";
+            }
+        }, 500);
+    }
+
+    function finalizarProgresoModal() {
+        clearInterval(progressInterval);
+        const circle = $("#circulo-progreso");
+        const text = $("#texto-progreso");
+        circle.style.strokeDashoffset = 0;
+        text.innerText = "100%";
+        setTimeout(() => {
+            cerrarModal();
+            setTimeout(() => resetearModalVisual(), 400);
+        }, 600);
+    }
+
+    function detenerErrorProgresoModal() {
+        clearInterval(progressInterval);
         cerrarModal();
+        setTimeout(() => resetearModalVisual(), 400);
+    }
+
+    function resetearModalVisual() {
+        $("#modal-content-opciones").classList.remove("hidden");
+        $("#modal-content-progreso").classList.add("hidden");
+        $("#circulo-progreso").style.strokeDashoffset = 326.7;
+        $("#texto-progreso").innerText = "0%";
+    }
+
+    function ejecutarDescarga(formato) {
+        iniciarProgresoModal();
         if (idDescargaPendiente) redescargar(idDescargaPendiente, formato);
         else enviarProceso("descarga", formato);
     }
@@ -636,34 +693,25 @@
         try {
             const res = await fetch(`${URL_BASE}${endpoint}`, {
                 method,
-                headers: { "Content-Type": "application/json", "x-password": tokenSeguridad },
+                headers: authHeaders({ "Content-Type": "application/json" }),
                 body: JSON.stringify(data),
             });
 
-            if (!res.ok) { alert("Error validando datos en el servidor."); return; }
-
-            if (modo === "descarga") {
-                const blob = await res.blob();
-                const head = res.headers.get("Content-Disposition");
-                let filename = data.barco.replace(/ /g, "_");
-                if (head?.includes("filename=")) {
-                    filename = head.split("filename=")[1].replace(/["']/g, "");
+            if (res.ok) {
+                if (modo === "descarga") {
+                    descargarBlob(await res.blob(), res.headers.get("Content-Disposition"), data.barco.replace(/ /g, "_"), formato);
+                    finalizarProgresoModal();
                 } else {
-                    filename += formato === "excel" ? ".xlsm" : formato === "pdf" ? ".pdf" : ".zip";
+                    detenerErrorProgresoModal();
                 }
-                const url = URL.createObjectURL(blob);
-                const a = Object.assign(document.createElement("a"), { href: url, download: filename });
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                URL.revokeObjectURL(url);
+                limpiarBorrador(false);
+                if (modo === "nube") alert(editId ? "☁️ Factura actualizada en la nube" : "☁️ Guardado en la nube");
+            } else {
+                if (modo === "descarga") detenerErrorProgresoModal();
+                alert("Error validando sesión en el servidor. Prueba a recargar.");
             }
-
-            limpiarBorrador(false);
-            const msgEdit = modo === "nube" ? "☁️ Factura actualizada en la nube" : "✅ Archivo descargado";
-            const msgNueva = modo === "nube" ? "☁️ Guardado en la nube" : "✅ Archivo descargado";
-            alert(editId ? msgEdit : msgNueva);
         } catch {
+            if (modo === "descarga") detenerErrorProgresoModal();
             alert("Error de conexión con el servidor");
         }
     }
@@ -674,18 +722,12 @@
     async function cargarHistorial() {
         const tb = $("#tabla-historial");
         tb.innerHTML = `<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500 font-medium">Cargando...</td></tr>`;
-
         try {
-            const res = await fetch(`${URL_BASE}/historial`, { headers: { "x-password": tokenSeguridad } });
+            const res = await fetch(`${URL_BASE}/historial`, { headers: authHeaders() });
             const datos = await res.json();
             tb.innerHTML = "";
-
-            if (!datos.length) {
-                tb.innerHTML = `<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500 font-medium">No hay facturas.</td></tr>`;
-                return;
-            }
-
-            const fragment = document.createDocumentFragment();
+            if (!datos.length) { tb.innerHTML = `<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500 font-medium">No hay facturas.</td></tr>`; return; }
+            const frag = document.createDocumentFragment();
             datos.forEach(f => {
                 const d = new Date(f.fecha_creacion).toLocaleDateString("es-ES", { year: "numeric", month: "2-digit", day: "2-digit" });
                 const tr = document.createElement("tr");
@@ -708,12 +750,10 @@
                             </button>
                         </div>
                     </td>`;
-                fragment.appendChild(tr);
+                frag.appendChild(tr);
             });
-            tb.appendChild(fragment);
-        } catch {
-            tb.innerHTML = `<tr><td colspan="5" class="text-center text-red-500">Error</td></tr>`;
-        }
+            tb.appendChild(frag);
+        } catch { tb.innerHTML = `<tr><td colspan="5" class="text-center text-red-500">Error</td></tr>`; }
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
@@ -721,11 +761,10 @@
        ═══════════════════════════════════════════════════════════════════════ */
     async function editarFactura(id) {
         try {
-            const res = await fetch(`${URL_BASE}/factura/${id}`, { headers: { "x-password": tokenSeguridad } });
+            const res = await fetch(`${URL_BASE}/factura/${id}`, { headers: authHeaders() });
             if (!res.ok) { alert("No se pudo cargar la factura"); return; }
             const datos = await res.json();
 
-            // Reset
             localStorage.removeItem("taxi_t1");
             $("#contenedor-tickets").innerHTML = "";
             ticketCount = 0;
@@ -744,21 +783,15 @@
                 $(".t-importe", card).value = t.importe || 0;
                 $(".t-contacto", card).value = t.contacto_metodo || "whatsapp";
 
-                // Pasajeros
-                const paxContainer = card.querySelector('[id^="pax_"]');
-                (t.pasajeros || []).forEach(nombre => {
-                    guardarNombreEnHistorial(nombre);
-                    crearTag(paxContainer, "t-pasajeros", nombre, nombre);
-                });
+                const paxC = card.querySelector('[id^="pax_"]');
+                (t.pasajeros || []).forEach(n => { guardarNombreEnHistorial(n); crearTag(paxC, "t-pasajeros", n, n); });
 
-                // Fechas
-                const solContainer = card.querySelector('[id^="fechas_solicitud_"]');
-                (t.fechas_solicitud || []).forEach(val => crearTag(solContainer, "t-fechas-solicitud", fechaISO_a_ES(val), val));
+                const solC = card.querySelector('[id^="fechas_solicitud_"]');
+                (t.fechas_solicitud || []).forEach(v => crearTag(solC, "t-fechas-solicitud", fechaISO_a_ES(v), v));
 
-                const serContainer = card.querySelector('[id^="fechas_servicio_"]');
-                (t.fechas_servicio || []).forEach(val => crearTag(serContainer, "t-fechas-servicio", fechaISO_a_ES(val), val));
+                const serC = card.querySelector('[id^="fechas_servicio_"]');
+                (t.fechas_servicio || []).forEach(v => crearTag(serC, "t-fechas-servicio", fechaISO_a_ES(v), v));
 
-                // Checkboxes
                 const checks = {
                     ".t-o-aero": t.o_aeropuerto, ".t-o-buque": t.o_buque, ".t-o-hotel": t.o_hotel,
                     ".t-o-otros": t.o_otros, ".t-d-aero": t.d_aeropuerto, ".t-d-buque": t.d_buque,
@@ -767,32 +800,20 @@
                 };
                 for (const [sel, val] of Object.entries(checks)) {
                     const el = $(sel, card);
-                    if (el && val) {
-                        el.checked = true;
-                        const changeEvt = el.getAttribute("onchange");
-                        if (changeEvt) new Function(changeEvt).call(el);
-                    }
+                    if (el && val) { el.checked = true; const fn = el.getAttribute("onchange"); if (fn) new Function(fn).call(el); }
                 }
-
-                // Textos condicionales
                 const textos = {
                     ".t-o-hotel-texto": t.o_hotel_texto, ".t-o-otros-texto": t.o_otros_texto,
                     ".t-d-hotel-texto": t.d_hotel_texto, ".t-d-hosp-texto": t.d_hospital_texto,
                     ".t-d-clin-texto": t.d_clinica_texto, ".t-d-otros-texto": t.d_otros_texto,
                 };
-                for (const [sel, val] of Object.entries(textos)) {
-                    const el = $(sel, card);
-                    if (el && val) el.value = val;
-                }
-
+                for (const [sel, val] of Object.entries(textos)) { const el = $(sel, card); if (el && val) el.value = val; }
                 if (t.comentarios) $(".t-comentarios", card).value = t.comentarios;
             }
 
             verSec("sec-nueva", $("#btn-nueva"));
             scrollTo({ top: 0, behavior: "smooth" });
-        } catch {
-            alert("Error al cargar la factura para editar");
-        }
+        } catch { alert("Error al cargar la factura para editar"); }
     }
 
     function cancelarEdicion() {
@@ -806,37 +827,26 @@
        ═══════════════════════════════════════════════════════════════════════ */
     async function redescargar(id, formato = "excel") {
         try {
-            const res = await fetch(`${URL_BASE}/re-descargar/${id}?formato=${formato}`, { headers: { "x-password": tokenSeguridad } });
-            if (!res.ok) { alert("Error al re-descargar."); return; }
-
-            const blob = await res.blob();
-            const head = res.headers.get("Content-Disposition");
-            let filename = `Fra_Antigua_${id}`;
-            if (head?.includes("filename=")) {
-                filename = head.split("filename=")[1].replace(/["']/g, "");
+            const res = await fetch(`${URL_BASE}/re-descargar/${id}?formato=${formato}`, { headers: authHeaders() });
+            if (res.ok) {
+                descargarBlob(await res.blob(), res.headers.get("Content-Disposition"), `Fra_Antigua_${id}`, formato);
+                finalizarProgresoModal();
             } else {
-                filename += formato === "excel" ? ".xlsm" : formato === "pdf" ? ".pdf" : ".zip";
+                detenerErrorProgresoModal();
+                alert("Error validando datos en el servidor al intentar re-descargar.");
             }
-            const url = URL.createObjectURL(blob);
-            const a = Object.assign(document.createElement("a"), { href: url, download: filename });
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            URL.revokeObjectURL(url);
-        } catch {
-            alert("Fallo al descargar");
-        }
+        } catch { detenerErrorProgresoModal(); alert("Fallo al descargar"); }
     }
 
     async function eliminarF(id) {
         if (!confirm("¿Borrar factura de la nube?")) return;
-        await fetch(`${URL_BASE}/eliminar-factura/${id}`, { method: "DELETE", headers: { "x-password": tokenSeguridad } });
+        await fetch(`${URL_BASE}/eliminar-factura/${id}`, { method: "DELETE", headers: authHeaders() });
         cargarHistorial();
     }
 
     async function vaciarHistorial() {
         if (!confirm("⚠️ ATENCIÓN: Vaciarás todo el historial de la nube. ¿Continuar?")) return;
-        await fetch(`${URL_BASE}/limpiar-historial`, { method: "DELETE", headers: { "x-password": tokenSeguridad } });
+        await fetch(`${URL_BASE}/limpiar-historial`, { method: "DELETE", headers: authHeaders() });
         cargarHistorial();
     }
 
@@ -853,12 +863,9 @@
         const inputs = $$("#contenedor-tickets input, #contenedor-tickets select, #contenedor-tickets textarea");
         const vals = inputs.map(i => ({ type: i.type, value: i.value, checked: i.checked }));
         localStorage.setItem("taxi_t1", JSON.stringify({
-            html, count: ticketCount,
-            b: $("#barco").value,
-            f: $("#factura_numero").value,
-            data: vals,
+            html, count: ticketCount, b: $("#barco").value, f: $("#factura_numero").value, data: vals,
         }));
-        mostrarAviso();
+        const av = $("#aviso-guardado"); av.style.display = "flex"; setTimeout(() => av.style.display = "none", 1500);
     }
 
     function cargarProgreso() {
