@@ -142,6 +142,9 @@
                     <a id="btn-historial" onclick="verSec('sec-historial',this);cargarHistorial();" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group">
                         <span class="material-symbols-outlined group-hover:fill-1">cloud_done</span><span class="text-sm font-medium">Historial Cloud</span>
                     </a>
+                    <a id="btn-plantillas" onclick="verSec('sec-plantillas',this);cargarPlantillas();" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group">
+                        <span class="material-symbols-outlined group-hover:fill-1">draft</span><span class="text-sm font-medium">Plantillas</span>
+                    </a>
                     <a id="btn-admin" onclick="verSec('sec-admin',this);cargarDashboard();" class="nav-btn hidden flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-amber-300/70 hover:text-amber-200 cursor-pointer group">
                         <span class="material-symbols-outlined group-hover:fill-1">admin_panel_settings</span><span class="text-sm font-medium">Dashboard Admin</span>
                     </a>
@@ -206,6 +209,14 @@
                                 <input type="text" id="barco" required class="w-full rounded-lg border-slate-200 bg-slate-50 focus:ring-primary focus:border-primary px-4 py-3" placeholder="Nombre del buque">
                             </div>
                         </div>
+                        <div class="mt-4 flex flex-col gap-2">
+                            <label class="text-sm font-semibold text-slate-600 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-base text-primary">draft</span> Plantilla
+                            </label>
+                            <select id="sel-plantilla" class="w-full md:w-1/2 rounded-lg border-slate-200 bg-slate-50 focus:ring-primary focus:border-primary px-4 py-3 text-sm">
+                                <option value="">Plantilla original (por defecto)</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div id="contenedor-tickets" class="space-y-6"></div>
@@ -250,6 +261,198 @@
                         </thead>
                         <tbody id="tabla-historial" class="divide-y divide-slate-50"></tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- ── SECCIÓN: PLANTILLAS ── -->
+            <div id="sec-plantillas" class="app-section w-full max-w-[1400px]">
+                <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
+                    <div class="flex items-center gap-4">
+                        <div class="p-2 bg-primary/10 rounded-lg text-primary"><span class="material-symbols-outlined fill-1">draft</span></div>
+                        <div>
+                            <h2 class="text-2xl font-bold tracking-tight text-slate-900">Mis Plantillas</h2>
+                            <p class="text-slate-500 text-sm mt-1 font-medium">Gestione sus modelos de factura</p>
+                        </div>
+                    </div>
+                    <button onclick="verSec('sec-crear-plantilla',document.getElementById('btn-plantillas'))" class="flex items-center gap-2 bg-primary hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm">
+                        <span class="material-symbols-outlined text-lg">add</span> Nueva Plantilla
+                    </button>
+                </header>
+                <div id="lista-plantillas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+            </div>
+
+            <!-- ── SECCIÓN: CREAR PLANTILLA ── -->
+            <div id="sec-crear-plantilla" class="app-section w-full max-w-[1400px]">
+                <header class="flex items-center justify-between mb-6 pb-6 border-b border-slate-200">
+                    <div class="flex items-center gap-4">
+                        <button onclick="verSec('sec-plantillas',document.getElementById('btn-plantillas'));cargarPlantillas();" class="p-2 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors"><span class="material-symbols-outlined">arrow_back</span></button>
+                        <h2 class="text-2xl font-bold tracking-tight text-slate-900">Nueva Plantilla</h2>
+                    </div>
+                </header>
+
+                <!-- Tabs -->
+                <div class="flex gap-1 mb-6 bg-slate-100 p-1 rounded-lg w-fit">
+                    <button onclick="tabPlantilla('visual')" id="tab-visual" class="px-5 py-2 rounded-md text-sm font-bold bg-white text-primary shadow-sm transition-all">Crear Visual</button>
+                    <button onclick="tabPlantilla('excel')" id="tab-excel" class="px-5 py-2 rounded-md text-sm font-bold text-slate-500 hover:text-slate-700 transition-all">Subir Excel</button>
+                </div>
+
+                <!-- TAB: Visual Builder -->
+                <div id="panel-visual" class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                    <!-- Form (3 cols) -->
+                    <div class="lg:col-span-3 space-y-5">
+                        <div class="flex flex-col gap-2">
+                            <label class="text-sm font-bold text-slate-700">Nombre de la plantilla</label>
+                            <input type="text" id="tpl-nombre" class="rounded-lg border-slate-200 bg-white px-4 py-3 focus:ring-primary" placeholder="Ej: Factura estándar">
+                        </div>
+
+                        <!-- Empresa -->
+                        <details open class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">business</span> Datos de Empresa</summary>
+                            <div class="px-5 pb-5 pt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <input type="text" id="tpl-emp-nombre" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Nombre empresa">
+                                <input type="text" id="tpl-emp-cif" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="CIF / NIF">
+                                <input type="text" id="tpl-emp-dir" class="tpl-field md:col-span-2 rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Dirección completa">
+                                <input type="text" id="tpl-emp-tel" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Teléfono">
+                                <input type="email" id="tpl-emp-email" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Email">
+                                <input type="url" id="tpl-emp-logo" class="tpl-field md:col-span-2 rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="URL del logo (opcional)">
+                            </div>
+                        </details>
+
+                        <!-- Estilo -->
+                        <details class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">palette</span> Estilo y Página</summary>
+                            <div class="px-5 pb-5 pt-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Color primario</label><input type="color" id="tpl-color1" value="#1a2e4a" class="tpl-field w-full h-10 rounded-lg border-slate-200 cursor-pointer"></div>
+                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Color secundario</label><input type="color" id="tpl-color2" value="#0d6dfd" class="tpl-field w-full h-10 rounded-lg border-slate-200 cursor-pointer"></div>
+                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Fuente</label>
+                                    <select id="tpl-fuente" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm">
+                                        <option value="Helvetica, Arial, sans-serif">Helvetica</option>
+                                        <option value="Georgia, serif">Georgia</option>
+                                        <option value="'Courier New', monospace">Courier</option>
+                                        <option value="Verdana, sans-serif">Verdana</option>
+                                        <option value="'Times New Roman', serif">Times</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Tamaño texto</label><input type="number" id="tpl-tam" value="10" min="8" max="14" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm"></div>
+                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Tamaño página</label>
+                                    <select id="tpl-page-size" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm"><option value="A4">A4</option><option value="Letter">Carta</option></select>
+                                </div>
+                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Orientación</label>
+                                    <select id="tpl-page-orient" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm"><option value="portrait">Vertical</option><option value="landscape">Horizontal</option></select>
+                                </div>
+                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Margen V (mm)</label><input type="number" id="tpl-margin-v" value="20" min="5" max="50" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm"></div>
+                                <div class="flex flex-col gap-1"><label class="text-xs font-semibold text-slate-500">Margen H (mm)</label><input type="number" id="tpl-margin-h" value="15" min="5" max="50" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm"></div>
+                            </div>
+                        </details>
+
+                        <!-- Secciones -->
+                        <details class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">tune</span> Secciones del Detalle</summary>
+                            <div class="px-5 pb-5 pt-2 grid grid-cols-2 gap-3">
+                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-sec-fechas" checked class="tpl-field rounded text-primary"> Fechas de servicio</label>
+                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-sec-pax" checked class="tpl-field rounded text-primary"> Pasajeros</label>
+                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-sec-ordes" checked class="tpl-field rounded text-primary"> Origen / Destino</label>
+                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-sec-idavuelta" checked class="tpl-field rounded text-primary"> Ida y vuelta</label>
+                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-sec-contacto" checked class="tpl-field rounded text-primary"> Contacto</label>
+                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-sec-comentarios" checked class="tpl-field rounded text-primary"> Observaciones</label>
+                            </div>
+                        </details>
+
+                        <!-- Factura -->
+                        <details class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">receipt</span> Configuración Factura</summary>
+                            <div class="px-5 pb-5 pt-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <input type="text" id="tpl-fac-titulo" value="FACTURA" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Título">
+                                <input type="number" id="tpl-fac-iva" value="10" min="0" max="100" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="% IVA">
+                                <input type="text" id="tpl-fac-moneda" value="€" class="tpl-field rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Moneda">
+                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-fac-desglose" checked class="tpl-field rounded text-primary"> Desglose IVA</label>
+                            </div>
+                        </details>
+
+                        <!-- Pie -->
+                        <details class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <summary class="px-5 py-4 cursor-pointer font-bold text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50"><span class="material-symbols-outlined text-base text-primary">sticky_note_2</span> Pie de Página</summary>
+                            <div class="px-5 pb-5 pt-2 space-y-3">
+                                <textarea id="tpl-pie-texto" class="tpl-field w-full rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm min-h-[60px]" placeholder="Texto del pie (ej: Gracias por su confianza)"></textarea>
+                                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="tpl-pie-pago" class="tpl-field rounded text-primary"> Mostrar datos de pago</label>
+                                <input type="text" id="tpl-pie-pago-texto" class="tpl-field w-full rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="IBAN / Datos bancarios...">
+                            </div>
+                        </details>
+
+                        <button onclick="guardarPlantillaVisual()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined">save</span> Guardar Plantilla
+                        </button>
+                    </div>
+
+                    <!-- Preview (2 cols) -->
+                    <div class="lg:col-span-2 sticky top-6 self-start">
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Vista previa</span>
+                                <button onclick="previewPDF()" class="text-xs font-bold text-primary hover:underline flex items-center gap-1"><span class="material-symbols-outlined text-sm">picture_as_pdf</span> Ver PDF</button>
+                            </div>
+                            <div id="tpl-preview" class="border border-slate-100 rounded-lg bg-white overflow-auto" style="height:500px;font-size:7px;padding:12px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: Excel Upload -->
+                <div id="panel-excel" class="hidden space-y-6">
+                    <!-- Guía -->
+                    <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                        <h3 class="font-bold text-lg text-slate-900 flex items-center gap-2 mb-4"><span class="material-symbols-outlined text-primary">menu_book</span> Guía: Preparar tu Excel</h3>
+                        <div class="text-sm text-slate-600 space-y-3 leading-relaxed">
+                            <p>Prepara tu archivo Excel con <strong>marcadores</strong> (tags) donde quieras que se inserten los datos. Los tags tienen el formato <code class="bg-slate-100 px-1.5 py-0.5 rounded text-primary font-mono text-xs">{{nombre_del_tag}}</code>.</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <div>
+                                    <p class="font-bold text-slate-800 mb-2">Tags de Factura (Hoja 1):</p>
+                                    <div class="bg-slate-50 rounded-lg p-3 space-y-1 font-mono text-xs">
+                                        <p><span class="text-primary">{{factura_numero}}</span> — Nº de factura</p>
+                                        <p><span class="text-primary">{{barco}}</span> — Nombre del barco</p>
+                                        <p><span class="text-primary">{{fecha}}</span> — Fecha de servicio</p>
+                                        <p><span class="text-primary">{{tickets_descripcion}}</span> — Nº de tickets</p>
+                                        <p><span class="text-primary">{{tickets_total}}</span> — Importe total</p>
+                                        <p><span class="text-primary">{{base_imponible}}</span> — Base imponible</p>
+                                        <p><span class="text-primary">{{iva}}</span> — Importe IVA</p>
+                                        <p><span class="text-primary">{{total}}</span> — Total con IVA</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-slate-800 mb-2">Tags de Bono (Hoja 2, se duplica por ticket):</p>
+                                    <div class="bg-slate-50 rounded-lg p-3 space-y-1 font-mono text-xs">
+                                        <p><span class="text-emerald-600">{{ticket_numero}}</span> — Nº del ticket</p>
+                                        <p><span class="text-emerald-600">{{ticket_importe}}</span> — Importe</p>
+                                        <p><span class="text-emerald-600">{{ticket_pasajeros}}</span> — Pasajeros</p>
+                                        <p><span class="text-emerald-600">{{ticket_fechas_servicio}}</span> — Fechas</p>
+                                        <p><span class="text-emerald-600">{{ticket_origen}}</span> — Recogida</p>
+                                        <p><span class="text-emerald-600">{{ticket_destino}}</span> — Destino</p>
+                                        <p><span class="text-emerald-600">{{ticket_ida_vuelta}}</span> — Sí/No</p>
+                                        <p><span class="text-emerald-600">{{ticket_comentarios}}</span> — Observaciones</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="mt-3 text-slate-500 text-xs">Configura el tamaño de página, márgenes y áreas de impresión en <strong>Excel → Diseño de página</strong> antes de subir.</p>
+                        </div>
+                    </div>
+
+                    <!-- Upload form -->
+                    <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                        <h3 class="font-bold text-sm text-slate-700 mb-4">Subir archivo Excel</h3>
+                        <div class="space-y-4">
+                            <input type="text" id="excel-tpl-nombre" class="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Nombre de la plantilla">
+                            <div class="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center hover:border-primary transition-colors">
+                                <input type="file" id="excel-tpl-file" accept=".xlsx,.xlsm" class="hidden" onchange="archivoExcelSeleccionado()">
+                                <label for="excel-tpl-file" class="cursor-pointer">
+                                    <span class="material-symbols-outlined text-4xl text-slate-300 mb-2 block">upload_file</span>
+                                    <p class="text-sm font-semibold text-slate-600" id="excel-file-label">Haz clic para seleccionar .xlsx o .xlsm</p>
+                                </label>
+                            </div>
+                            <div id="excel-tags-resultado" class="hidden bg-emerald-50 border border-emerald-200 rounded-lg p-4"></div>
+                            <button onclick="subirPlantillaExcel()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg shadow-lg transition-all flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined">cloud_upload</span> Subir Plantilla Excel
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -488,6 +691,8 @@
 
             // Comprobar si es administrador
             checkAdminStatus();
+            // Cargar selector de plantillas
+            cargarSelectorPlantillas();
         }
     }
 
@@ -831,11 +1036,16 @@
 
         const data = recogerDatos();
         const editId = form.dataset.editId;
+        const plantillaId = $("#sel-plantilla")?.value || "";
         let endpoint, method;
 
         if (editId) {
             endpoint = modo === "nube" ? `/actualizar/${editId}` : `/actualizar-generar/${editId}?formato=${formato}`;
             method = "PUT";
+        } else if (plantillaId && modo === "descarga") {
+            // Usar el endpoint de plantilla personalizada
+            endpoint = `/generar-con-plantilla?formato=${formato}&plantilla_id=${plantillaId}`;
+            method = "POST";
         } else {
             endpoint = modo === "nube" ? "/solo-guardar" : `/generar?formato=${formato}`;
             method = "POST";
@@ -999,6 +1209,277 @@
         if (!confirm("⚠️ ATENCIÓN: Vaciarás todo el historial de la nube. ¿Continuar?")) return;
         await fetch(`${URL_BASE}/limpiar-historial`, { method: "DELETE", headers: authHeaders() });
         cargarHistorial();
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       SISTEMA DE PLANTILLAS
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    // Tab switching
+    function tabPlantilla(tab) {
+        const isVisual = tab === "visual";
+        $("#panel-visual").classList.toggle("hidden", !isVisual);
+        $("#panel-visual").classList.toggle("grid", isVisual);
+        $("#panel-excel").classList.toggle("hidden", isVisual);
+        $("#tab-visual").className = `px-5 py-2 rounded-md text-sm font-bold transition-all ${isVisual ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"}`;
+        $("#tab-excel").className = `px-5 py-2 rounded-md text-sm font-bold transition-all ${!isVisual ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"}`;
+    }
+
+    // Load template list
+    async function cargarPlantillas() {
+        const container = $("#lista-plantillas");
+        container.innerHTML = '<p class="col-span-3 text-center text-slate-400 py-12">Cargando...</p>';
+        try {
+            const res = await fetch(`${URL_BASE}/plantillas`, { headers: authHeaders() });
+            const data = await res.json();
+            if (!data.length) {
+                container.innerHTML = `<div class="col-span-3 text-center py-16">
+                    <span class="material-symbols-outlined text-5xl text-slate-200 mb-4 block">draft</span>
+                    <p class="text-slate-400 font-medium">No hay plantillas creadas</p>
+                    <p class="text-slate-400 text-sm mt-1">Crea tu primera plantilla con el botón de arriba</p>
+                </div>`;
+                return;
+            }
+            container.innerHTML = data.map(p => `
+                <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.tipo === "visual" ? "bg-violet-100 text-violet-700" : "bg-emerald-100 text-emerald-700"}">${esc(p.tipo)}</span>
+                        ${p.es_publica ? '<span class="text-[10px] font-bold text-amber-500">PÚBLICA</span>' : ""}
+                    </div>
+                    <h3 class="font-bold text-slate-900 text-lg mb-1">${esc(p.nombre)}</h3>
+                    <p class="text-xs text-slate-400 mb-4">${new Date(p.created_at).toLocaleDateString("es-ES")}</p>
+                    <div class="flex items-center gap-2">
+                        <button onclick="previewPlantilla(${p.id})" class="flex-1 text-xs font-bold text-primary bg-primary/5 hover:bg-primary/10 rounded-lg py-2 transition-colors flex items-center justify-center gap-1">
+                            <span class="material-symbols-outlined text-sm">visibility</span> Preview
+                        </button>
+                        <button onclick="eliminarPlantilla(${p.id})" class="text-slate-400 hover:text-red-500 transition-colors p-2" title="Eliminar">
+                            <span class="material-symbols-outlined text-lg">delete</span>
+                        </button>
+                    </div>
+                </div>`).join("");
+        } catch { container.innerHTML = '<p class="col-span-3 text-center text-red-500">Error cargando plantillas</p>'; }
+    }
+
+    // Populate template picker in invoice form
+    async function cargarSelectorPlantillas() {
+        const sel = $("#sel-plantilla");
+        if (!sel) return;
+        try {
+            const res = await fetch(`${URL_BASE}/plantillas`, { headers: authHeaders() });
+            const data = await res.json();
+            // Keep the default option, clear the rest
+            sel.innerHTML = '<option value="">Plantilla original (por defecto)</option>';
+            data.forEach(p => {
+                sel.innerHTML += `<option value="${p.id}">${esc(p.nombre)} (${p.tipo})</option>`;
+            });
+        } catch { /* silent */ }
+    }
+
+    // Build config JSON from visual builder form
+    function buildVisualConfig() {
+        return {
+            empresa: {
+                nombre: $("#tpl-emp-nombre").value,
+                cif: $("#tpl-emp-cif").value,
+                direccion: $("#tpl-emp-dir").value,
+                telefono: $("#tpl-emp-tel").value,
+                email: $("#tpl-emp-email").value,
+                logo_url: $("#tpl-emp-logo").value,
+            },
+            estilo: {
+                color_primario: $("#tpl-color1").value,
+                color_secundario: $("#tpl-color2").value,
+                fuente: $("#tpl-fuente").value,
+                tam_fuente: parseInt($("#tpl-tam").value) || 10,
+            },
+            pagina: {
+                size: $("#tpl-page-size").value,
+                orientation: $("#tpl-page-orient").value,
+                margenes: {
+                    top: parseInt($("#tpl-margin-v").value) || 20,
+                    right: parseInt($("#tpl-margin-h").value) || 15,
+                    bottom: parseInt($("#tpl-margin-v").value) || 20,
+                    left: parseInt($("#tpl-margin-h").value) || 15,
+                },
+            },
+            secciones: {
+                fechas_servicio: $("#tpl-sec-fechas").checked,
+                pasajeros: $("#tpl-sec-pax").checked,
+                origen_destino: $("#tpl-sec-ordes").checked,
+                ida_vuelta: $("#tpl-sec-idavuelta").checked,
+                contacto: $("#tpl-sec-contacto").checked,
+                comentarios: $("#tpl-sec-comentarios").checked,
+            },
+            factura: {
+                titulo: $("#tpl-fac-titulo").value || "FACTURA",
+                porcentaje_iva: parseInt($("#tpl-fac-iva").value) || 10,
+                moneda: $("#tpl-fac-moneda").value || "€",
+                mostrar_desglose_iva: $("#tpl-fac-desglose").checked,
+            },
+            pie: {
+                texto: $("#tpl-pie-texto").value,
+                mostrar_datos_pago: $("#tpl-pie-pago").checked,
+                datos_pago: $("#tpl-pie-pago-texto").value,
+            },
+        };
+    }
+
+    // Live preview generation (client-side HTML)
+    function actualizarPreview() {
+        const c = buildVisualConfig();
+        const e = c.empresa, s = c.estilo, f = c.factura, p = c.pie;
+        const logo = e.logo_url ? `<img src="${esc(e.logo_url)}" style="max-height:30px;max-width:90px;">` : "";
+
+        const previewHTML = `
+        <div style="font-family:${s.fuente};font-size:${s.tam_fuente * 0.7}px;color:#333;line-height:1.5;">
+            <table style="width:100%;margin-bottom:12px;"><tr>
+                <td style="vertical-align:top;width:55%;">${logo}
+                    <div style="font-weight:800;color:${s.color_primario};font-size:${(s.tam_fuente + 4) * 0.7}px;margin-top:4px;">${esc(e.nombre || "Tu Empresa")}</div>
+                    <div style="color:#888;font-size:${(s.tam_fuente - 2) * 0.7}px;">${esc(e.cif)}</div>
+                    <div style="color:#888;font-size:${(s.tam_fuente - 2) * 0.7}px;">${esc(e.direccion)}</div>
+                </td>
+                <td style="vertical-align:top;text-align:right;">
+                    <div style="font-weight:900;color:${s.color_secundario};font-size:${(s.tam_fuente + 8) * 0.7}px;letter-spacing:1px;">${esc(f.titulo)}</div>
+                    <div style="font-size:${(s.tam_fuente) * 0.7}px;margin-top:3px;"><strong>Nº:</strong> 2026-0001</div>
+                    <div style="font-size:${(s.tam_fuente) * 0.7}px;"><strong>Fecha:</strong> 19/03/2026</div>
+                    <div style="font-size:${(s.tam_fuente) * 0.7}px;"><strong>Ref:</strong> MSC EJEMPLO</div>
+                </td>
+            </tr></table>
+            <table style="width:100%;border-collapse:collapse;">
+                <tr style="background:${s.color_primario};color:white;"><th style="padding:4px 6px;text-align:left;">Descripción</th><th style="padding:4px 6px;text-align:right;">Importe</th></tr>
+                <tr><td style="padding:6px;border-bottom:1px solid #eee;">Ticket T-001${c.secciones.pasajeros ? "<br>Pasajeros: John, Jane" : ""}${c.secciones.origen_destino ? "<br>Origen: Aeropuerto → Destino: Buque" : ""}</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eee;font-weight:600;">45.00 ${esc(f.moneda)}</td></tr>
+                <tr><td style="padding:6px;border-bottom:1px solid #eee;">Ticket T-002${c.secciones.pasajeros ? "<br>Pasajeros: María" : ""}</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eee;font-weight:600;">35.00 ${esc(f.moneda)}</td></tr>
+            </table>
+            <table style="margin-top:10px;margin-left:auto;">
+                ${f.mostrar_desglose_iva ? `<tr><td style="padding:2px 10px;color:#888;">Base imponible</td><td style="text-align:right;padding:2px 6px;">72.73 ${esc(f.moneda)}</td></tr><tr><td style="padding:2px 10px;color:#888;">IVA (${f.porcentaje_iva}%)</td><td style="text-align:right;padding:2px 6px;">7.27 ${esc(f.moneda)}</td></tr>` : ""}
+                <tr style="border-top:2px solid ${s.color_primario};"><td style="padding:4px 10px;font-weight:800;color:${s.color_primario};">TOTAL</td><td style="text-align:right;padding:4px 6px;font-weight:800;color:${s.color_primario};">80.00 ${esc(f.moneda)}</td></tr>
+            </table>
+            ${p.texto ? `<div style="margin-top:16px;padding-top:6px;border-top:1px solid #ddd;color:#aaa;font-size:${(s.tam_fuente - 2) * 0.7}px;">${esc(p.texto)}</div>` : ""}
+            ${p.mostrar_datos_pago && p.datos_pago ? `<div style="color:#777;font-size:${(s.tam_fuente - 2) * 0.7}px;">${esc(p.datos_pago)}</div>` : ""}
+        </div>`;
+        $("#tpl-preview").innerHTML = previewHTML;
+    }
+
+    // Auto-update preview on any form change
+    document.addEventListener("input", e => { if (e.target.closest && e.target.closest("#panel-visual")) actualizarPreview(); });
+    document.addEventListener("change", e => { if (e.target.closest && e.target.closest("#panel-visual")) actualizarPreview(); });
+    // Initial preview after a short delay
+    setTimeout(actualizarPreview, 500);
+
+    // Save visual template
+    async function guardarPlantillaVisual() {
+        const nombre = $("#tpl-nombre").value.trim();
+        if (!nombre) { alert("Pon un nombre a la plantilla"); return; }
+        const config = buildVisualConfig();
+        if (!config.empresa.nombre) { alert("Indica al menos el nombre de la empresa"); return; }
+
+        const fd = new FormData();
+        fd.append("nombre", nombre);
+        fd.append("config_json", JSON.stringify(config));
+
+        try {
+            const res = await fetch(`${URL_BASE}/plantillas/crear-visual`, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${sessionToken}` },
+                body: fd,
+            });
+            if (res.ok) {
+                alert("✅ Plantilla guardada");
+                cargarSelectorPlantillas();
+                verSec("sec-plantillas", $("#btn-plantillas"));
+                cargarPlantillas();
+            } else { alert("Error al guardar"); }
+        } catch { alert("Error de conexión"); }
+    }
+
+    // Excel upload helpers
+    function archivoExcelSeleccionado() {
+        const file = $("#excel-tpl-file").files[0];
+        if (file) {
+            $("#excel-file-label").textContent = file.name;
+        }
+    }
+
+    async function subirPlantillaExcel() {
+        const nombre = $("#excel-tpl-nombre").value.trim();
+        const fileInput = $("#excel-tpl-file");
+        if (!nombre) { alert("Pon un nombre a la plantilla"); return; }
+        if (!fileInput.files.length) { alert("Selecciona un archivo Excel"); return; }
+
+        const fd = new FormData();
+        fd.append("nombre", nombre);
+        fd.append("file", fileInput.files[0]);
+        fd.append("config_json", "{}");
+
+        try {
+            const res = await fetch(`${URL_BASE}/plantillas/upload-excel`, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${sessionToken}` },
+                body: fd,
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const tags = data.tags_detectados || [];
+                if (tags.length) {
+                    const div = $("#excel-tags-resultado");
+                    div.classList.remove("hidden");
+                    div.innerHTML = `<p class="text-sm font-bold text-emerald-700 mb-2">✅ ${tags.length} tags detectados:</p>
+                        <div class="flex flex-wrap gap-2">${tags.map(t => `<span class="bg-emerald-100 text-emerald-800 text-xs font-mono px-2 py-1 rounded">${esc(t)}</span>`).join("")}</div>`;
+                }
+                alert("✅ Plantilla Excel subida correctamente");
+                cargarSelectorPlantillas();
+                setTimeout(() => {
+                    verSec("sec-plantillas", $("#btn-plantillas"));
+                    cargarPlantillas();
+                }, 1000);
+            } else {
+                const err = await res.json().catch(() => ({}));
+                alert("Error: " + (err.detail || "Error subiendo plantilla"));
+            }
+        } catch { alert("Error de conexión"); }
+    }
+
+    // Preview a saved template
+    async function previewPlantilla(id) {
+        try {
+            const res = await fetch(`${URL_BASE}/plantillas/${id}/preview`, {
+                method: "POST",
+                headers: authHeaders(),
+            });
+            if (res.ok) {
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                window.open(url, "_blank");
+            } else { alert("Error generando preview"); }
+        } catch { alert("Error de conexión"); }
+    }
+
+    // Preview PDF from builder (save first, then preview)
+    async function previewPDF() {
+        const nombre = $("#tpl-nombre").value.trim() || "Preview temporal";
+        const config = buildVisualConfig();
+        const fd = new FormData();
+        fd.append("nombre", nombre);
+        fd.append("config_json", JSON.stringify(config));
+        try {
+            const res = await fetch(`${URL_BASE}/plantillas/crear-visual`, {
+                method: "POST", headers: { "Authorization": `Bearer ${sessionToken}` }, body: fd,
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.id) await previewPlantilla(data.id);
+            }
+        } catch { alert("Error"); }
+    }
+
+    // Delete template
+    async function eliminarPlantilla(id) {
+        if (!confirm("¿Eliminar esta plantilla?")) return;
+        try {
+            await fetch(`${URL_BASE}/plantillas/${id}`, { method: "DELETE", headers: authHeaders() });
+            cargarPlantillas();
+            cargarSelectorPlantillas();
+        } catch { alert("Error al eliminar"); }
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
