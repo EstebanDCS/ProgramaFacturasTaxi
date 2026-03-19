@@ -228,12 +228,14 @@ def procesar_descarga(datos_dict, formato):
 
 @app.get("/historial")
 async def historial(user = Depends(verificar_usuario)):
-    res = supabase.table("facturas").select("id, numero_factura, barco, importe_total, fecha_creacion").order("fecha_creacion", desc=True).execute()
+    # Solo mostramos las facturas que coincidan con el user_id
+    res = supabase.table("facturas").select("id, numero_factura, barco, importe_total, fecha_creacion").eq("user_id", user.id).order("fecha_creacion", desc=True).execute()
     return res.data
 
 @app.post("/solo-guardar")
 async def solo_guardar(datos: DatosFactura, user = Depends(verificar_usuario)):
     nueva = {
+        "user_id": user.id, # Asignamos el dueño de la factura
         "numero_factura": datos.factura_numero,
         "barco": datos.barco.upper(),
         "importe_total": sum(t.importe for t in datos.tickets),
@@ -245,6 +247,7 @@ async def solo_guardar(datos: DatosFactura, user = Depends(verificar_usuario)):
 @app.post("/generar")
 async def generar(datos: DatosFactura, formato: str = "excel", user = Depends(verificar_usuario)):
     nueva = {
+        "user_id": user.id, # Asignamos el dueño de la factura
         "numero_factura": datos.factura_numero,
         "barco": datos.barco.upper(),
         "importe_total": sum(t.importe for t in datos.tickets),
@@ -255,7 +258,7 @@ async def generar(datos: DatosFactura, formato: str = "excel", user = Depends(ve
 
 @app.get("/factura/{f_id}")
 async def get_factura(f_id: int, user = Depends(verificar_usuario)):
-    res = supabase.table("facturas").select("datos_json").eq("id", f_id).single().execute()
+    res = supabase.table("facturas").select("datos_json").eq("id", f_id).eq("user_id", user.id).single().execute()
     if not res.data: raise HTTPException(status_code=404)
     return json.loads(res.data["datos_json"])
 
@@ -267,7 +270,7 @@ async def actualizar(f_id: int, datos: DatosFactura, user = Depends(verificar_us
         "importe_total": sum(t.importe for t in datos.tickets),
         "datos_json": compact_json(datos.dict())
     }
-    supabase.table("facturas").update(nueva).eq("id", f_id).execute()
+    supabase.table("facturas").update(nueva).eq("id", f_id).eq("user_id", user.id).execute()
     return {"msg": "✅ Factura actualizada"}
 
 @app.put("/actualizar-generar/{f_id}")
@@ -278,22 +281,21 @@ async def actualizar_generar(f_id: int, datos: DatosFactura, formato: str = "exc
         "importe_total": sum(t.importe for t in datos.tickets),
         "datos_json": compact_json(datos.dict())
     }
-    supabase.table("facturas").update(nueva).eq("id", f_id).execute()
+    supabase.table("facturas").update(nueva).eq("id", f_id).eq("user_id", user.id).execute()
     return procesar_descarga(datos.dict(), formato)
 
 @app.get("/re-descargar/{f_id}")
 async def redescargar_file(f_id: int, formato: str = "excel", user = Depends(verificar_usuario)):
-    res = supabase.table("facturas").select("datos_json").eq("id", f_id).single().execute()
+    res = supabase.table("facturas").select("datos_json").eq("id", f_id).eq("user_id", user.id).single().execute()
     if not res.data: raise HTTPException(status_code=404)
     return procesar_descarga(json.loads(res.data["datos_json"]), formato)
 
 @app.delete("/eliminar-factura/{f_id}")
 async def eliminar_factura(f_id: int, user = Depends(verificar_usuario)):
-    supabase.table("facturas").delete().eq("id", f_id).execute()
+    supabase.table("facturas").delete().eq("id", f_id).eq("user_id", user.id).execute()
     return {"msg": "Factura eliminada"}
 
 @app.delete("/limpiar-historial")
 async def limpiar(user = Depends(verificar_usuario)):
-    # Elimina todas las facturas cuyo ID sea mayor que 0
-    supabase.table("facturas").delete().gt("id", 0).execute()
+    supabase.table("facturas").delete().eq("user_id", user.id).execute()
     return {"msg": "ok"}
