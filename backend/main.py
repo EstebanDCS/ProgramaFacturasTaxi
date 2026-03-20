@@ -285,7 +285,7 @@ def aplicar_formulas(lineas: list, columnas: list) -> list:
 
 
 def generar_html_visual(config: dict, datos_dict: dict) -> str:
-    """Genera HTML optimizado para LibreOffice PDF conversion."""
+    """Genera HTML con CSS moderno para WeasyPrint."""
     emp = config.get("empresa", {})
     est = config.get("estilo", {})
     pag = config.get("pagina", {})
@@ -317,59 +317,47 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
     cliente = datos_dict.get("cliente", {})
     lineas = datos_dict.get("lineas", [])
     notas = datos_dict.get("notas", "")
-
     lineas = aplicar_formulas(lineas, cols)
 
     # Logo
     logo_html = ""
     if emp.get("logo_url"):
-        logo_html = f'<img src="{emp["logo_url"]}" style="max-height:50px;max-width:160px;display:block;margin-bottom:8px" />'
+        logo_html = f'<img src="{emp["logo_url"]}" class="logo" />'
 
-    # Empresa info
+    # Empresa
     emp_nombre = emp.get("nombre", "")
-    emp_parts = []
-    if emp.get("cif"): emp_parts.append(emp["cif"])
-    if emp.get("direccion"): emp_parts.append(emp["direccion"])
+    emp_sub = []
+    if emp.get("cif"): emp_sub.append(emp["cif"])
+    if emp.get("direccion"): emp_sub.append(emp["direccion"])
     contacts = []
     if emp.get("telefono"): contacts.append(emp["telefono"])
     if emp.get("email"): contacts.append(emp["email"])
-    if contacts: emp_parts.append(" | ".join(contacts))
+    if contacts: emp_sub.append(" · ".join(contacts))
 
     # Cliente
     cliente_html = ""
     if config.get("cliente", {}).get("mostrar") and cliente:
-        cli_lines = []
-        if cliente.get("nombre"): cli_lines.append(f'<b>{cliente["nombre"]}</b>')
-        if cliente.get("cif"): cli_lines.append(f'CIF: {cliente["cif"]}')
-        if cliente.get("direccion"): cli_lines.append(cliente["direccion"])
-        if cliente.get("email"): cli_lines.append(cliente["email"])
-        if cli_lines:
-            cliente_html = f'''<table width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0">
-<tr><td bgcolor="#f5f6fa" style="padding:10px 14px;font-size:{tam}px">
-<div style="color:#999;font-size:{tam-2}px;font-weight:700;margin-bottom:4px">FACTURAR A:</div>
-{"<br>".join(cli_lines)}
-</td></tr></table>'''
+        cl = []
+        if cliente.get("nombre"): cl.append(f'<strong>{cliente["nombre"]}</strong>')
+        if cliente.get("cif"): cl.append(f'CIF: {cliente["cif"]}')
+        if cliente.get("direccion"): cl.append(cliente["direccion"])
+        if cliente.get("email"): cl.append(cliente["email"])
+        if cl:
+            cliente_html = f'''<div class="cliente-box">
+<div class="cliente-label">FACTURAR A:</div>
+{"<br>".join(cl)}
+</div>'''
 
     # Columnas visibles
     cols_vis = [c for c in cols if not c.get("oculta")]
-    # Calcular anchos como porcentaje
-    n_text = sum(1 for c in cols_vis if c.get("tipo") == "texto")
-    n_num = len(cols_vis) - n_text
-    pct_num = 15  # % por columna numérica
-    pct_text = max(10, (100 - n_num * pct_num) // max(n_text, 1))
 
-    # Header de tabla - HTML3.2 style que LibreOffice entiende
-    th_cells = []
-    for c in cols_vis:
-        w = pct_text if c.get("tipo") == "texto" else pct_num
-        al = c.get("alineacion", "left")
-        th_cells.append(f'<td width="{w}%" bgcolor="{color1}" align="{al}" style="padding:8px 10px"><font color="#ffffff"><b>{c["nombre"]}</b></font></td>')
-    th_html = "".join(th_cells)
+    # Header
+    th_html = "".join(f'<th style="text-align:{c.get("alineacion","left")}">{c["nombre"]}</th>' for c in cols_vis)
 
-    # Filas - bgcolor en cada td, align como atributo
+    # Filas
     filas_html = ""
     for ri, linea in enumerate(lineas):
-        bg = "#ffffff" if ri % 2 == 0 else "#f8f9fb"
+        cls = "row-alt" if ri % 2 == 1 else ""
         celdas = ""
         for c in cols_vis:
             val = linea.get(c.get("campo", ""), "")
@@ -377,14 +365,14 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
             if c.get("tipo") in ("moneda", "formula") or c.get("campo") == col_importe:
                 try: display = f'{float(val):,.2f} {moneda}'
                 except: display = str(val)
+                celdas += f'<td class="num" style="text-align:{align}"><strong>{display}</strong></td>'
             elif c.get("tipo") == "numero":
                 try: display = f'{float(val):g}'
                 except: display = str(val)
-            else: display = str(val)
-            bold = "<b>" if c.get("tipo") in ("moneda", "formula") else ""
-            bold_c = "</b>" if bold else ""
-            celdas += f'<td bgcolor="{bg}" align="{align}" style="padding:7px 10px;border-bottom:1px solid #e0e4e8">{bold}{display}{bold_c}</td>'
-        filas_html += f'<tr>{celdas}</tr>'
+                celdas += f'<td style="text-align:{align}">{display}</td>'
+            else:
+                celdas += f'<td style="text-align:{align}">{str(val)}</td>'
+        filas_html += f'<tr class="{cls}">{celdas}</tr>'
 
     # Totales
     subtotal = 0
@@ -392,49 +380,21 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
         try: subtotal += float(linea.get(col_importe, 0))
         except: pass
 
-    totales_rows = ""
+    totales_html = ""
     total_final = subtotal
     if config.get("mostrar_desglose", True) and impuestos:
-        totales_rows += f'<tr><td align="right" style="padding:4px 14px"><font color="#888888">Subtotal</font></td><td align="right" style="padding:4px 14px"><b>{subtotal:,.2f} {moneda}</b></td></tr>'
+        totales_html += f'<tr><td class="tot-label">Subtotal</td><td class="tot-val">{subtotal:,.2f} {moneda}</td></tr>'
         for imp in impuestos:
             pct = float(imp.get("porcentaje", 0))
             monto = subtotal * pct / 100
             total_final = subtotal + monto
-            totales_rows += f'<tr><td align="right" style="padding:4px 14px"><font color="#888888">{imp.get("nombre","Impuesto")} ({pct:g}%)</font></td><td align="right" style="padding:4px 14px"><b>{monto:,.2f} {moneda}</b></td></tr>'
+            totales_html += f'<tr><td class="tot-label">{imp.get("nombre","Impuesto")} ({pct:g}%)</td><td class="tot-val">{monto:,.2f} {moneda}</td></tr>'
 
-    totales_rows += f'<tr><td colspan="2"><hr style="border:none;border-top:2px solid {color1};margin:4px 0" /></td></tr>'
-    totales_rows += f'<tr><td bgcolor="#f5f6fa" align="right" style="padding:8px 14px"><font color="{color1}" size="+1"><b>TOTAL</b></font></td><td bgcolor="#f5f6fa" align="right" style="padding:8px 14px"><font color="{color1}" size="+1"><b>{total_final:,.2f} {moneda}</b></font></td></tr>'
+    totales_html += f'<tr class="total-row"><td class="tot-label">TOTAL</td><td class="tot-val">{total_final:,.2f} {moneda}</td></tr>'
 
-    ref = datos_dict.get("referencia", "")
-    ref_html = f'<div style="font-size:{tam}px;margin-top:3px"><b>Ref:</b> {ref}</div>' if ref else ""
-    notas_html = f'<p style="margin:12px 0 4px;font-size:{tam-1}px;color:#555;font-style:italic">{notas}</p>' if notas else ""
-    pago_html = f'<p style="font-size:{tam-1}px;color:#666;margin:4px 0">{pie["datos_pago"]}</p>' if pie.get("mostrar_datos_pago") and pie.get("datos_pago") else ""
-
-    pag_html = f'''
-<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px">
-<tr>
-<td width="55%" valign="top">
-{logo_html}
-<font size="5" color="{color1}"><b>{emp_nombre}</b></font><br>
-{"<br>".join(f'<font size="2" color="#777777">{p}</font>' for p in emp_parts)}
-</td>
-<td valign="top" align="right">
-<font size="6" color="{color2}"><b>{titulo}</b></font><br>
-<font size="3"><b>Nº:</b> {datos_dict.get("numero_factura","")}</font><br>
-<font size="3"><b>Fecha:</b> {fecha}</font><br>
-{ref_html}
-</td>
-</tr>
-</table>
-{cliente_html}
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:10px">
-<tr>{th_html}</tr>
-{filas_html}
-</table>
-<table width="50%" cellpadding="0" cellspacing="0" style="margin-top:16px;margin-left:auto">{totales_rows}</table>
-{notas_html}
-<div style="margin-top:30px;padding-top:10px;border-top:1px solid #ddd;font-size:{tam-1}px;color:#999">
-{pie.get("texto","")}{pago_html}</div>'''
+    ref_html = f'<div style="margin-top:4px"><strong>Ref:</strong> {datos_dict.get("referencia","")}</div>' if datos_dict.get("referencia") else ""
+    notas_html = f'<p class="notas">{notas}</p>' if notas else ""
+    pago_html = f'<p class="pago">{pie["datos_pago"]}</p>' if pie.get("mostrar_datos_pago") and pie.get("datos_pago") else ""
 
     # Hojas de detalle
     det = config.get("hoja_detalle", {})
@@ -444,51 +404,124 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
         campos_det = det.get("campos", [c["campo"] for c in cols])
         nombres = {c["campo"]: c["nombre"] for c in cols}
         for idx, linea in enumerate(lineas, 1):
-            filas_d = ""
-            for campo in campos_det:
-                nom = nombres.get(campo, campo.replace("_", " ").title())
-                val = linea.get(campo, "")
-                filas_d += f'<tr><td bgcolor="#f5f6fa" width="40%" style="padding:8px 14px;border-bottom:1px solid #eaedf0"><font color="{color1}"><b>{nom}</b></font></td><td style="padding:8px 14px;border-bottom:1px solid #eaedf0">{val}</td></tr>'
+            filas_d = "".join(
+                f'<tr><td class="det-label">{nombres.get(campo, campo.replace("_"," ").title())}</td><td class="det-val">{linea.get(campo,"")}</td></tr>'
+                for campo in campos_det
+            )
             pags_det += f'''
-<div style="page-break-before:always"></div>
-<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px">
-<tr>
-<td width="55%" valign="top">{logo_html}
-<font size="4" color="{color1}"><b>{emp_nombre}</b></font>
-</td><td valign="top" align="right">
-<font size="5" color="{color2}"><b>{titulo_det} #{idx}</b></font><br>
-<font size="2">Factura: {datos_dict.get("numero_factura","")}</font><br>
-<font size="2">{fecha}</font>
-</td></tr></table>
-<table width="100%" cellpadding="0" cellspacing="0">{filas_d}</table>'''
+<div class="page-break"></div>
+<table class="header-table">
+<tr><td class="emp-col">{logo_html}<div class="emp-name" style="font-size:{tam+4}px">{emp_nombre}</div></td>
+<td class="fac-col"><div class="fac-title" style="font-size:{tam+6}px">{titulo_det} #{idx}</div>
+<div>Factura: {datos_dict.get("numero_factura","")}</div><div>{fecha}</div></td></tr>
+</table>
+<table class="det-table">{filas_d}</table>'''
 
     return f'''<!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <style>
-@page {{ size: {pag.get("size","A4")} {pag.get("orientation","portrait")}; margin: {mt}mm {mr}mm {mb}mm {ml}mm; }}
-body {{ font-family: {fuente}; font-size: {tam}px; color: #333333; margin: 0; padding: 0; line-height: {interlineado}; }}
-table {{ border-collapse: collapse; }}
-td {{ vertical-align: top; }}
+@page {{
+    size: {pag.get("size","A4")} {pag.get("orientation","portrait")};
+    margin: {mt}mm {mr}mm {mb}mm {ml}mm;
+}}
+body {{
+    font-family: {fuente};
+    font-size: {tam}px;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    line-height: {interlineado};
+}}
+.logo {{ max-height: 50px; max-width: 160px; display: block; margin-bottom: 8px; }}
+.header-table {{ width: 100%; margin-bottom: 20px; }}
+.header-table td {{ vertical-align: top; padding: 0; }}
+.emp-col {{ width: 55%; }}
+.fac-col {{ text-align: right; }}
+.emp-name {{ font-size: {tam+8}px; font-weight: 800; color: {color1}; margin-bottom: 4px; }}
+.emp-sub {{ font-size: {tam-1}px; color: #777; }}
+.fac-title {{ font-size: {tam+14}px; font-weight: 900; color: {color2}; margin-bottom: 8px; }}
+.cliente-box {{ background: #f5f6fa; padding: 10px 14px; margin: 14px 0; }}
+.cliente-label {{ font-size: {tam-2}px; color: #999; font-weight: 700; margin-bottom: 4px; }}
+.items-table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
+.items-table th {{
+    background-color: {color1};
+    color: white;
+    font-weight: 700;
+    padding: 8px 10px;
+    font-size: {tam}px;
+    border: none;
+}}
+.items-table td {{
+    padding: 7px 10px;
+    border-bottom: 1px solid #e0e4e8;
+}}
+.items-table .row-alt td {{ background-color: #f8f9fb; }}
+.totals-table {{ width: auto; margin-left: auto; margin-top: 16px; }}
+.tot-label {{ padding: 4px 14px; text-align: right; color: #888; }}
+.tot-val {{ padding: 4px 14px; text-align: right; font-weight: 600; min-width: 100px; }}
+.total-row td {{
+    border-top: 2px solid {color1};
+    padding: 8px 14px;
+    font-weight: 800;
+    font-size: {tam+3}px;
+    color: {color1};
+    background-color: #f5f6fa;
+}}
+.notas {{ margin: 12px 0 4px; font-size: {tam-1}px; color: #555; font-style: italic; }}
+.pago {{ font-size: {tam-1}px; color: #666; margin: 4px 0; }}
+.footer {{ margin-top: 30px; padding-top: 10px; border-top: 1px solid #ddd; font-size: {tam-1}px; color: #999; }}
+.page-break {{ page-break-before: always; }}
+.det-table {{ width: 100%; border-collapse: collapse; }}
+.det-label {{ padding: 8px 14px; font-weight: 600; color: {color1}; width: 40%; background-color: #f5f6fa; border-bottom: 1px solid #eaedf0; }}
+.det-val {{ padding: 8px 14px; border-bottom: 1px solid #eaedf0; }}
 </style></head><body>
-{pag_html}
+
+<table class="header-table">
+<tr>
+<td class="emp-col">
+{logo_html}
+<div class="emp-name">{emp_nombre}</div>
+{"<br>".join(f'<span class="emp-sub">{p}</span>' for p in emp_sub)}
+</td>
+<td class="fac-col">
+<div class="fac-title">{titulo}</div>
+<div><strong>Nº:</strong> {datos_dict.get("numero_factura","")}</div>
+<div><strong>Fecha:</strong> {fecha}</div>
+{ref_html}
+</td>
+</tr>
+</table>
+
+{cliente_html}
+
+<table class="items-table">
+<tr>{th_html}</tr>
+{filas_html}
+</table>
+
+<table class="totals-table">
+{totales_html}
+</table>
+
+{notas_html}
+
+<div class="footer">
+{pie.get("texto","")}{pago_html}
+</div>
+
 {pags_det}
+
 </body></html>'''
 
 def html_a_pdf(html_content: str) -> str:
+    """Convierte HTML a PDF usando WeasyPrint."""
+    from weasyprint import HTML as WeasyprintHTML
     os.makedirs(TEMP_DIR, exist_ok=True)
-    html_path = os.path.join(TEMP_DIR, f"vis_{datetime.now().strftime('%H%M%S%f')}.html")
-    with open(html_path, "w", encoding="utf-8") as f:
-        f.write(html_content)
-    lo_profile = os.path.join(TEMP_DIR, "lo_profile_vis")
+    pdf_path = os.path.join(TEMP_DIR, f"vis_{datetime.now().strftime('%H%M%S%f')}.pdf")
     try:
-        subprocess.run(
-            ["libreoffice", f"-env:UserInstallation=file://{lo_profile}",
-             "--headless", "--convert-to", "pdf", "--outdir", TEMP_DIR, html_path],
-            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60,
-        )
+        WeasyprintHTML(string=html_content).write_pdf(pdf_path)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generando PDF: {e}")
-    pdf_path = html_path.replace(".html", ".pdf")
     if not os.path.exists(pdf_path):
         raise HTTPException(status_code=500, detail="No se generó el PDF.")
     return pdf_path
