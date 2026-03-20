@@ -345,34 +345,30 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
         if cliente.get("email"): cli_lines.append(cliente["email"])
         if cli_lines:
             cliente_html = f'''<table width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0">
-<tr><td style="background:#f5f6fa;padding:10px 14px;border-radius:4px;font-size:{tam}px">
+<tr><td bgcolor="#f5f6fa" style="background-color:#f5f6fa;padding:10px 14px;font-size:{tam}px">
 <div style="color:#999;font-size:{tam-2}px;font-weight:700;margin-bottom:4px">FACTURAR A:</div>
 {"<br>".join(cli_lines)}
 </td></tr></table>'''
 
     # Columnas visibles
     cols_vis = [c for c in cols if not c.get("oculta")]
-    n_cols = len(cols_vis)
-    # Calcular anchos: texto=ancho, numeros=estrecho
-    col_widths = []
-    for c in cols_vis:
-        if c.get("tipo") == "texto": col_widths.append("*")
-        else: col_widths.append("90px")
-    total_fixed = sum(90 for w in col_widths if w != "*")
-    n_flex = sum(1 for w in col_widths if w == "*")
+    # Calcular anchos como porcentaje
+    n_text = sum(1 for c in cols_vis if c.get("tipo") == "texto")
+    n_num = len(cols_vis) - n_text
+    pct_num = 15  # % por columna numérica
+    pct_text = max(10, (100 - n_num * pct_num) // max(n_text, 1))
 
-    # Header de tabla
+    # Header de tabla - bgcolor en CADA th para LibreOffice
     th_cells = []
-    for i, c in enumerate(cols_vis):
-        w = col_widths[i]
-        ws = f'width="{w}"' if w != "*" else ""
-        th_cells.append(f'<th {ws} style="padding:8px 10px;text-align:{c.get("alineacion","left")};font-size:{tam}px;font-weight:700;color:white">{c["nombre"]}</th>')
+    for c in cols_vis:
+        w = pct_text if c.get("tipo") == "texto" else pct_num
+        th_cells.append(f'<th width="{w}%" bgcolor="{color1}" style="background-color:{color1};padding:8px 10px;text-align:{c.get("alineacion","left")};font-size:{tam}px;font-weight:700;color:#ffffff">{c["nombre"]}</th>')
     th_html = "".join(th_cells)
 
-    # Filas
+    # Filas - bgcolor en cada td
     filas_html = ""
     for ri, linea in enumerate(lineas):
-        bg = "#ffffff" if ri % 2 == 0 else "#fafbfc"
+        bg = "#ffffff" if ri % 2 == 0 else "#f8f9fb"
         celdas = ""
         for c in cols_vis:
             val = linea.get(c.get("campo", ""), "")
@@ -385,8 +381,8 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
                 except: display = str(val)
             else: display = str(val)
             fw = "font-weight:600;" if c.get("tipo") in ("moneda", "formula") else ""
-            celdas += f'<td style="padding:7px 10px;text-align:{align};{fw}border-bottom:1px solid #eaedf0">{display}</td>'
-        filas_html += f'<tr style="background:{bg}">{celdas}</tr>'
+            celdas += f'<td bgcolor="{bg}" style="background-color:{bg};padding:7px 10px;text-align:{align};{fw}border-bottom:1px solid #e0e4e8">{display}</td>'
+        filas_html += f'<tr>{celdas}</tr>'
 
     # Totales
     subtotal = 0
@@ -404,8 +400,8 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
             total_final = subtotal + monto
             totales_rows += f'<tr><td style="padding:4px 14px;color:#888;text-align:right;font-size:{tam}px">{imp.get("nombre","Impuesto")} ({pct:g}%)</td><td style="padding:4px 14px;text-align:right;font-weight:600;font-size:{tam}px">{monto:,.2f} {moneda}</td></tr>'
 
-    totales_rows += f'<tr><td colspan="2" style="border-top:2px solid {color1};padding:0"></td></tr>'
-    totales_rows += f'<tr><td style="padding:8px 14px;text-align:right;font-weight:800;font-size:{tam+3}px;color:{color1}">TOTAL</td><td style="padding:8px 14px;text-align:right;font-weight:800;font-size:{tam+3}px;color:{color1}">{total_final:,.2f} {moneda}</td></tr>'
+    totales_rows += f'<tr><td colspan="2"><hr style="border:none;border-top:2px solid {color1};margin:4px 0" /></td></tr>'
+    totales_rows += f'<tr><td bgcolor="#f5f6fa" style="background-color:#f5f6fa;padding:8px 14px;text-align:right;font-weight:800;font-size:{tam+3}px;color:{color1}">TOTAL</td><td bgcolor="#f5f6fa" style="background-color:#f5f6fa;padding:8px 14px;text-align:right;font-weight:800;font-size:{tam+3}px;color:{color1}">{total_final:,.2f} {moneda}</td></tr>'
 
     ref = datos_dict.get("referencia", "")
     ref_html = f'<div style="font-size:{tam}px;margin-top:3px"><b>Ref:</b> {ref}</div>' if ref else ""
@@ -430,7 +426,7 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
 </table>
 {cliente_html}
 <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px">
-<thead><tr style="background-color:{color1}" bgcolor="{color1}">{th_html}</tr></thead>
+<thead><tr>{th_html}</tr></thead>
 <tbody>{filas_html}</tbody>
 </table>
 <table width="50%" cellpadding="0" cellspacing="0" style="margin-top:16px;margin-left:auto">{totales_rows}</table>
@@ -450,7 +446,7 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
             for campo in campos_det:
                 nom = nombres.get(campo, campo.replace("_", " ").title())
                 val = linea.get(campo, "")
-                filas_d += f'<tr><td style="padding:8px 14px;font-weight:600;color:{color1};width:40%;background:#f5f6fa;border-bottom:1px solid #eaedf0">{nom}</td><td style="padding:8px 14px;border-bottom:1px solid #eaedf0">{val}</td></tr>'
+                filas_d += f'<tr><td bgcolor="#f5f6fa" style="background-color:#f5f6fa;padding:8px 14px;font-weight:600;color:{color1};width:40%;border-bottom:1px solid #eaedf0">{nom}</td><td style="padding:8px 14px;border-bottom:1px solid #eaedf0">{val}</td></tr>'
             pags_det += f'''
 <div style="page-break-before:always"></div>
 <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px">
