@@ -869,6 +869,56 @@ async def preview_plantilla(p_id: int, user=Depends(verificar_usuario)):
         return FileResponse(out, filename="preview.xlsx", background=cleanup)
 
 
+@app.get("/health")
+async def health():
+    """Health check — usado por el frontend para detectar cold start."""
+    return {"status": "ok"}
+
+
+@app.post("/guardar-con-plantilla")
+async def guardar_con_plantilla(datos: DatosFacturaGenerica, plantilla_id: Optional[int] = None, user=Depends(verificar_usuario)):
+    """Guarda factura en la nube sin generar PDF."""
+    if not plantilla_id:
+        raise HTTPException(status_code=400, detail="Se requiere plantilla_id")
+    res = supabase.table("plantillas").select("nombre").eq("id", plantilla_id).single().execute()
+    plantilla_nombre = res.data["nombre"] if res.data else "custom"
+
+    # Calcular importe total desde las líneas
+    config = {}
+    try:
+        pr = supabase.table("plantillas").select("config_json").eq("id", plantilla_id).single().execute()
+        if pr.data:
+            config = json.loads(pr.data.get("config_json", "{}"))
+    except Exception:
+        pass
+
+    cols = config.get("columnas", [])
+    col_importe = config.get("columna_importe", "")
+    if not col_importe and cols:
+        for c in reversed(cols):
+            if c.get("tipo") in ("moneda", "numero", "formula"):
+                col_importe = c["campo"]
+                break
+    importe_total = 0
+    for linea in datos.lineas:
+        try:
+            importe_total += float(linea.get(col_importe, 0))
+        except (ValueError, TypeError):
+            pass
+
+    registro = {
+        "user_id": user.id,
+        "numero_factura": datos.numero_factura,
+        "barco": datos.referencia or plantilla_nombre,
+        "importe_total": round(importe_total, 2),
+        "datos_json": compact_json(datos.dict()),
+        "plantilla_nombre": plantilla_nombre,
+    }
+    supabase.table("facturas").insert(registro).execute()
+    log_actividad(user.id, "guardar_con_plantilla", f"plantilla={plantilla_nombre}")
+    return {"msg": "Factura guardada en la nube"}
+
+
 @app.post("/generar-con-plantilla")
 async def generar_con_plantilla(datos: DatosFacturaGenerica, formato: str = "pdf", plantilla_id: Optional[int] = None, user=Depends(verificar_usuario)):
     if not plantilla_id:
@@ -887,12 +937,18 @@ async def generar_con_plantilla(datos: DatosFacturaGenerica, formato: str = "pdf
     if p["tipo"] == "visual":
         config = json.loads(p["config_json"])
         html = generar_html_visual(config, datos.dict())
-        pdf_path = html_a_pdf(html)
-        pdf_name = f"{nombre_base}.pdf"
-        final_path = os.path.join(TEMP_DIR, pdf_name)
-        shutil.move(pdf_path, final_path)
-        return FileResponse(final_path, filename=pdf_name,
-                            headers={"Content-Disposition": f"attachment; filename={pdf_name}"}, background=cleanup)
+        if formato == "html":
+            return Response(content=html, media_type="text/html",
+                            headers={"Content-Disposition": f"attachment; filename={nombre_base}.html"})
+        try:
+            pdf_path = html_a_pdf(html)
+            pdf_name = f"{nombre_base}.pdf"
+            final_path = os.path.join(TEMP_DIR, pdf_name)
+            shutil.move(pdf_path, final_path)
+            return FileResponse(final_path, filename=pdf_name,
+                                headers={"Content-Disposition": f"attachment; filename={pdf_name}"}, background=cleanup)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error generando PDF: {e}. Prueba con formato=html.")
     elif p["tipo"] == "excel":
         if not p.get("excel_path"):
             raise HTTPException(status_code=400)
@@ -904,14 +960,18 @@ async def generar_con_plantilla(datos: DatosFacturaGenerica, formato: str = "pdf
         if formato == "excel":
             return FileResponse(final_path, filename=xlsx_name,
                                 headers={"Content-Disposition": f"attachment; filename={xlsx_name}"}, background=cleanup)
-        lo_profile = os.path.join(TEMP_DIR, "lo_profile_tpl")
-        subprocess.run(["libreoffice", f"-env:UserInstallation=file://{lo_profile}",
-                        "--headless", "--convert-to", "pdf", "--outdir", TEMP_DIR, final_path],
-                       check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        pdf_name = f"{nombre_base}.pdf"
-        pdf_path = os.path.join(TEMP_DIR, pdf_name)
-        return FileResponse(pdf_path, filename=pdf_name,
-                            headers={"Content-Disposition": f"attachment; filename={pdf_name}"}, background=cleanup)
+        try:
+            lo_profile = os.path.join(TEMP_DIR, "lo_profile_tpl")
+            subprocess.run(["libreoffice", f"-env:UserInstallation=file://{lo_profile}",
+                            "--headless", "--convert-to", "pdf", "--outdir", TEMP_DIR, final_path],
+                           check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+            pdf_name = f"{nombre_base}.pdf"
+            pdf_path = os.path.join(TEMP_DIR, pdf_name)
+            return FileResponse(pdf_path, filename=pdf_name,
+                                headers={"Content-Disposition": f"attachment; filename={pdf_name}"}, background=cleanup)
+        except Exception as e:
+            return FileResponse(final_path, filename=xlsx_name,
+                                headers={"Content-Disposition": f"attachment; filename={xlsx_name}"}, background=cleanup)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

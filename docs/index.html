@@ -14,7 +14,6 @@
         .app-section{display:none!important;animation:fadeIn .3s ease}.app-section.activa{display:flex!important;flex-direction:column}
         @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         #app-layout{display:none}body.logged-in #sec-login-container{display:none!important}body.logged-in #app-layout{display:flex}
-        .condicional{display:none}
         body.modo-pruebas aside::after{content:'DEV';position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;letter-spacing:.15em;color:#f87171;opacity:.5}
         .animate-spin{animation:spin 1s linear infinite}@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         .stat-card{background:white;border-radius:12px;border:1px solid #e2e8f0;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
@@ -27,7 +26,6 @@
 </head>
 <body class="bg-bg-light text-slate-900 font-display min-h-screen flex flex-col">
     <div id="toast-container"></div>
-    <datalist id="sugerencias-pasajeros"></datalist>
 
     <!-- MODAL PREVIEW -->
     <div id="modal-preview" class="fixed inset-0 z-[9998] hidden flex items-center justify-center">
@@ -82,6 +80,13 @@
 
     <!-- APP -->
     <div id="app-layout" class="w-full min-h-screen">
+        <!-- Loading overlay for cold start -->
+        <div id="app-loading" class="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center">
+            <div class="bg-primary p-3 rounded-xl mb-6"><span class="material-symbols-outlined text-white text-3xl fill-1">directions_boat</span></div>
+            <p class="text-lg font-bold text-slate-800 mb-2">Conectando con el servidor</p>
+            <p class="text-sm text-slate-400 mb-6" id="loading-msg">Esto puede tardar unos segundos...</p>
+            <div class="w-48 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div id="loading-bar" class="h-full bg-primary rounded-full transition-all duration-500" style="width:10%"></div></div>
+        </div>
         <aside class="fixed inset-y-0 left-0 w-64 bg-sidebar text-slate-300 flex flex-col shadow-xl z-50">
             <div class="p-6">
                 <div class="flex items-center gap-3 mb-8">
@@ -249,7 +254,7 @@
                     </div>
                     <div class="lg:col-span-2 sticky top-6 self-start">
                         <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                            <div class="flex items-center justify-between mb-3"><span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Vista previa</span><button onclick="previewPDF()" class="text-xs font-bold text-primary hover:underline flex items-center gap-1"><span class="material-symbols-outlined text-sm">picture_as_pdf</span> Ver PDF</button></div>
+                            <div class="flex items-center justify-between mb-3"><span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Vista previa</span></div>
                             <div id="tpl-preview" class="border border-slate-100 rounded-lg bg-white overflow-auto" style="height:500px;font-size:7px;padding:12px;"></div>
                         </div>
                     </div>
@@ -348,10 +353,15 @@
                         <textarea id="gen-notas" class="mt-2 w-full rounded-lg border-slate-200 bg-slate-50 p-4 min-h-[80px] text-sm" placeholder="Condiciones de pago, notas adicionales..."></textarea>
                     </div>
 
-                    <!-- Botón generar -->
-                    <button type="button" onclick="generarConPlantilla()" class="w-full flex items-center justify-center gap-2 px-8 py-4 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all text-lg">
-                        <span class="material-symbols-outlined">picture_as_pdf</span> GENERAR FACTURA
-                    </button>
+                    <!-- Botones acción -->
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <button type="button" onclick="guardarConPlantilla()" class="flex-1 flex items-center justify-center gap-2 px-8 py-3.5 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 shadow-lg transition-all">
+                            <span class="material-symbols-outlined">cloud_upload</span> GUARDAR EN NUBE
+                        </button>
+                        <button type="button" onclick="abrirModalDescargaPlantilla()" class="flex-1 flex items-center justify-center gap-2 px-8 py-3.5 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all">
+                            <span class="material-symbols-outlined">download</span> DESCARGAR
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -423,7 +433,7 @@
     const PROD_HOSTNAME="programa-facturas-taxi.vercel.app";
     const esProd=location.hostname===PROD_HOSTNAME;
     const URL_BASE=esProd?"https://programafacturas.onrender.com":"https://programafacturas-dev.onrender.com";
-    const PAX_KEY="taxi_pasajeros_historial";
+    
     let ticketCount=0,sessionToken=null,sbClient=null,isAdmin=false;
     let idDescargaPendiente=null,progressInterval=null,currentPlantillaConfig=null,cryptoKey=null;
     if(!esProd)document.body.classList.add("modo-pruebas");
@@ -469,8 +479,9 @@
 
     async function iniciarApp(user){
         document.body.classList.add("logged-in");
+        // Health check — esperar a que el backend arranque
+        await waitForBackend();
         verSec("sec-dashboard",$("#btn-dashboard"));
-        cargarSugerenciasPasajeros();
         if(user){
             await initCrypto(user.id);
             const meta=user.user_metadata||{};
@@ -487,11 +498,28 @@
             cargarUserDashboard();
         }
     }
+    async function waitForBackend(){
+        const bar=$("#loading-bar"),msg=$("#loading-msg"),overlay=$("#app-loading");
+        if(!overlay)return;
+        let pct=10;const msgs=["Despertando el servidor...","Casi listo...","Conectando..."];
+        for(let i=0;i<20;i++){
+            try{
+                bar.style.width=Math.min(pct,90)+"%";
+                if(i>2)msg.textContent=msgs[Math.min(i-3,2)];
+                const r=await fetch(`${URL_BASE}/health`,{signal:AbortSignal.timeout(5000)});
+                if(r.ok){bar.style.width="100%";msg.textContent="Conectado";
+                    setTimeout(()=>{overlay.style.opacity="0";overlay.style.transition="opacity .3s";setTimeout(()=>overlay.remove(),300)},400);return}
+            }catch{}
+            pct+=Math.random()*12+3;
+            await new Promise(r=>setTimeout(r,2000));
+        }
+        msg.textContent="El servidor tarda más de lo normal. Recarga la página.";
+        bar.style.width="100%";bar.classList.remove("bg-primary");bar.classList.add("bg-amber-400");
+    }
     async function checkAdminStatus(){try{const r=await fetch(`${URL_BASE}/admin/check`,{headers:authHeaders()});if(r.ok){const d=await r.json();isAdmin=d.is_admin===true;if(isAdmin){$("#btn-admin").classList.remove("hidden");$("#btn-admin").classList.add("flex")}}}catch{}}
 
     /* ═══ NAVIGATION ═══ */
     function verSec(id,btn){$$(".app-section").forEach(s=>s.classList.remove("activa"));$(`#${id}`).classList.add("activa");$$(".nav-btn").forEach(l=>{const keep=l.id==="btn-admin"&&!isAdmin;l.className="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group";if(keep)l.classList.add("hidden");if(l.id==="btn-comunidad")l.className="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg text-blue-200/30 cursor-default";l.querySelector("span:first-child")?.classList.remove("fill-1")});btn.className="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white shadow-lg shadow-primary/20 transition-all cursor-pointer";btn.querySelector("span:first-child")?.classList.add("fill-1")}
-    function toggleI(cb,id){const el=document.getElementById(id);if(cb.checked){el.classList.remove("condicional");el.classList.add("block")}else{el.classList.add("condicional");el.classList.remove("block");el.value=""}}
 
     /* ═══ USER DASHBOARD ═══ */
     async function cargarUserDashboard(){try{const r=await fetch(`${URL_BASE}/user/stats`,{headers:authHeaders()});if(!r.ok)return;const d=await r.json();
@@ -509,18 +537,7 @@
         else{const mx=Math.max(...pp.map(x=>x.count),1);pl.innerHTML=pp.map(x=>{const p=x.count/mx*100;return`<div class="flex items-center gap-3"><span class="text-xs font-bold text-slate-700 w-24 truncate">${esc(x.nombre)}</span><div class="flex-1 bg-slate-100 rounded-full h-2"><div class="bg-amber-400 h-2 rounded-full" style="width:${p}%"></div></div><span class="text-xs text-slate-500 w-8 text-right">${x.count}</span></div>`}).join("")}
     }catch{}}
 
-    /* ═══ PASAJEROS ═══ */
-    function getPaxHistorial(){return JSON.parse(localStorage.getItem(PAX_KEY)||"[]")}
-    function cargarSugerenciasPasajeros(){$("#sugerencias-pasajeros").innerHTML=getPaxHistorial().map(n=>`<option value="${esc(n)}">`).join("")}
-    function guardarNombreEnHistorial(n){const ns=getPaxHistorial();if(ns.includes(n))return;ns.unshift(n);if(ns.length>200)ns.pop();localStorage.setItem(PAX_KEY,JSON.stringify(ns));cargarSugerenciasPasajeros()}
-
-    /* ═══ TAGS (pasajeros + fechas) ═══ */
-    function crearTag(c,cls,display,raw){const isPax=cls.includes("pasajeros");const t=document.createElement("span");t.className="inline-flex items-center gap-1 text-sm font-medium px-3 py-1.5 rounded-lg "+(isPax?"pax-tag bg-blue-50 border border-blue-100 text-blue-800":"fecha-tag bg-slate-100 border border-slate-200 text-slate-700");t.innerHTML=`<input type="hidden" class="${esc(cls)}" value="${esc(raw)}">${esc(display)} <button type="button" class="${isPax?'text-blue-400':'text-slate-400'} hover:text-red-500 ml-1 leading-none font-bold text-base transition-colors">&times;</button>`;t.querySelector("button").onclick=()=>{t.remove();guardarProgreso()};c.appendChild(t)}
-    function fechaISO_a_ES(iso){const[y,m,d]=iso.split("-");return`${d}/${m}/${y}`}
-    function addP(id){const c=$(`#pax_${id}`);if(c.querySelector(".pax-input-temp")){c.querySelector(".pax-input-temp").focus();return}const i=document.createElement("input");i.className="pax-input-temp flex-shrink-0 min-w-[140px] rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary/30 outline-none";i.setAttribute("list","sugerencias-pasajeros");i.placeholder="Nombre...";const conf=()=>{const n=i.value.trim();i.remove();if(!n)return;guardarNombreEnHistorial(n);crearTag(c,"t-pasajeros",n,n);guardarProgreso()};i.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===","){e.preventDefault();conf()}if(e.key==="Escape")i.remove()});i.addEventListener("blur",()=>setTimeout(()=>{if(i.parentNode)conf()},150));c.appendChild(i);i.focus()}
-    function addFecha(tipo,id){const c=$(`#fechas_${tipo}_${id}`);if(c.querySelector(".fecha-input-temp")){c.querySelector(".fecha-input-temp").focus();return}const i=document.createElement("input");i.type="date";i.className="fecha-input-temp rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary/30 outline-none";const conf=()=>{const v=i.value;i.remove();if(!v)return;crearTag(c,`t-fechas-${tipo}`,fechaISO_a_ES(v),v);guardarProgreso()};i.addEventListener("change",()=>{if(i.value)conf()});i.addEventListener("keydown",e=>{if(e.key==="Escape")i.remove()});i.addEventListener("blur",()=>setTimeout(()=>{if(i.parentNode&&!i.value)i.remove()},200));c.appendChild(i);i.focus()}
-
-    /* ═══ MODAL ═══ */
+    /* ═══ MODAL DESCARGA ═══ */
     function abrirModalDescarga(id=null){idDescargaPendiente=id;$("#modal-descarga").classList.remove("hidden");$("#app-layout").classList.add("blur-sm")}
     function cerrarModal(){$("#modal-descarga").classList.add("hidden");$("#app-layout").classList.remove("blur-sm");restaurarBotonesModal()}
     function iniciarProgresoModal(){$("#modal-content-opciones").classList.add("hidden");$("#modal-content-progreso").classList.remove("hidden");let p=0;const ci=$("#circulo-progreso"),tx=$("#texto-progreso");ci.style.strokeDashoffset=326.7;tx.innerText="0%";progressInterval=setInterval(()=>{if(p<90){p+=Math.floor(Math.random()*8)+2;if(p>90)p=90;ci.style.strokeDashoffset=326.7-(p/100)*326.7;tx.innerText=p+"%"}},500)}
@@ -566,7 +583,6 @@
     async function subirPlantillaExcel(){const n=$("#excel-tpl-nombre").value.trim();const fi=$("#excel-tpl-file");if(!n){showToast("Indica un nombre para la plantilla","warn");return}if(!fi.files.length){showToast("Selecciona un archivo","warn");return}const fd=new FormData();fd.append("nombre",n);fd.append("file",fi.files[0]);fd.append("config_json","{}");try{const r=await fetch(`${URL_BASE}/plantillas/upload-excel`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){const d=await r.json();const tags=d.tags_detectados||[];if(tags.length){const div=$("#excel-tags-resultado");div.classList.remove("hidden");div.innerHTML=`<p class="text-sm font-bold text-emerald-700 mb-2">✅ ${tags.length} tags:</p><div class="flex flex-wrap gap-2">${tags.map(t=>`<span class="bg-emerald-100 text-emerald-800 text-xs font-mono px-2 py-1 rounded">${esc(t)}</span>`).join("")}</div>`}showToast("Plantilla subida correctamente","success");setTimeout(()=>{verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()},1000)}else{const err=await r.json().catch(()=>({}));showToast(err.detail||"Error al subir","error")}}catch{showToast("Ha ocurrido un error","error")}}
     async function previewPlantilla(id){try{$("#preview-contenido").innerHTML='<div class="flex items-center justify-center h-64"><span class="material-symbols-outlined animate-spin text-3xl text-slate-300">refresh</span></div>';$("#modal-preview").classList.remove("hidden");const r=await fetch(`${URL_BASE}/plantillas/${id}/preview`,{method:"POST",headers:authHeaders()});if(r.ok){const blob=await r.blob();const url=URL.createObjectURL(blob);if(blob.type.includes("pdf")){$("#preview-contenido").innerHTML=`<iframe src="${url}" style="width:100%;height:100%;border:none;"></iframe>`}else{$("#preview-contenido").innerHTML=`<div class="p-4 text-center"><p class="text-sm text-slate-500 mb-3">Preview generado</p><a href="${url}" download class="bg-primary text-white px-6 py-2 rounded-lg text-sm font-bold">Descargar</a></div>`}}else{cerrarPreview();showToast("Error generando preview","error")}}catch{cerrarPreview();showToast("Error de conexión","error")}}
     function cerrarPreview(){$("#modal-preview").classList.add("hidden");$("#preview-contenido").innerHTML=""}
-    async function previewPDF(){const n=$("#tpl-nombre").value.trim()||"Preview";const cfg=buildVisualConfig();const fd=new FormData();fd.append("nombre",n);fd.append("config_json",JSON.stringify(cfg));try{const r=await fetch(`${URL_BASE}/plantillas/crear-visual`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){const d=await r.json();if(d.id)await previewPlantilla(d.id)}}catch{showToast("Ha ocurrido un error","error")}}
     async function eliminarPlantilla(id){if(!confirm("¿Eliminar?"))return;try{await fetch(`${URL_BASE}/plantillas/${id}`,{method:"DELETE",headers:authHeaders()});cargarPlantillas()}catch{showToast("Ha ocurrido un error","error")}}
 
     /* ═══ PLANTILLA → FORM SWITCH ═══ */
@@ -626,8 +642,28 @@
     function addLineaGenerica(){const cols=currentPlantillaConfig?.columnas||COL_PRESETS.simple;const visCols=cols.filter(c=>!c.oculta);const c=$("#gen-lineas");const r=document.createElement("div");r.className="gen-linea grid gap-2 items-center";r.style.gridTemplateColumns=visCols.map(c=>c.tipo==="texto"?"2fr":"1fr").join(" ")+" 40px";r.innerHTML=visCols.map(col=>{const isFormula=col.tipo==="formula";return`<input type="${col.tipo==="texto"?"text":"number"}" step="any" data-campo="${esc(col.campo)}" data-formula="${esc(col.formula||"")}" class="rounded-lg border-slate-200 ${isFormula?"bg-violet-50 text-violet-700 font-semibold":"bg-slate-50"} px-3 py-2.5 text-sm" placeholder="${esc(col.nombre)}" ${isFormula?"readonly":""}>`}).join("")+`<button type="button" onclick="this.closest('.gen-linea').remove()" class="text-slate-400 hover:text-red-500 flex items-center justify-center"><span class="material-symbols-outlined text-lg">close</span></button>`;c.appendChild(r);r.querySelectorAll("input:not([readonly])").forEach(inp=>{inp.addEventListener("input",()=>calcFormulasEnLinea(r))})}
     function calcFormulasEnLinea(row){const inputs=row.querySelectorAll("input[data-campo]");const vals={};inputs.forEach(i=>{if(!i.dataset.formula)vals[i.dataset.campo]=i.value});inputs.forEach(i=>{if(i.dataset.formula){i.value=evalFormulaClient(i.dataset.formula,vals)}})}
 
-    async function generarConPlantilla(){
+    async function generarConPlantilla(formato="pdf"){
         if(!selectedPlantillaId){showToast("Selecciona una plantilla","warn");return}
+        const data=recogerDatosPlantilla();
+        if(!data)return;
+        iniciarProgresoModal();
+        try{const r=await fetch(`${URL_BASE}/generar-con-plantilla?formato=${formato}&plantilla_id=${selectedPlantillaId}`,{method:"POST",headers:authHeaders({"Content-Type":"application/json"}),body:JSON.stringify(data)});
+        if(r.ok){descargarBlob(await r.blob(),r.headers.get("Content-Disposition"),`Factura_${data.numero_factura}`,formato);finalizarProgresoModal()}
+        else{const err=await r.json().catch(()=>({}));detenerErrorProgresoModal();showToast(err.detail||"Error generando factura","error")}}
+        catch{detenerErrorProgresoModal();showToast("Error de conexión","error")}
+    }
+
+    async function guardarConPlantilla(){
+        if(!selectedPlantillaId){showToast("Selecciona una plantilla","warn");return}
+        const data=recogerDatosPlantilla();
+        if(!data)return;
+        try{const r=await fetch(`${URL_BASE}/guardar-con-plantilla?plantilla_id=${selectedPlantillaId}`,{method:"POST",headers:authHeaders({"Content-Type":"application/json"}),body:JSON.stringify(data)});
+        if(r.ok){showToast("Factura guardada en la nube","success")}
+        else{const err=await r.json().catch(()=>({}));showToast(err.detail||"Error al guardar","error")}}
+        catch{showToast("Error de conexión","error")}
+    }
+
+    function recogerDatosPlantilla(){
         const cols=currentPlantillaConfig?.columnas||COL_PRESETS.simple;
         const lineas=$$(".gen-linea").map(r=>{const o={};r.querySelectorAll("input").forEach(i=>{if(i.dataset.campo)o[i.dataset.campo]=i.value});return o}).filter(l=>Object.values(l).some(v=>v));
         const data={
@@ -637,13 +673,25 @@
             cliente:{nombre:$("#gen-cli-nombre")?.value||"",cif:$("#gen-cli-cif")?.value||"",direccion:$("#gen-cli-dir")?.value||"",email:$("#gen-cli-email")?.value||"",telefono:$("#gen-cli-tel")?.value||""},
             lineas,notas:$("#gen-notas")?.value||""
         };
-        if(!data.numero_factura){showToast("Indica el nº de factura","warn");return}
-        if(!lineas.length){showToast("Añade al menos una línea","warn");return}
-        abrirModalDescarga();iniciarProgresoModal();
-        try{const r=await fetch(`${URL_BASE}/generar-con-plantilla?formato=pdf&plantilla_id=${selectedPlantillaId}`,{method:"POST",headers:authHeaders({"Content-Type":"application/json"}),body:JSON.stringify(data)});
-        if(r.ok){descargarBlob(await r.blob(),r.headers.get("Content-Disposition"),`Factura_${data.numero_factura}`,"pdf");finalizarProgresoModal()}
-        else{detenerErrorProgresoModal();showToast("Error generando factura","error")}}
-        catch{detenerErrorProgresoModal();showToast("Error de conexión","error")}
+        if(!data.numero_factura){showToast("Indica el nº de factura","warn");return null}
+        if(!lineas.length){showToast("Añade al menos una línea","warn");return null}
+        return data;
+    }
+
+    function abrirModalDescargaPlantilla(){
+        if(!selectedPlantillaId){showToast("Selecciona una plantilla","warn");return}
+        const data=recogerDatosPlantilla();
+        if(!data)return;
+        // Reconfigurar modal para formatos de plantilla
+        idDescargaPendiente=null;
+        const btns=$$("#modal-content-opciones button[type='button']");
+        if(btns[0])btns[0].onclick=()=>{generarConPlantilla("pdf")};
+        if(btns[1])btns[1].onclick=()=>{generarConPlantilla("pdf")};
+        if(btns[2])btns[2].onclick=()=>{generarConPlantilla("html")};
+        // Relabel
+        if(btns[0])btns[0].querySelector("div span:first-child").textContent="PDF";
+        if(btns[2])btns[2].querySelector("div span:first-child").textContent="HTML (fallback)";
+        abrirModalDescarga();
     }
 
     /* ═══ ADMIN DASHBOARD ═══ */
