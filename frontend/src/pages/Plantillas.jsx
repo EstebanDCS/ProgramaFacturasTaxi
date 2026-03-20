@@ -58,10 +58,40 @@ export default function Plantillas({ onCrear, onEditar }) {
             <p className="text-slate-400 font-medium">No hay plantillas</p>
           </div>
         )}
-        {plantillas.map(p => (
+        {plantillas.map(p => {
+          let miniPreview = null;
+          if (p.tipo === 'visual' && p.config_json) {
+            try {
+              const cfg = JSON.parse(p.config_json);
+              const emp = cfg.empresa || {};
+              const est = cfg.estilo || {};
+              const cols = (cfg.columnas || []).filter(c => !c.oculta);
+              const c1 = est.color_primario || '#1a2e4a';
+              const c2 = est.color_secundario || '#0d6dfd';
+              const mon = cfg.moneda || '€';
+              miniPreview = (
+                <div style={{ fontSize: 5, lineHeight: 1.3, color: '#333', fontFamily: 'sans-serif', padding: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                    <b style={{ color: c1 }}>{emp.nombre || 'Empresa'}</b>
+                    <span style={{ color: c2, fontWeight: 900, fontSize: 7 }}>{cfg.titulo || 'FACTURA'}</span>
+                  </div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead><tr style={{ backgroundColor: c1, color: 'white' }}>
+                      {cols.map((c, i) => <th key={i} style={{ padding: '1px 2px', textAlign: c.alineacion, fontSize: 4.5 }}>{c.nombre}</th>)}
+                    </tr></thead>
+                    <tbody>
+                      {['Servicio A', 'Material B'].map(n => <tr key={n}>{cols.map((c, i) => <td key={i} style={{ padding: '1px 2px', textAlign: c.alineacion }}>{c.tipo === 'texto' ? n : `50.00 ${mon}`}</td>)}</tr>)}
+                    </tbody>
+                  </table>
+                  <div style={{ textAlign: 'right', marginTop: 2, fontWeight: 800, color: c1 }}>TOTAL: 100.00 {mon}</div>
+                </div>
+              );
+            } catch {}
+          }
+          return (
           <div key={p.id} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden">
-            <div className="h-28 bg-slate-50 border-b border-slate-100 flex items-center justify-center text-slate-300">
-              <span className="material-symbols-outlined text-3xl">table_view</span>
+            <div className="h-28 bg-slate-50 border-b border-slate-100 overflow-hidden">
+              {miniPreview || <div className="flex items-center justify-center h-full text-slate-300"><span className="material-symbols-outlined text-3xl">table_view</span></div>}
             </div>
             <div className="p-4">
               <div className="flex items-center justify-between mb-2">
@@ -82,7 +112,7 @@ export default function Plantillas({ onCrear, onEditar }) {
               </div>
             </div>
           </div>
-        ))}
+        )})}
       </div>
     </div>
   );
