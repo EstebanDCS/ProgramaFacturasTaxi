@@ -913,8 +913,12 @@ async def preview_plantilla(p_id: int, user=Depends(verificar_usuario)):
 
 @app.get("/health")
 async def health():
-    """Health check — usado por el frontend para detectar cold start."""
-    return {"status": "ok"}
+    """Health check real — verifica que Supabase responde."""
+    try:
+        supabase.table("plantillas").select("id").limit(1).execute()
+        return {"status": "ok"}
+    except Exception:
+        raise HTTPException(status_code=503, detail="Servidor iniciando...")
 
 
 @app.post("/guardar-con-plantilla")
