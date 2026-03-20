@@ -501,6 +501,7 @@
     async function waitForBackend(){
         const bar=$("#loading-bar"),msg=$("#loading-msg"),overlay=$("#app-loading");
         if(!overlay)return;
+        overlay.classList.remove("hidden");overlay.style.opacity="1";
         let pct=10;const msgs=["Despertando el servidor...","Casi listo...","Conectando..."];
         for(let i=0;i<20;i++){
             try{
@@ -508,7 +509,7 @@
                 if(i>2)msg.textContent=msgs[Math.min(i-3,2)];
                 const r=await fetch(`${URL_BASE}/health`,{signal:AbortSignal.timeout(5000)});
                 if(r.ok){bar.style.width="100%";msg.textContent="Conectado";
-                    setTimeout(()=>{overlay.style.opacity="0";overlay.style.transition="opacity .3s";setTimeout(()=>overlay.remove(),300)},400);return}
+                    setTimeout(()=>{overlay.style.opacity="0";overlay.style.transition="opacity .3s";setTimeout(()=>overlay.classList.add("hidden"),300)},400);return}
             }catch{}
             pct+=Math.random()*12+3;
             await new Promise(r=>setTimeout(r,2000));
@@ -516,13 +517,28 @@
         msg.textContent="El servidor tarda más de lo normal. Recarga la página.";
         bar.style.width="100%";bar.classList.remove("bg-primary");bar.classList.add("bg-amber-400");
     }
-    async function checkAdminStatus(){try{const r=await fetch(`${URL_BASE}/admin/check`,{headers:authHeaders()});if(r.ok){const d=await r.json();isAdmin=d.is_admin===true;if(isAdmin){$("#btn-admin").classList.remove("hidden");$("#btn-admin").classList.add("flex")}}}catch{}}
+
+    // Auto-reconexión: detecta cuando el servidor se duerme durante el uso
+    async function apiFetch(url,opts={}){
+        try{const r=await fetch(url,opts);
+            if(r.status===502||r.status===503){throw new Error("server_down")}
+            return r;
+        }catch(e){
+            if(e.name==="TypeError"||e.message==="server_down"||e.name==="AbortError"){
+                showToast("Servidor reiniciando, reconectando...","info");
+                await waitForBackend();
+                return fetch(url,opts);
+            }
+            throw e;
+        }
+    }
+    async function checkAdminStatus(){try{const r=await apiFetch(`${URL_BASE}/admin/check`,{headers:authHeaders()});if(r.ok){const d=await r.json();isAdmin=d.is_admin===true;if(isAdmin){$("#btn-admin").classList.remove("hidden");$("#btn-admin").classList.add("flex")}}}catch{}}
 
     /* ═══ NAVIGATION ═══ */
     function verSec(id,btn){$$(".app-section").forEach(s=>s.classList.remove("activa"));$(`#${id}`).classList.add("activa");$$(".nav-btn").forEach(l=>{const keep=l.id==="btn-admin"&&!isAdmin;l.className="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-blue-200/70 hover:text-white cursor-pointer group";if(keep)l.classList.add("hidden");if(l.id==="btn-comunidad")l.className="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg text-blue-200/30 cursor-default";l.querySelector("span:first-child")?.classList.remove("fill-1")});btn.className="nav-btn flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white shadow-lg shadow-primary/20 transition-all cursor-pointer";btn.querySelector("span:first-child")?.classList.add("fill-1")}
 
     /* ═══ USER DASHBOARD ═══ */
-    async function cargarUserDashboard(){try{const r=await fetch(`${URL_BASE}/user/stats`,{headers:authHeaders()});if(!r.ok)return;const d=await r.json();
+    async function cargarUserDashboard(){try{const r=await apiFetch(`${URL_BASE}/user/stats`,{headers:authHeaders()});if(!r.ok)return;const d=await r.json();
         $("#ud-total").textContent=d.total_facturas;
         $("#ud-mes").textContent=d.facturas_este_mes;
         $("#ud-importe").textContent=d.total_importe.toLocaleString("es-ES",{minimumFractionDigits:2})+" €";
@@ -548,10 +564,10 @@
     function restaurarBotonesModal(){["excel","pdf","ambos"].forEach((f,i)=>{const btns=$$("#modal-content-opciones button[type='button']");if(btns[i])btns[i].onclick=()=>ejecutarDescarga(f)})}
 
     /* ═══ HISTORIAL ═══ */
-    async function cargarHistorial(){const tb=$("#tabla-historial");tb.innerHTML=`<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500">Cargando...</td></tr>`;try{const res=await fetch(`${URL_BASE}/historial`,{headers:authHeaders()});const datos=await res.json();tb.innerHTML="";if(!datos.length){tb.innerHTML=`<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500">No hay facturas.</td></tr>`;return}const frag=document.createDocumentFragment();datos.forEach(f=>{const d=new Date(f.fecha_creacion).toLocaleDateString("es-ES",{year:"numeric",month:"2-digit",day:"2-digit"});const tr=document.createElement("tr");tr.className="hover:bg-slate-50/80 border-b border-slate-50";tr.innerHTML=`<td class="px-6 py-4 text-sm font-medium text-slate-600">${esc(d)}</td><td class="px-6 py-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#e1effe] text-primary uppercase tracking-wider">${esc(f.barco||f.plantilla_nombre||"-")}</span></td><td class="px-6 py-4 text-sm font-semibold text-slate-900">${esc(f.numero_factura)}</td><td class="px-6 py-4 text-sm font-bold text-slate-900">${f.importe_total.toFixed(2)}€</td><td class="px-6 py-4 text-right"><div class="flex items-center justify-end gap-3"><button onclick="abrirModalDescarga(${f.id})" class="text-primary hover:text-blue-800 font-extrabold text-[11px] uppercase tracking-widest"><span class="material-symbols-outlined text-lg">download</span></button><button onclick="eliminarF(${f.id})" class="text-slate-400 hover:text-red-500"><span class="material-symbols-outlined text-[18px]">delete</span></button></div></td>`;frag.appendChild(tr)});tb.appendChild(frag)}catch{tb.innerHTML=`<tr><td colspan="5" class="text-center text-red-500">Error</td></tr>`}}
-    async function redescargar(id,f="excel"){try{const res=await fetch(`${URL_BASE}/re-descargar/${id}?formato=${f}`,{headers:authHeaders()});if(res.ok){descargarBlob(await res.blob(),res.headers.get("Content-Disposition"),`Fra_${id}`,f);finalizarProgresoModal()}else{detenerErrorProgresoModal();const err=await res.json().catch(()=>({}));showToast(err.detail||"Plantilla no disponible","error")}}catch{detenerErrorProgresoModal();showToast("Error de conexión","error")}}
-    async function eliminarF(id){if(!confirm("¿Borrar factura?"))return;await fetch(`${URL_BASE}/eliminar-factura/${id}`,{method:"DELETE",headers:authHeaders()});cargarHistorial()}
-    async function vaciarHistorial(){if(!confirm("⚠️ ¿Vaciar todo el historial?"))return;await fetch(`${URL_BASE}/limpiar-historial`,{method:"DELETE",headers:authHeaders()});cargarHistorial()}
+    async function cargarHistorial(){const tb=$("#tabla-historial");tb.innerHTML=`<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500">Cargando...</td></tr>`;try{const res=await apiFetch(`${URL_BASE}/historial`,{headers:authHeaders()});const datos=await res.json();tb.innerHTML="";if(!datos.length){tb.innerHTML=`<tr><td colspan="5" class="px-6 py-6 text-center text-slate-500">No hay facturas.</td></tr>`;return}const frag=document.createDocumentFragment();datos.forEach(f=>{const d=new Date(f.fecha_creacion).toLocaleDateString("es-ES",{year:"numeric",month:"2-digit",day:"2-digit"});const tr=document.createElement("tr");tr.className="hover:bg-slate-50/80 border-b border-slate-50";tr.innerHTML=`<td class="px-6 py-4 text-sm font-medium text-slate-600">${esc(d)}</td><td class="px-6 py-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#e1effe] text-primary uppercase tracking-wider">${esc(f.barco||f.plantilla_nombre||"-")}</span></td><td class="px-6 py-4 text-sm font-semibold text-slate-900">${esc(f.numero_factura)}</td><td class="px-6 py-4 text-sm font-bold text-slate-900">${f.importe_total.toFixed(2)}€</td><td class="px-6 py-4 text-right"><div class="flex items-center justify-end gap-3"><button onclick="abrirModalDescarga(${f.id})" class="text-primary hover:text-blue-800 font-extrabold text-[11px] uppercase tracking-widest"><span class="material-symbols-outlined text-lg">download</span></button><button onclick="eliminarF(${f.id})" class="text-slate-400 hover:text-red-500"><span class="material-symbols-outlined text-[18px]">delete</span></button></div></td>`;frag.appendChild(tr)});tb.appendChild(frag)}catch{tb.innerHTML=`<tr><td colspan="5" class="text-center text-red-500">Error</td></tr>`}}
+    async function redescargar(id,f="excel"){try{const res=await apiFetch(`${URL_BASE}/re-descargar/${id}?formato=${f}`,{headers:authHeaders()});if(res.ok){descargarBlob(await res.blob(),res.headers.get("Content-Disposition"),`Fra_${id}`,f);finalizarProgresoModal()}else{detenerErrorProgresoModal();const err=await res.json().catch(()=>({}));showToast(err.detail||"Plantilla no disponible","error")}}catch{detenerErrorProgresoModal();showToast("Error de conexión","error")}}
+    async function eliminarF(id){if(!confirm("¿Borrar factura?"))return;await apiFetch(`${URL_BASE}/eliminar-factura/${id}`,{method:"DELETE",headers:authHeaders()});cargarHistorial()}
+    async function vaciarHistorial(){if(!confirm("⚠️ ¿Vaciar todo el historial?"))return;await apiFetch(`${URL_BASE}/limpiar-historial`,{method:"DELETE",headers:authHeaders()});cargarHistorial()}
 
     /* ═══ PLANTILLAS ═══ */
     const COL_PRESETS={simple:[{nombre:"Descripción",campo:"descripcion",alineacion:"left",tipo:"texto"},{nombre:"Importe",campo:"importe",alineacion:"right",tipo:"moneda"}],detallado:[{nombre:"Descripción",campo:"descripcion",alineacion:"left",tipo:"texto"},{nombre:"Cantidad",campo:"cantidad",alineacion:"right",tipo:"numero"},{nombre:"Precio Ud.",campo:"precio",alineacion:"right",tipo:"moneda"},{nombre:"Total",campo:"total",alineacion:"right",tipo:"formula",formula:"=cantidad*precio"}],servicios:[{nombre:"Descripción",campo:"descripcion",alineacion:"left",tipo:"texto"},{nombre:"Horas",campo:"horas",alineacion:"right",tipo:"numero"},{nombre:"Tarifa/h",campo:"tarifa",alineacion:"right",tipo:"moneda"},{nombre:"Total",campo:"total",alineacion:"right",tipo:"formula",formula:"=horas*tarifa"}]};
@@ -574,7 +590,7 @@
 
     function buildVisualConfig(){const cols=getColumnasFromEditor();return{empresa:{nombre:$("#tpl-emp-nombre").value,cif:$("#tpl-emp-cif").value,direccion:$("#tpl-emp-dir").value,telefono:$("#tpl-emp-tel").value,email:$("#tpl-emp-email").value,logo_url:$("#tpl-emp-logo").value},estilo:{color_primario:$("#tpl-color1").value,color_secundario:$("#tpl-color2").value,fuente:$("#tpl-fuente").value,tam_fuente:parseInt($("#tpl-tam").value)||10},pagina:{size:$("#tpl-page-size").value,orientation:$("#tpl-page-orient").value,margenes:{top:parseInt($("#tpl-margin-v").value)||20,right:parseInt($("#tpl-margin-h").value)||15,bottom:parseInt($("#tpl-margin-v").value)||20,left:parseInt($("#tpl-margin-h").value)||15},escala:parseInt($("#tpl-escala")?.value)||100,interlineado:parseFloat($("#tpl-interlineado")?.value)||1.5},cliente:{mostrar:$("#tpl-cli-mostrar").checked},columnas:cols,columna_importe:(cols.filter(c=>c.tipo==="moneda"||c.tipo==="formula").pop()?.campo)||cols.at(-1)?.campo||"importe",impuestos:[{nombre:$("#tpl-imp-nombre").value||"IVA",porcentaje:parseInt($("#tpl-imp-pct").value)||21}],moneda:$("#tpl-moneda").value||"€",titulo:$("#tpl-fac-titulo").value||"FACTURA",mostrar_desglose:$("#tpl-desglose").checked,pie:{texto:$("#tpl-pie-texto").value,mostrar_datos_pago:$("#tpl-pie-pago").checked,datos_pago:$("#tpl-pie-pago-texto").value},hoja_detalle:{activar:$("#tpl-detalle-activar")?.checked||false,titulo:$("#tpl-detalle-titulo")?.value||"Detalle",campos:cols.map(c=>c.campo)}}}
     function tabPlantilla(t){const v=t==="visual";$("#panel-visual").classList.toggle("hidden",!v);$("#panel-visual").classList.toggle("grid",v);$("#panel-excel").classList.toggle("hidden",v);$("#tab-visual").className=`px-5 py-2 rounded-md text-sm font-bold transition-all ${v?"bg-white text-primary shadow-sm":"text-slate-500"}`;$("#tab-excel").className=`px-5 py-2 rounded-md text-sm font-bold transition-all ${!v?"bg-white text-primary shadow-sm":"text-slate-500"}`}
-    async function cargarPlantillas(){const c=$("#lista-plantillas");c.innerHTML='<p class="col-span-3 text-center text-slate-400 py-12">Cargando...</p>';try{const r=await fetch(`${URL_BASE}/plantillas`,{headers:authHeaders()});const data=await r.json();if(!data.length){c.innerHTML=`<div class="col-span-3 text-center py-16"><span class="material-symbols-outlined text-5xl text-slate-200 mb-4 block">draft</span><p class="text-slate-400 font-medium">No hay plantillas</p></div>`;return}
+    async function cargarPlantillas(){const c=$("#lista-plantillas");c.innerHTML='<p class="col-span-3 text-center text-slate-400 py-12">Cargando...</p>';try{const r=await apiFetch(`${URL_BASE}/plantillas`,{headers:authHeaders()});const data=await r.json();if(!data.length){c.innerHTML=`<div class="col-span-3 text-center py-16"><span class="material-symbols-outlined text-5xl text-slate-200 mb-4 block">draft</span><p class="text-slate-400 font-medium">No hay plantillas</p></div>`;return}
         c.innerHTML=data.map(p=>{
             let miniHtml='<div class="flex items-center justify-center h-full text-slate-300"><span class="material-symbols-outlined text-3xl">table_view</span></div>';
             if(p.tipo==="visual"&&p.config_json){try{const cfg=JSON.parse(p.config_json);miniHtml=renderMiniPreview(cfg)}catch{}}
@@ -606,13 +622,13 @@
     let editingPlantillaId=null;
     async function guardarPlantillaVisual(){const n=$("#tpl-nombre").value.trim();if(!n){showToast("Indica un nombre para la plantilla","warn");return}const cfg=buildVisualConfig();const fd=new FormData();fd.append("nombre",n);fd.append("config_json",JSON.stringify(cfg));
         if(editingPlantillaId){
-            try{const r=await fetch(`${URL_BASE}/plantillas/${editingPlantillaId}`,{method:"PUT",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){showToast("Plantilla actualizada","success");editingPlantillaId=null;verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()}else showToast("Error al actualizar","error")}catch{showToast("Ha ocurrido un error","error")}
+            try{const r=await apiFetch(`${URL_BASE}/plantillas/${editingPlantillaId}`,{method:"PUT",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){showToast("Plantilla actualizada","success");editingPlantillaId=null;verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()}else showToast("Error al actualizar","error")}catch{showToast("Ha ocurrido un error","error")}
         }else{
-            try{const r=await fetch(`${URL_BASE}/plantillas/crear-visual`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){showToast("Plantilla guardada","success");verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()}else showToast("Ha ocurrido un error","error")}catch{showToast("Ha ocurrido un error","error")}
+            try{const r=await apiFetch(`${URL_BASE}/plantillas/crear-visual`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){showToast("Plantilla guardada","success");verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()}else showToast("Ha ocurrido un error","error")}catch{showToast("Ha ocurrido un error","error")}
         }}
 
     async function editarPlantilla(id){
-        try{const r=await fetch(`${URL_BASE}/plantillas/${id}`,{headers:authHeaders()});if(!r.ok){showToast("No se pudo cargar","error");return}
+        try{const r=await apiFetch(`${URL_BASE}/plantillas/${id}`,{headers:authHeaders()});if(!r.ok){showToast("No se pudo cargar","error");return}
             const p=await r.json();
             if(p.tipo!=="visual"){showToast("Solo se pueden editar plantillas visuales desde el builder","info");return}
             editingPlantillaId=id;
@@ -666,10 +682,10 @@
         $("#builder-titulo").textContent="Nueva Plantilla";
         verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas();
     }
-    async function subirPlantillaExcel(){const n=$("#excel-tpl-nombre").value.trim();const fi=$("#excel-tpl-file");if(!n){showToast("Indica un nombre para la plantilla","warn");return}if(!fi.files.length){showToast("Selecciona un archivo","warn");return}const fd=new FormData();fd.append("nombre",n);fd.append("file",fi.files[0]);fd.append("config_json","{}");try{const r=await fetch(`${URL_BASE}/plantillas/upload-excel`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){const d=await r.json();const tags=d.tags_detectados||[];if(tags.length){const div=$("#excel-tags-resultado");div.classList.remove("hidden");div.innerHTML=`<p class="text-sm font-bold text-emerald-700 mb-2">✅ ${tags.length} tags:</p><div class="flex flex-wrap gap-2">${tags.map(t=>`<span class="bg-emerald-100 text-emerald-800 text-xs font-mono px-2 py-1 rounded">${esc(t)}</span>`).join("")}</div>`}showToast("Plantilla subida correctamente","success");setTimeout(()=>{verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()},1000)}else{const err=await r.json().catch(()=>({}));showToast(err.detail||"Error al subir","error")}}catch{showToast("Ha ocurrido un error","error")}}
-    async function previewPlantilla(id){try{$("#preview-contenido").innerHTML='<div class="flex items-center justify-center h-64"><span class="material-symbols-outlined animate-spin text-3xl text-slate-300">refresh</span></div>';$("#modal-preview").classList.remove("hidden");const r=await fetch(`${URL_BASE}/plantillas/${id}/preview`,{method:"POST",headers:authHeaders()});if(r.ok){const blob=await r.blob();const url=URL.createObjectURL(blob);if(blob.type.includes("pdf")){$("#preview-contenido").innerHTML=`<iframe src="${url}" style="width:100%;height:100%;border:none;"></iframe>`}else{$("#preview-contenido").innerHTML=`<div class="p-4 text-center"><p class="text-sm text-slate-500 mb-3">Preview generado</p><a href="${url}" download class="bg-primary text-white px-6 py-2 rounded-lg text-sm font-bold">Descargar</a></div>`}}else{cerrarPreview();showToast("Error generando preview","error")}}catch{cerrarPreview();showToast("Error de conexión","error")}}
+    async function subirPlantillaExcel(){const n=$("#excel-tpl-nombre").value.trim();const fi=$("#excel-tpl-file");if(!n){showToast("Indica un nombre para la plantilla","warn");return}if(!fi.files.length){showToast("Selecciona un archivo","warn");return}const fd=new FormData();fd.append("nombre",n);fd.append("file",fi.files[0]);fd.append("config_json","{}");try{const r=await apiFetch(`${URL_BASE}/plantillas/upload-excel`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){const d=await r.json();const tags=d.tags_detectados||[];if(tags.length){const div=$("#excel-tags-resultado");div.classList.remove("hidden");div.innerHTML=`<p class="text-sm font-bold text-emerald-700 mb-2">✅ ${tags.length} tags:</p><div class="flex flex-wrap gap-2">${tags.map(t=>`<span class="bg-emerald-100 text-emerald-800 text-xs font-mono px-2 py-1 rounded">${esc(t)}</span>`).join("")}</div>`}showToast("Plantilla subida correctamente","success");setTimeout(()=>{verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()},1000)}else{const err=await r.json().catch(()=>({}));showToast(err.detail||"Error al subir","error")}}catch{showToast("Ha ocurrido un error","error")}}
+    async function previewPlantilla(id){try{$("#preview-contenido").innerHTML='<div class="flex items-center justify-center h-64"><span class="material-symbols-outlined animate-spin text-3xl text-slate-300">refresh</span></div>';$("#modal-preview").classList.remove("hidden");const r=await apiFetch(`${URL_BASE}/plantillas/${id}/preview`,{method:"POST",headers:authHeaders()});if(r.ok){const blob=await r.blob();const url=URL.createObjectURL(blob);if(blob.type.includes("pdf")){$("#preview-contenido").innerHTML=`<iframe src="${url}" style="width:100%;height:100%;border:none;"></iframe>`}else{$("#preview-contenido").innerHTML=`<div class="p-4 text-center"><p class="text-sm text-slate-500 mb-3">Preview generado</p><a href="${url}" download class="bg-primary text-white px-6 py-2 rounded-lg text-sm font-bold">Descargar</a></div>`}}else{cerrarPreview();showToast("Error generando preview","error")}}catch{cerrarPreview();showToast("Error de conexión","error")}}
     function cerrarPreview(){$("#modal-preview").classList.add("hidden");$("#preview-contenido").innerHTML=""}
-    async function eliminarPlantilla(id){if(!confirm("¿Eliminar?"))return;try{await fetch(`${URL_BASE}/plantillas/${id}`,{method:"DELETE",headers:authHeaders()});cargarPlantillas()}catch{showToast("Ha ocurrido un error","error")}}
+    async function eliminarPlantilla(id){if(!confirm("¿Eliminar?"))return;try{await apiFetch(`${URL_BASE}/plantillas/${id}`,{method:"DELETE",headers:authHeaders()});cargarPlantillas()}catch{showToast("Ha ocurrido un error","error")}}
 
     /* ═══ PLANTILLA → FORM SWITCH ═══ */
     /* ═══ NUEVA FACTURA: Template selector → Form ═══ */
@@ -682,7 +698,7 @@
         grid.innerHTML = '<p class="col-span-3 text-center text-slate-400 py-6">Cargando plantillas...</p>';
         cta.classList.add("hidden");
         try {
-            const r = await fetch(`${URL_BASE}/plantillas`, { headers: authHeaders() });
+            const r = await apiFetch(`${URL_BASE}/plantillas`, { headers: authHeaders() });
             const data = await r.json();
             if (!data.length) { grid.innerHTML = ''; cta.classList.remove("hidden"); return; }
             cta.classList.add("hidden");
@@ -707,7 +723,7 @@
 
         // Load config and setup form
         try {
-            const r = await fetch(`${URL_BASE}/plantillas/${id}`, { headers: authHeaders() });
+            const r = await apiFetch(`${URL_BASE}/plantillas/${id}`, { headers: authHeaders() });
             if (r.ok) {
                 const p = await r.json();
                 currentPlantillaConfig = JSON.parse(p.config_json || "{}");
@@ -733,7 +749,7 @@
         const data=recogerDatosPlantilla();
         if(!data)return;
         iniciarProgresoModal();
-        try{const r=await fetch(`${URL_BASE}/generar-con-plantilla?formato=${formato}&plantilla_id=${selectedPlantillaId}`,{method:"POST",headers:authHeaders({"Content-Type":"application/json"}),body:JSON.stringify(data)});
+        try{const r=await apiFetch(`${URL_BASE}/generar-con-plantilla?formato=${formato}&plantilla_id=${selectedPlantillaId}`,{method:"POST",headers:authHeaders({"Content-Type":"application/json"}),body:JSON.stringify(data)});
         if(r.ok){descargarBlob(await r.blob(),r.headers.get("Content-Disposition"),`Factura_${data.numero_factura}`,formato);finalizarProgresoModal()}
         else{const err=await r.json().catch(()=>({}));detenerErrorProgresoModal();showToast(err.detail||"Error generando factura","error")}}
         catch{detenerErrorProgresoModal();showToast("Error de conexión","error")}
@@ -743,7 +759,7 @@
         if(!selectedPlantillaId){showToast("Selecciona una plantilla","warn");return}
         const data=recogerDatosPlantilla();
         if(!data)return;
-        try{const r=await fetch(`${URL_BASE}/guardar-con-plantilla?plantilla_id=${selectedPlantillaId}`,{method:"POST",headers:authHeaders({"Content-Type":"application/json"}),body:JSON.stringify(data)});
+        try{const r=await apiFetch(`${URL_BASE}/guardar-con-plantilla?plantilla_id=${selectedPlantillaId}`,{method:"POST",headers:authHeaders({"Content-Type":"application/json"}),body:JSON.stringify(data)});
         if(r.ok){showToast("Factura guardada en la nube","success")}
         else{const err=await r.json().catch(()=>({}));showToast(err.detail||"Error al guardar","error")}}
         catch{showToast("Error de conexión","error")}
@@ -784,7 +800,7 @@
     function adminTab(t){["stats","users","activity","system"].forEach(x=>{$(`#adm-panel-${x}`).classList.toggle("hidden",x!==t);$(`#adm-tab-${x}`).className=`px-4 py-2 rounded-md text-sm font-bold ${x===t?"bg-white text-primary shadow-sm":"text-slate-500"}`})}
     async function cargarAdminDashboard(){try{
         // Stats
-        const r1=await fetch(`${URL_BASE}/admin/stats`,{headers:authHeaders()});if(r1.ok){const d=await r1.json();
+        const r1=await apiFetch(`${URL_BASE}/admin/stats`,{headers:authHeaders()});if(r1.ok){const d=await r1.json();
             $("#adm-total-facturas").textContent=d.total_facturas;$("#adm-usuarios").textContent=d.usuarios_unicos;
             $("#adm-hoy").textContent=d.facturas_hoy;$("#adm-plantillas").textContent=d.total_plantillas;
             const ch=$("#adm-chart-dias");const dias=d.facturas_por_dia||[];
@@ -793,11 +809,11 @@
             if(usos.length){const mx=Math.max(...usos.map(x=>x.count),1);up.innerHTML=usos.map(x=>`<div class="flex items-center gap-3"><span class="text-xs font-bold text-slate-700 w-28 truncate">${esc(x.nombre)}</span><div class="flex-1 bg-slate-100 rounded-full h-2"><div class="bg-amber-400 h-2 rounded-full" style="width:${x.count/mx*100}%"></div></div><span class="text-xs text-slate-500">${x.count}</span></div>`).join("")}
         }
         // Users
-        const r2=await fetch(`${URL_BASE}/admin/users`,{headers:authHeaders()});if(r2.ok){const users=await r2.json();const tb=$("#adm-users-table");tb.innerHTML="";users.forEach(u=>{const tr=document.createElement("tr");tr.className="border-b border-slate-50";tr.innerHTML=`<td class="px-6 py-3"><span class="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded">${esc((u.user_id||"").substring(0,12))}…</span></td><td class="px-6 py-3 text-sm font-semibold">${u.facturas}</td><td class="px-6 py-3 text-sm">${u.plantillas}</td><td class="px-6 py-3 text-xs text-slate-500">${u.ultima_actividad?new Date(u.ultima_actividad).toLocaleDateString("es-ES"):"-"}</td><td class="px-6 py-3 text-right"><button onclick="toggleUser('${u.user_id}')" class="text-xs font-bold px-3 py-1 rounded-full ${u.disabled?"bg-red-100 text-red-700":"bg-emerald-100 text-emerald-700"}">${u.disabled?"Desactivado":"Activo"}</button></td>`;tb.appendChild(tr)})}
+        const r2=await apiFetch(`${URL_BASE}/admin/users`,{headers:authHeaders()});if(r2.ok){const users=await r2.json();const tb=$("#adm-users-table");tb.innerHTML="";users.forEach(u=>{const tr=document.createElement("tr");tr.className="border-b border-slate-50";tr.innerHTML=`<td class="px-6 py-3"><span class="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded">${esc((u.user_id||"").substring(0,12))}…</span></td><td class="px-6 py-3 text-sm font-semibold">${u.facturas}</td><td class="px-6 py-3 text-sm">${u.plantillas}</td><td class="px-6 py-3 text-xs text-slate-500">${u.ultima_actividad?new Date(u.ultima_actividad).toLocaleDateString("es-ES"):"-"}</td><td class="px-6 py-3 text-right"><button onclick="toggleUser('${u.user_id}')" class="text-xs font-bold px-3 py-1 rounded-full ${u.disabled?"bg-red-100 text-red-700":"bg-emerald-100 text-emerald-700"}">${u.disabled?"Desactivado":"Activo"}</button></td>`;tb.appendChild(tr)})}
         // Activity
-        const r3=await fetch(`${URL_BASE}/admin/activity?limit=50`,{headers:authHeaders()});if(r3.ok){const logs=await r3.json();const tb=$("#adm-activity-table");tb.innerHTML="";logs.forEach(l=>{const tr=document.createElement("tr");tr.className="border-b border-slate-50";tr.innerHTML=`<td class="px-6 py-3 text-xs text-slate-500">${new Date(l.created_at).toLocaleString("es-ES")}</td><td class="px-6 py-3"><span class="text-[10px] font-mono text-slate-400">${esc((l.user_id||"").substring(0,8))}…</span></td><td class="px-6 py-3 text-sm font-semibold">${esc(l.accion)}</td><td class="px-6 py-3 text-xs text-slate-500">${esc(l.meta||"")}</td>`;tb.appendChild(tr)})}
+        const r3=await apiFetch(`${URL_BASE}/admin/activity?limit=50`,{headers:authHeaders()});if(r3.ok){const logs=await r3.json();const tb=$("#adm-activity-table");tb.innerHTML="";logs.forEach(l=>{const tr=document.createElement("tr");tr.className="border-b border-slate-50";tr.innerHTML=`<td class="px-6 py-3 text-xs text-slate-500">${new Date(l.created_at).toLocaleString("es-ES")}</td><td class="px-6 py-3"><span class="text-[10px] font-mono text-slate-400">${esc((l.user_id||"").substring(0,8))}…</span></td><td class="px-6 py-3 text-sm font-semibold">${esc(l.accion)}</td><td class="px-6 py-3 text-xs text-slate-500">${esc(l.meta||"")}</td>`;tb.appendChild(tr)})}
         // System
-        const r4=await fetch(`${URL_BASE}/admin/system`,{headers:authHeaders()});if(r4.ok){const s=await r4.json();
+        const r4=await apiFetch(`${URL_BASE}/admin/system`,{headers:authHeaders()});if(r4.ok){const s=await r4.json();
             $("#adm-system-cards").innerHTML=`
                 <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase">Facturas en BD</span><p class="text-2xl font-black text-slate-900 mt-2">${s.facturas_en_bd}</p></div>
                 <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase">Plantillas en BD</span><p class="text-2xl font-black text-slate-900 mt-2">${s.plantillas_en_bd}</p></div>
@@ -806,7 +822,7 @@
                 <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase">Hora servidor</span><p class="text-lg font-bold text-slate-900 mt-2">${new Date(s.server_time).toLocaleString("es-ES")}</p></div>
                 <div class="stat-card"><span class="text-[11px] font-bold text-slate-400 uppercase">Admins</span><p class="text-sm font-mono text-slate-700 mt-2">${s.admin_emails.join(", ")}</p></div>`}
     }catch{showToast("Error cargando panel admin","error")}}
-    async function toggleUser(uid){try{const r=await fetch(`${URL_BASE}/admin/users/${uid}/toggle`,{method:"PUT",headers:authHeaders()});if(r.ok)cargarAdminDashboard()}catch{showToast("Ha ocurrido un error","error")}}
+    async function toggleUser(uid){try{const r=await apiFetch(`${URL_BASE}/admin/users/${uid}/toggle`,{method:"PUT",headers:authHeaders()});if(r.ok)cargarAdminDashboard()}catch{showToast("Ha ocurrido un error","error")}}
 
     /* ═══ PERSISTENCIA LOCAL ═══ */
     </script>
