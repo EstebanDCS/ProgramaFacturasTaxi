@@ -755,7 +755,7 @@ async def user_stats(user=Depends(verificar_usuario)):
 @app.get("/plantillas")
 async def listar_plantillas(user=Depends(verificar_usuario)):
     res = supabase.table("plantillas") \
-        .select("id, nombre, tipo, es_publica, created_at, user_id") \
+        .select("id, nombre, tipo, config_json, es_publica, created_at, user_id") \
         .or_(f"user_id.eq.{user.id},es_publica.eq.true") \
         .order("created_at", desc=True).execute()
     return res.data

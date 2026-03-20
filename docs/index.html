@@ -149,7 +149,7 @@
                 <header class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
                     <div class="flex items-center gap-4"><div class="p-2 bg-primary/10 rounded-lg text-primary"><span class="material-symbols-outlined fill-1">draft</span></div><div>
                         <h2 class="text-2xl font-bold tracking-tight text-slate-900">Mis Plantillas</h2><p class="text-slate-500 text-sm mt-1 font-medium">Modelos de factura</p></div></div>
-                    <button onclick="verSec('sec-crear-plantilla',document.getElementById('btn-plantillas'));setTimeout(actualizarPreview,100)" class="flex items-center gap-2 bg-primary hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm">
+                    <button onclick="editingPlantillaId=null;$('#builder-titulo').textContent='Nueva Plantilla';$('#tpl-nombre').value='';verSec('sec-crear-plantilla',document.getElementById('btn-plantillas'));cargarPreset('simple');setTimeout(actualizarPreview,100)" class="flex items-center gap-2 bg-primary hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm">
                         <span class="material-symbols-outlined text-lg">add</span> Nueva Plantilla</button>
                 </header>
                 <div id="lista-plantillas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
@@ -159,8 +159,8 @@
             <div id="sec-crear-plantilla" class="app-section w-full max-w-[1400px]">
                 <header class="flex items-center justify-between mb-6 pb-6 border-b border-slate-200">
                     <div class="flex items-center gap-4">
-                        <button onclick="verSec('sec-plantillas',document.getElementById('btn-plantillas'));cargarPlantillas()" class="p-2 rounded-lg hover:bg-slate-100 text-slate-400"><span class="material-symbols-outlined">arrow_back</span></button>
-                        <h2 class="text-2xl font-bold tracking-tight text-slate-900">Nueva Plantilla</h2></div>
+                        <button onclick="cancelarEdicionPlantilla()" class="p-2 rounded-lg hover:bg-slate-100 text-slate-400"><span class="material-symbols-outlined">arrow_back</span></button>
+                        <h2 id="builder-titulo" class="text-2xl font-bold tracking-tight text-slate-900">Nueva Plantilla</h2></div>
                 </header>
                 <div class="flex gap-1 mb-6 bg-slate-100 p-1 rounded-lg w-fit">
                     <button onclick="tabPlantilla('visual')" id="tab-visual" class="px-5 py-2 rounded-md text-sm font-bold bg-white text-primary shadow-sm transition-all">Crear Visual</button>
@@ -574,12 +574,98 @@
 
     function buildVisualConfig(){const cols=getColumnasFromEditor();return{empresa:{nombre:$("#tpl-emp-nombre").value,cif:$("#tpl-emp-cif").value,direccion:$("#tpl-emp-dir").value,telefono:$("#tpl-emp-tel").value,email:$("#tpl-emp-email").value,logo_url:$("#tpl-emp-logo").value},estilo:{color_primario:$("#tpl-color1").value,color_secundario:$("#tpl-color2").value,fuente:$("#tpl-fuente").value,tam_fuente:parseInt($("#tpl-tam").value)||10},pagina:{size:$("#tpl-page-size").value,orientation:$("#tpl-page-orient").value,margenes:{top:parseInt($("#tpl-margin-v").value)||20,right:parseInt($("#tpl-margin-h").value)||15,bottom:parseInt($("#tpl-margin-v").value)||20,left:parseInt($("#tpl-margin-h").value)||15},escala:parseInt($("#tpl-escala")?.value)||100,interlineado:parseFloat($("#tpl-interlineado")?.value)||1.5},cliente:{mostrar:$("#tpl-cli-mostrar").checked},columnas:cols,columna_importe:(cols.filter(c=>c.tipo==="moneda"||c.tipo==="formula").pop()?.campo)||cols.at(-1)?.campo||"importe",impuestos:[{nombre:$("#tpl-imp-nombre").value||"IVA",porcentaje:parseInt($("#tpl-imp-pct").value)||21}],moneda:$("#tpl-moneda").value||"€",titulo:$("#tpl-fac-titulo").value||"FACTURA",mostrar_desglose:$("#tpl-desglose").checked,pie:{texto:$("#tpl-pie-texto").value,mostrar_datos_pago:$("#tpl-pie-pago").checked,datos_pago:$("#tpl-pie-pago-texto").value},hoja_detalle:{activar:$("#tpl-detalle-activar")?.checked||false,titulo:$("#tpl-detalle-titulo")?.value||"Detalle",campos:cols.map(c=>c.campo)}}}
     function tabPlantilla(t){const v=t==="visual";$("#panel-visual").classList.toggle("hidden",!v);$("#panel-visual").classList.toggle("grid",v);$("#panel-excel").classList.toggle("hidden",v);$("#tab-visual").className=`px-5 py-2 rounded-md text-sm font-bold transition-all ${v?"bg-white text-primary shadow-sm":"text-slate-500"}`;$("#tab-excel").className=`px-5 py-2 rounded-md text-sm font-bold transition-all ${!v?"bg-white text-primary shadow-sm":"text-slate-500"}`}
-    async function cargarPlantillas(){const c=$("#lista-plantillas");c.innerHTML='<p class="col-span-3 text-center text-slate-400 py-12">Cargando...</p>';try{const r=await fetch(`${URL_BASE}/plantillas`,{headers:authHeaders()});const data=await r.json();if(!data.length){c.innerHTML=`<div class="col-span-3 text-center py-16"><span class="material-symbols-outlined text-5xl text-slate-200 mb-4 block">draft</span><p class="text-slate-400 font-medium">No hay plantillas</p></div>`;return}c.innerHTML=data.map(p=>`<div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer" onclick="previewPlantilla(${p.id})"><div class="flex items-center justify-between mb-3"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.tipo==="visual"?"bg-violet-100 text-violet-700":"bg-emerald-100 text-emerald-700"}">${esc(p.tipo)}</span><span class="material-symbols-outlined text-slate-300 text-lg">visibility</span></div><h3 class="font-bold text-slate-900 text-lg mb-1">${esc(p.nombre)}</h3><p class="text-xs text-slate-400 mb-4">${new Date(p.created_at).toLocaleDateString("es-ES")}</p><div class="flex items-center justify-end"><button onclick="event.stopPropagation();eliminarPlantilla(${p.id})" class="text-slate-400 hover:text-red-500 p-2"><span class="material-symbols-outlined text-lg">delete</span></button></div></div>`).join("")}catch{c.innerHTML='<p class="col-span-3 text-center text-red-500">Error</p>'}}
+    async function cargarPlantillas(){const c=$("#lista-plantillas");c.innerHTML='<p class="col-span-3 text-center text-slate-400 py-12">Cargando...</p>';try{const r=await fetch(`${URL_BASE}/plantillas`,{headers:authHeaders()});const data=await r.json();if(!data.length){c.innerHTML=`<div class="col-span-3 text-center py-16"><span class="material-symbols-outlined text-5xl text-slate-200 mb-4 block">draft</span><p class="text-slate-400 font-medium">No hay plantillas</p></div>`;return}
+        c.innerHTML=data.map(p=>{
+            let miniHtml='<div class="flex items-center justify-center h-full text-slate-300"><span class="material-symbols-outlined text-3xl">table_view</span></div>';
+            if(p.tipo==="visual"&&p.config_json){try{const cfg=JSON.parse(p.config_json);miniHtml=renderMiniPreview(cfg)}catch{}}
+            return`<div class="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden">
+<div class="h-32 bg-slate-50 border-b border-slate-100 overflow-hidden p-2" style="font-size:5px;line-height:1.3">${miniHtml}</div>
+<div class="p-4"><div class="flex items-center justify-between mb-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${p.tipo==="visual"?"bg-violet-100 text-violet-700":"bg-emerald-100 text-emerald-700"}">${esc(p.tipo)}</span>
+<span class="text-[10px] text-slate-400">${new Date(p.created_at).toLocaleDateString("es-ES")}</span></div>
+<h3 class="font-bold text-slate-900 mb-3">${esc(p.nombre)}</h3>
+<div class="flex items-center gap-1.5">
+<button onclick="previewPlantilla(${p.id})" class="flex-1 text-[11px] font-bold text-primary bg-primary/5 hover:bg-primary/10 rounded-lg py-1.5 flex items-center justify-center gap-1 transition-colors"><span class="material-symbols-outlined text-sm">visibility</span> Preview</button>
+<button onclick="editarPlantilla(${p.id})" class="flex-1 text-[11px] font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg py-1.5 flex items-center justify-center gap-1 transition-colors"><span class="material-symbols-outlined text-sm">edit</span> Editar</button>
+<button onclick="eliminarPlantilla(${p.id})" class="text-slate-400 hover:text-red-500 p-1.5 transition-colors"><span class="material-symbols-outlined text-base">delete</span></button>
+</div></div></div>`}).join("")}catch{c.innerHTML='<p class="col-span-3 text-center text-red-500">Error</p>'}}
+
+    function renderMiniPreview(cfg){
+        const e=cfg.empresa||{},s=cfg.estilo||{},cols=(cfg.columnas||[]).filter(c=>!c.oculta);
+        const c1=s.color_primario||"#1a2e4a",c2=s.color_secundario||"#0d6dfd",mon=cfg.moneda||"€";
+        const th=cols.map(c=>`<th style="padding:1px 2px;text-align:${c.alineacion}">${c.nombre}</th>`).join("");
+        const rows=['Servicio A','Material B'].map(n=>"<tr>"+cols.map(c=>{
+            if(c.tipo==="texto")return`<td style="padding:1px 2px">${n}</td>`;
+            return`<td style="padding:1px 2px;text-align:right;font-weight:600">50.00 ${mon}</td>`}).join("")+"</tr>").join("");
+        return`<div style="color:#333;font-family:sans-serif"><table style="width:100%;margin-bottom:3px"><tr><td><b style="color:${c1}">${esc(e.nombre||"Empresa")}</b></td><td style="text-align:right;color:${c2};font-weight:900;font-size:7px">${esc(cfg.titulo||"FACTURA")}</td></tr></table><table style="width:100%;border-collapse:collapse"><tr style="background:${c1};color:white">${th}</tr>${rows}</table><div style="text-align:right;margin-top:2px;font-weight:800;color:${c1}">TOTAL: 100.00 ${esc(mon)}</div></div>`;
+    }
     function evalFormulaClient(formula,row){if(!formula||!formula.startsWith("="))return formula;let e=formula.slice(1);for(const[k,v]of Object.entries(row).sort((a,b)=>b[0].length-a[0].length)){try{e=e.replaceAll(k,String(parseFloat(v)||0))}catch{}}try{if(/^[\d\s.\+\-\*\/\(\)]+$/.test(e))return new Function("return "+e)().toFixed(2)}catch{}return"0.00"}
     function actualizarPreview(){const c=buildVisualConfig(),e=c.empresa,s=c.estilo,cols=c.columnas.filter(x=>!x.oculta),moneda=c.moneda,sc=0.7;const logo=e.logo_url?`<img src="${esc(e.logo_url)}" style="max-height:30px;max-width:90px;">`:"";let ejs=[{descripcion:"Servicio profesional",cantidad:"10",horas:"10",precio:"50.00",tarifa:"50.00",importe:"500.00"},{descripcion:"Material",cantidad:"1",horas:"2",precio:"30.00",tarifa:"30.00",importe:"30.00"}];ejs=ejs.map(row=>{const r={...row};cols.forEach(col=>{if(col.tipo==="formula"&&col.formula)r[col.campo]=evalFormulaClient(col.formula,r)});return r});const ci=c.columna_importe;let sub=0;ejs.forEach(r=>{try{sub+=parseFloat(r[ci]||0)}catch{}});const impP=c.impuestos[0]?.porcentaje||0;const impM=sub*impP/100;const tot=sub+impM;const thH=cols.map(col=>`<th style="padding:4px 6px;text-align:${col.alineacion};">${col.nombre}</th>`).join("");const rowsH=ejs.map(ej=>"<tr>"+cols.map(col=>{let v=ej[col.campo]||"";if(col.tipo==="moneda"||col.tipo==="formula")try{v=parseFloat(v).toFixed(2)+" "+moneda}catch{};return`<td style="padding:4px 6px;border-bottom:1px solid #eee;text-align:${col.alineacion};${col.alineacion==="right"?"font-weight:600;":""}">${v}</td>`}).join("")+"</tr>").join("");const cliH=c.cliente.mostrar?`<div style="margin:8px 0;padding:6px;background:#f8f9fa;border-radius:3px;font-size:${(s.tam_fuente-1)*sc}px;"><span style="color:#999;font-weight:600;">FACTURAR A:</span><br>Empresa Ejemplo S.L.</div>`:"";const detH=c.hoja_detalle?.activar?`<div style="margin-top:10px;padding:6px;background:#fffbeb;border:1px dashed #f59e0b;border-radius:4px;font-size:${(s.tam_fuente-2)*sc}px;color:#92400e;">+ ${ejs.length} hojas de detalle ("${esc(c.hoja_detalle.titulo)}")</div>`:"";
     $("#tpl-preview").innerHTML=`<div style="font-family:${s.fuente};font-size:${s.tam_fuente*sc}px;color:#333;line-height:${c.pagina.interlineado||1.5};"><table style="width:100%;margin-bottom:10px;"><tr><td style="vertical-align:top;width:55%;">${logo}<div style="font-weight:800;color:${s.color_primario};font-size:${(s.tam_fuente+4)*sc}px;margin-top:4px;">${esc(e.nombre||"Tu Empresa")}</div><div style="color:#888;font-size:${(s.tam_fuente-2)*sc}px;">${esc(e.cif)}</div></td><td style="vertical-align:top;text-align:right;"><div style="font-weight:900;color:${s.color_secundario};font-size:${(s.tam_fuente+8)*sc}px;">${esc(c.titulo)}</div><div>Nº: 2026-0001</div><div>Fecha: 19/03/2026</div></td></tr></table>${cliH}<table style="width:100%;border-collapse:collapse;"><tr style="background:${s.color_primario};color:white;font-size:${(s.tam_fuente-1)*sc}px;">${thH}</tr>${rowsH}</table><table style="margin-top:8px;margin-left:auto;">${c.mostrar_desglose?`<tr><td style="padding:2px 8px;color:#888;">Subtotal</td><td style="text-align:right;">${sub.toFixed(2)} ${esc(moneda)}</td></tr><tr><td style="padding:2px 8px;color:#888;">${esc(c.impuestos[0]?.nombre)} (${impP}%)</td><td style="text-align:right;">${impM.toFixed(2)} ${esc(moneda)}</td></tr>`:""}<tr style="border-top:2px solid ${s.color_primario};"><td style="padding:3px 8px;font-weight:800;color:${s.color_primario};">TOTAL</td><td style="text-align:right;font-weight:800;color:${s.color_primario};">${tot.toFixed(2)} ${esc(moneda)}</td></tr></table>${c.pie.texto?`<div style="margin-top:12px;padding-top:4px;border-top:1px solid #ddd;color:#aaa;">${esc(c.pie.texto)}</div>`:""}${detH}</div>`}
     document.addEventListener("input",e=>{if(e.target.closest?.("#panel-visual"))actualizarPreview()});document.addEventListener("change",e=>{if(e.target.closest?.("#panel-visual"))actualizarPreview()});setTimeout(actualizarPreview,500);
-    async function guardarPlantillaVisual(){const n=$("#tpl-nombre").value.trim();if(!n){showToast("Indica un nombre para la plantilla","warn");return}const cfg=buildVisualConfig();const fd=new FormData();fd.append("nombre",n);fd.append("config_json",JSON.stringify(cfg));try{const r=await fetch(`${URL_BASE}/plantillas/crear-visual`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){showToast("Plantilla guardada","success");verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()}else showToast("Ha ocurrido un error","error")}catch{showToast("Ha ocurrido un error","error")}}
+    let editingPlantillaId=null;
+    async function guardarPlantillaVisual(){const n=$("#tpl-nombre").value.trim();if(!n){showToast("Indica un nombre para la plantilla","warn");return}const cfg=buildVisualConfig();const fd=new FormData();fd.append("nombre",n);fd.append("config_json",JSON.stringify(cfg));
+        if(editingPlantillaId){
+            try{const r=await fetch(`${URL_BASE}/plantillas/${editingPlantillaId}`,{method:"PUT",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){showToast("Plantilla actualizada","success");editingPlantillaId=null;verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()}else showToast("Error al actualizar","error")}catch{showToast("Ha ocurrido un error","error")}
+        }else{
+            try{const r=await fetch(`${URL_BASE}/plantillas/crear-visual`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){showToast("Plantilla guardada","success");verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()}else showToast("Ha ocurrido un error","error")}catch{showToast("Ha ocurrido un error","error")}
+        }}
+
+    async function editarPlantilla(id){
+        try{const r=await fetch(`${URL_BASE}/plantillas/${id}`,{headers:authHeaders()});if(!r.ok){showToast("No se pudo cargar","error");return}
+            const p=await r.json();
+            if(p.tipo!=="visual"){showToast("Solo se pueden editar plantillas visuales desde el builder","info");return}
+            editingPlantillaId=id;
+            const cfg=JSON.parse(p.config_json||"{}");
+            // Load into builder
+            $("#tpl-nombre").value=p.nombre||"";
+            $("#builder-titulo").textContent="Editar Plantilla";
+            // Empresa
+            const e=cfg.empresa||{};
+            $("#tpl-emp-nombre").value=e.nombre||"";$("#tpl-emp-cif").value=e.cif||"";
+            $("#tpl-emp-dir").value=e.direccion||"";$("#tpl-emp-tel").value=e.telefono||"";
+            $("#tpl-emp-email").value=e.email||"";$("#tpl-emp-logo").value=e.logo_url||"";
+            // Estilo
+            const s=cfg.estilo||{};
+            $("#tpl-color1").value=s.color_primario||"#1a2e4a";$("#tpl-color2").value=s.color_secundario||"#0d6dfd";
+            $("#tpl-fuente").value=s.fuente||"Helvetica, Arial, sans-serif";$("#tpl-tam").value=s.tam_fuente||10;
+            // Página
+            const pg=cfg.pagina||{};const mg=pg.margenes||{};
+            $("#tpl-page-size").value=pg.size||"A4";$("#tpl-page-orient").value=pg.orientation||"portrait";
+            $("#tpl-margin-v").value=mg.top||20;$("#tpl-margin-h").value=mg.right||15;
+            if($("#tpl-escala"))$("#tpl-escala").value=pg.escala||100;
+            if($("#tpl-interlineado"))$("#tpl-interlineado").value=pg.interlineado||1.5;
+            // Cliente
+            $("#tpl-cli-mostrar").checked=cfg.cliente?.mostrar!==false;
+            // Columnas
+            $("#tpl-cols-editor").innerHTML="";
+            (cfg.columnas||[]).forEach(c=>addColumnaEditor(c));
+            // Impuestos
+            const imp=(cfg.impuestos||[{}])[0];
+            $("#tpl-fac-titulo").value=cfg.titulo||"FACTURA";
+            $("#tpl-imp-nombre").value=imp.nombre||"IVA";$("#tpl-imp-pct").value=imp.porcentaje||21;
+            $("#tpl-moneda").value=cfg.moneda||"€";$("#tpl-desglose").checked=cfg.mostrar_desglose!==false;
+            // Pie
+            const pi=cfg.pie||{};
+            $("#tpl-pie-texto").value=pi.texto||"";
+            $("#tpl-pie-pago").checked=!!pi.mostrar_datos_pago;
+            $("#tpl-pie-pago-texto").value=pi.datos_pago||"";
+            // Detalle
+            const det=cfg.hoja_detalle||{};
+            if($("#tpl-detalle-activar"))$("#tpl-detalle-activar").checked=!!det.activar;
+            if($("#tpl-detalle-titulo"))$("#tpl-detalle-titulo").value=det.titulo||"Detalle";
+            // Navigate and update
+            verSec("sec-crear-plantilla",$("#btn-plantillas"));
+            tabPlantilla("visual");
+            setTimeout(actualizarPreview,200);
+        }catch{showToast("Error cargando plantilla","error")}
+    }
+
+    function cancelarEdicionPlantilla(){
+        editingPlantillaId=null;
+        $("#builder-titulo").textContent="Nueva Plantilla";
+        verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas();
+    }
     async function subirPlantillaExcel(){const n=$("#excel-tpl-nombre").value.trim();const fi=$("#excel-tpl-file");if(!n){showToast("Indica un nombre para la plantilla","warn");return}if(!fi.files.length){showToast("Selecciona un archivo","warn");return}const fd=new FormData();fd.append("nombre",n);fd.append("file",fi.files[0]);fd.append("config_json","{}");try{const r=await fetch(`${URL_BASE}/plantillas/upload-excel`,{method:"POST",headers:{"Authorization":`Bearer ${sessionToken}`},body:fd});if(r.ok){const d=await r.json();const tags=d.tags_detectados||[];if(tags.length){const div=$("#excel-tags-resultado");div.classList.remove("hidden");div.innerHTML=`<p class="text-sm font-bold text-emerald-700 mb-2">✅ ${tags.length} tags:</p><div class="flex flex-wrap gap-2">${tags.map(t=>`<span class="bg-emerald-100 text-emerald-800 text-xs font-mono px-2 py-1 rounded">${esc(t)}</span>`).join("")}</div>`}showToast("Plantilla subida correctamente","success");setTimeout(()=>{verSec("sec-plantillas",$("#btn-plantillas"));cargarPlantillas()},1000)}else{const err=await r.json().catch(()=>({}));showToast(err.detail||"Error al subir","error")}}catch{showToast("Ha ocurrido un error","error")}}
     async function previewPlantilla(id){try{$("#preview-contenido").innerHTML='<div class="flex items-center justify-center h-64"><span class="material-symbols-outlined animate-spin text-3xl text-slate-300">refresh</span></div>';$("#modal-preview").classList.remove("hidden");const r=await fetch(`${URL_BASE}/plantillas/${id}/preview`,{method:"POST",headers:authHeaders()});if(r.ok){const blob=await r.blob();const url=URL.createObjectURL(blob);if(blob.type.includes("pdf")){$("#preview-contenido").innerHTML=`<iframe src="${url}" style="width:100%;height:100%;border:none;"></iframe>`}else{$("#preview-contenido").innerHTML=`<div class="p-4 text-center"><p class="text-sm text-slate-500 mb-3">Preview generado</p><a href="${url}" download class="bg-primary text-white px-6 py-2 rounded-lg text-sm font-bold">Descargar</a></div>`}}else{cerrarPreview();showToast("Error generando preview","error")}}catch{cerrarPreview();showToast("Error de conexión","error")}}
     function cerrarPreview(){$("#modal-preview").classList.add("hidden");$("#preview-contenido").innerHTML=""}
