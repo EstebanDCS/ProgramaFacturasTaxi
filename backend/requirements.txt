@@ -3,4 +3,4 @@ uvicorn
 openpyxl
 python-multipart
 supabase
-httpx
+weasyprint
