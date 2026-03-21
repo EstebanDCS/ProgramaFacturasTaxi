@@ -237,6 +237,15 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
                         <input type="checkbox" checked={!!ticket[campo.campo]} onChange={e => updateTicket(ti, campo.campo, e.target.checked)}
                           className="rounded text-violet-600" /> {campo.nombre}
                       </label>
+                    ) : campo.tipo === 'dropdown' ? (
+                      <select value={ticket[campo.campo] || ''} onChange={e => updateTicket(ti, campo.campo, e.target.value)}
+                        className="w-full rounded-lg border-violet-200 bg-white px-3 py-2 text-sm focus:ring-violet-400">
+                        <option value="">Seleccionar...</option>
+                        {(campo.opciones || []).map(op => <option key={op} value={op}>{op}</option>)}
+                      </select>
+                    ) : campo.tipo === 'fecha' ? (
+                      <input type="date" value={ticket[campo.campo] || ''} onChange={e => updateTicket(ti, campo.campo, e.target.value)}
+                        className="w-full rounded-lg border-violet-200 bg-white px-3 py-2 text-sm focus:ring-violet-400" />
                     ) : (
                       <input type={campo.tipo === 'numero' || campo.tipo === 'moneda' ? 'number' : 'text'}
                         value={ticket[campo.campo] || ''} onChange={e => updateTicket(ti, campo.campo, e.target.value)}

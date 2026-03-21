@@ -77,17 +77,25 @@ export default function BlockRenderer({ block, onChange }) {
                 {['Nombre', 'ID campo', 'Tipo', ''].map(h => <span key={h} className="text-[9px] font-bold text-slate-400 uppercase">{h}</span>)}
               </div>
               {(config.campos || []).map((c, i) => (
-                <div key={i} className="grid grid-cols-[1fr_1fr_80px_24px] gap-1.5 items-center mb-1">
-                  <input value={c.nombre} onChange={e => { const n = [...config.campos]; n[i] = {...n[i], nombre: e.target.value}; update('campos', n); }}
-                    className="rounded-md border-slate-200 bg-slate-50 px-2 py-1.5 text-xs" placeholder="Nombre" />
-                  <input value={c.campo} onChange={e => { const n = [...config.campos]; n[i] = {...n[i], campo: e.target.value}; update('campos', n); }}
-                    className="rounded-md border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-mono text-slate-500" placeholder="id" />
-                  <select value={c.tipo} onChange={e => { const n = [...config.campos]; n[i] = {...n[i], tipo: e.target.value}; update('campos', n); }}
-                    className="rounded-md border-slate-200 bg-slate-50 px-1 py-1.5 text-xs">
-                    <option value="texto">Texto</option><option value="numero">Nº</option><option value="moneda">€</option><option value="checkbox">✓</option>
-                  </select>
-                  <button onClick={() => { const n = config.campos.filter((_, idx) => idx !== i); update('campos', n); }}
-                    className="text-slate-300 hover:text-red-500"><span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span></button>
+                <div key={i}>
+                  <div className="grid grid-cols-[1fr_1fr_80px_24px] gap-1.5 items-center mb-1">
+                    <input value={c.nombre} onChange={e => { const n = [...config.campos]; n[i] = {...n[i], nombre: e.target.value}; update('campos', n); }}
+                      className="rounded-md border-slate-200 bg-slate-50 px-2 py-1.5 text-xs" placeholder="Nombre" />
+                    <input value={c.campo} onChange={e => { const n = [...config.campos]; n[i] = {...n[i], campo: e.target.value}; update('campos', n); }}
+                      className="rounded-md border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-mono text-slate-500" placeholder="id" />
+                    <select value={c.tipo} onChange={e => { const n = [...config.campos]; n[i] = {...n[i], tipo: e.target.value}; update('campos', n); }}
+                      className="rounded-md border-slate-200 bg-slate-50 px-1 py-1.5 text-xs">
+                      <option value="texto">Texto</option><option value="numero">Nº</option><option value="moneda">€</option><option value="checkbox">✓</option><option value="dropdown">Lista</option><option value="fecha">Fecha</option>
+                    </select>
+                    <button onClick={() => { const n = config.campos.filter((_, idx) => idx !== i); update('campos', n); }}
+                      className="text-slate-300 hover:text-red-500"><span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span></button>
+                  </div>
+                  {c.tipo === 'dropdown' && (
+                    <div className="ml-4 mb-1">
+                      <input value={(c.opciones || []).join(', ')} onChange={e => { const n = [...config.campos]; n[i] = {...n[i], opciones: e.target.value.split(',').map(s => s.trim())}; update('campos', n); }}
+                        className="w-full rounded-md border-slate-200 bg-slate-50 px-2 py-1 text-xs" placeholder="Opciones separadas por coma" />
+                    </div>
+                  )}
                 </div>
               ))}
               <button onClick={() => update('campos', [...(config.campos||[]), { nombre: '', campo: '', tipo: 'texto' }])}

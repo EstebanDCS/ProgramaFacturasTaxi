@@ -13,11 +13,9 @@ import { BLOCK_TYPES, CATEGORIES, createBlock } from '../../utils/blockTypes';
 import BlockRenderer from './BlockRenderer';
 
 
-// ── Palette item (draggable + clickable) ──
 function PaletteItem({ typeKey, typeDef, onAdd }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `palette-${typeKey}`,
-    data: { type: 'palette', typeKey },
+    id: `palette-${typeKey}`, data: { type: 'palette', typeKey },
   });
   const colors = {
     blue: 'bg-blue-50 text-blue-600 border-blue-100 hover:border-blue-300',
@@ -28,8 +26,7 @@ function PaletteItem({ typeKey, typeDef, onAdd }) {
     coral: 'bg-orange-50 text-orange-600 border-orange-100 hover:border-orange-300',
   };
   return (
-    <div ref={setNodeRef} {...attributes} {...listeners}
-      onClick={() => onAdd(typeKey)}
+    <div ref={setNodeRef} {...attributes} {...listeners} onClick={() => onAdd(typeKey)}
       className={`w-full flex items-center gap-2 p-2 rounded-lg border cursor-grab active:cursor-grabbing text-left transition-all ${colors[typeDef.color] || colors.slate} ${isDragging ? 'opacity-40' : ''}`}>
       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{typeDef.icon}</span>
       <span className="text-[11px] font-bold truncate">{typeDef.label}</span>
@@ -37,8 +34,6 @@ function PaletteItem({ typeKey, typeDef, onAdd }) {
   );
 }
 
-
-// ── Block palette (left panel) ──
 export function BlockPalette({ onAddBlock }) {
   const [expandedCat, setExpandedCat] = useState('section');
   return (
@@ -65,46 +60,139 @@ export function BlockPalette({ onAddBlock }) {
 }
 
 
-// ── Sortable block on canvas ──
-function SortableBlock({ block, onUpdate, onRemove }) {
+// ── Visual block representation (what it looks like on the "page") ──
+function BlockVisual({ block, estilo }) {
+  const c1 = estilo?.color_primario || '#1a2e4a';
+  const c2 = estilo?.color_secundario || '#0d6dfd';
+  const cfg = block.config;
+
+  switch (block.type) {
+    case 'header':
+      return (
+        <div className="flex justify-between items-start py-2">
+          <div>
+            {cfg.logo_url && <div className="w-12 h-4 bg-slate-200 rounded mb-1" />}
+            <div className="font-extrabold text-sm" style={{ color: c1 }}>{cfg.nombre || 'Empresa'}</div>
+            <div className="text-[9px] text-slate-400">{[cfg.cif, cfg.direccion].filter(Boolean).join(' · ') || 'CIF · Dirección'}</div>
+          </div>
+          <div className="text-right">
+            <div className="font-black text-lg" style={{ color: c2 }}>FACTURA</div>
+            <div className="text-[9px] text-slate-400">Nº: 2026-0001</div>
+          </div>
+        </div>
+      );
+
+    case 'client':
+      return cfg.mostrar !== false ? (
+        <div className="bg-slate-50 rounded px-3 py-2 text-[10px]">
+          <div className="text-[8px] font-bold text-slate-400 mb-0.5">FACTURAR A:</div>
+          <div className="text-slate-600">Empresa Ejemplo S.L.</div>
+        </div>
+      ) : <div className="text-[10px] text-slate-300 italic">Cliente oculto</div>;
+
+    case 'items_table': {
+      const cols = (cfg.columnas || []).filter(c => !c.oculta);
+      return (
+        <div>
+          <div className="flex rounded-t overflow-hidden" style={{ backgroundColor: c1 }}>
+            {cols.map((c, i) => <div key={i} className="flex-1 px-2 py-1 text-[8px] font-bold text-white" style={{ textAlign: c.alineacion }}>{c.nombre}</div>)}
+          </div>
+          {['Servicio profesional', 'Material fungible'].map((n, i) => (
+            <div key={i} className={`flex ${i % 2 ? 'bg-slate-50' : ''}`}>
+              {cols.map((c, j) => <div key={j} className="flex-1 px-2 py-0.5 text-[8px] text-slate-600" style={{ textAlign: c.alineacion }}>{c.tipo === 'texto' ? n : '50.00 €'}</div>)}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    case 'totals':
+      return (
+        <div className="flex flex-col items-end text-[9px] py-1">
+          {cfg.mostrar_desglose !== false && <>
+            <div className="flex gap-4"><span className="text-slate-400">Subtotal</span><b>530.00 {cfg.moneda || '€'}</b></div>
+            <div className="flex gap-4"><span className="text-slate-400">{cfg.impuestos?.[0]?.nombre || 'IVA'} ({cfg.impuestos?.[0]?.porcentaje || 21}%)</span><b>111.30 {cfg.moneda || '€'}</b></div>
+          </>}
+          <div className="flex gap-4 mt-1 pt-1 border-t-2" style={{ borderColor: c1 }}>
+            <span className="font-black" style={{ color: c1 }}>TOTAL</span>
+            <b style={{ color: c1 }}>641.30 {cfg.moneda || '€'}</b>
+          </div>
+        </div>
+      );
+
+    case 'notes':
+      return <div className="text-[9px] text-slate-400 italic py-1">{cfg.placeholder || 'Notas...'}</div>;
+
+    case 'footer':
+      return (
+        <div className="text-[9px] text-slate-400 border-t border-slate-200 pt-1">
+          {cfg.texto || 'Pie de página'}{cfg.mostrar_datos_pago && cfg.datos_pago ? ` · ${cfg.datos_pago}` : ''}
+        </div>
+      );
+
+    case 'detail_sheet':
+      return cfg.activar ? (
+        <div className="bg-violet-50 border border-violet-100 rounded px-3 py-2 text-[9px] text-violet-700">
+          <b>{cfg.titulo || 'Ticket'}</b> — {(cfg.campos || []).map(c => c.nombre).join(', ') || 'Sin campos'}
+        </div>
+      ) : <div className="text-[9px] text-slate-300 italic">Tickets desactivados</div>;
+
+    default:
+      return <div className="text-[9px] text-slate-400">{BLOCK_TYPES[block.type]?.label || block.type}</div>;
+  }
+}
+
+
+// ── Sortable page block (visual + click to edit) ──
+function SortablePageBlock({ block, estilo, isSelected, onSelect, onUpdate, onRemove }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
-  const [open, setOpen] = useState(true);
   const typeDef = BLOCK_TYPES[block.type] || {};
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 };
-  const borderColors = {
-    blue: 'border-l-blue-400', emerald: 'border-l-emerald-400', amber: 'border-l-amber-400',
-    violet: 'border-l-violet-400', slate: 'border-l-slate-400', coral: 'border-l-orange-400',
-  };
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 };
 
   return (
-    <div ref={setNodeRef} style={style} className={`bg-white rounded-xl border border-slate-200 shadow-sm mb-3 overflow-hidden border-l-4 ${borderColors[typeDef.color] || 'border-l-slate-300'}`}>
-      <div className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-slate-50/50 transition-colors" onClick={() => setOpen(!open)}>
-        <div className="flex items-center gap-2">
-          <span {...attributes} {...listeners} className="material-symbols-outlined text-slate-300 cursor-grab active:cursor-grabbing" style={{ fontSize: 18 }}>drag_indicator</span>
-          <span className="material-symbols-outlined text-primary/70" style={{ fontSize: 16 }}>{typeDef.icon}</span>
-          <span className="text-sm font-bold text-slate-700">{typeDef.label}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button onClick={e => { e.stopPropagation(); onRemove(); }} className="text-slate-300 hover:text-red-500 p-1 transition-colors">
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span></button>
-          <span className="material-symbols-outlined text-slate-300" style={{ fontSize: 16, transform: open ? 'rotate(0)' : 'rotate(-90deg)', transition: 'transform .15s' }}>expand_more</span>
-        </div>
+    <div ref={setNodeRef} style={style}
+      className={`relative group mb-1 rounded-lg transition-all cursor-pointer
+        ${isSelected ? 'ring-2 ring-primary bg-blue-50/30' : 'hover:bg-slate-50/50'}`}
+      onClick={() => onSelect(block.id)}>
+
+      {/* Drag handle + type badge */}
+      <div className="absolute -left-7 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center gap-1">
+        <span {...attributes} {...listeners} className="material-symbols-outlined text-slate-300 cursor-grab active:cursor-grabbing hover:text-primary" style={{ fontSize: 16 }}>drag_indicator</span>
       </div>
-      {open && <div className="px-4 pb-4 pt-1"><BlockRenderer block={block} onChange={newConfig => onUpdate(newConfig)} /></div>}
+
+      {/* Delete button */}
+      <button onClick={e => { e.stopPropagation(); onRemove(); }}
+        className="absolute -right-2 -top-2 opacity-0 group-hover:opacity-100 bg-white border border-slate-200 rounded-full w-5 h-5 flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 shadow-sm transition-all z-10">
+        <span className="material-symbols-outlined" style={{ fontSize: 12 }}>close</span>
+      </button>
+
+      {/* Visual representation */}
+      <div className="px-3 py-2">
+        <BlockVisual block={block} estilo={estilo} />
+      </div>
+
+      {/* Inline editor (when selected) */}
+      {isSelected && (
+        <div className="border-t border-primary/20 bg-blue-50/50 px-4 py-3 rounded-b-lg" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>{typeDef.icon}</span>
+            <span className="text-xs font-bold text-primary">Editar: {typeDef.label}</span>
+          </div>
+          <BlockRenderer block={block} onChange={newConfig => onUpdate(newConfig)} />
+        </div>
+      )}
     </div>
   );
 }
 
 
-// ── Drop zone indicator ──
-function CanvasDropZone({ children, isEmpty }) {
-  const { setNodeRef, isOver } = useDroppable({ id: 'canvas-drop' });
+function CanvasDropZone({ children, isEmpty, isOver }) {
   return (
-    <div ref={setNodeRef} className={`min-h-[200px] rounded-xl transition-colors ${isOver ? 'bg-primary/5 ring-2 ring-primary/20 ring-dashed' : ''}`}>
+    <div className={`transition-colors ${isOver ? 'ring-2 ring-primary/20' : ''}`}>
       {isEmpty ? (
-        <div className={`flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-xl transition-colors ${isOver ? 'border-primary bg-primary/5' : 'border-slate-200'} text-slate-300`}>
-          <span className="material-symbols-outlined text-4xl mb-3">{isOver ? 'download' : 'add_circle'}</span>
-          <p className="text-sm font-medium">{isOver ? 'Suelta para añadir' : 'Arrastra bloques aquí o haz clic en la paleta'}</p>
+        <div className={`flex flex-col items-center justify-center h-40 border-2 border-dashed rounded-xl ${isOver ? 'border-primary bg-primary/5' : 'border-slate-200'} text-slate-300`}>
+          <span className="material-symbols-outlined text-3xl mb-2">{isOver ? 'download' : 'add_circle'}</span>
+          <p className="text-xs font-medium">{isOver ? 'Suelta aquí' : 'Arrastra bloques o haz clic en la paleta'}</p>
         </div>
       ) : children}
     </div>
@@ -112,49 +200,23 @@ function CanvasDropZone({ children, isEmpty }) {
 }
 
 
-// ── Drag overlay (ghost element while dragging) ──
-function DragGhost({ typeKey }) {
-  const t = BLOCK_TYPES[typeKey];
-  if (!t) return null;
-  return (
-    <div className="bg-white border border-primary shadow-xl rounded-xl px-4 py-3 flex items-center gap-2 opacity-90 pointer-events-none w-56">
-      <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>{t.icon}</span>
-      <span className="text-sm font-bold text-slate-800">{t.label}</span>
-    </div>
-  );
-}
-
-
-// ── Main canvas with shared DndContext ──
-export function DragCanvas({ blocks, onChange, paletteContent }) {
+export function DragCanvas({ blocks, onChange, paletteContent, estilo }) {
   const [draggingType, setDraggingType] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const { setNodeRef: dropRef, isOver } = useDroppable({ id: 'canvas-drop' });
 
-  const handleDragStart = (event) => {
-    const { active } = event;
-    if (active.data.current?.type === 'palette') {
-      setDraggingType(active.data.current.typeKey);
-    }
-  };
-
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
+  const handleDragStart = (e) => { if (e.active.data.current?.type === 'palette') setDraggingType(e.active.data.current.typeKey); };
+  const handleDragEnd = (e) => {
+    const { active, over } = e;
     setDraggingType(null);
-
-    // Drop from palette onto canvas
     if (active.data.current?.type === 'palette') {
-      if (over) {
-        const newBlock = createBlock(active.data.current.typeKey);
-        if (newBlock) onChange([...blocks, newBlock]);
-      }
+      if (over) { const b = createBlock(active.data.current.typeKey); if (b) onChange([...blocks, b]); }
       return;
     }
-
-    // Reorder within canvas
     if (over && active.id !== over.id) {
-      const oldIdx = blocks.findIndex(b => b.id === active.id);
-      const newIdx = blocks.findIndex(b => b.id === over.id);
-      if (oldIdx >= 0 && newIdx >= 0) onChange(arrayMove(blocks, oldIdx, newIdx));
+      const oi = blocks.findIndex(b => b.id === active.id), ni = blocks.findIndex(b => b.id === over.id);
+      if (oi >= 0 && ni >= 0) { onChange(arrayMove(blocks, oi, ni)); }
     }
   };
 
@@ -163,31 +225,36 @@ export function DragCanvas({ blocks, onChange, paletteContent }) {
       <div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
         {/* Palette */}
         {paletteContent && (
-          <div className="w-56 flex-shrink-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-y-auto">
-            <div className="p-3 border-b border-slate-100">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bloques</p>
-            </div>
+          <div className="w-52 flex-shrink-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-y-auto">
+            <div className="p-3 border-b border-slate-100"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bloques</p></div>
             <div className="p-2">{paletteContent}</div>
           </div>
         )}
 
-        {/* Canvas */}
-        <div className="flex-1 min-w-0 overflow-y-auto">
-          <CanvasDropZone isEmpty={!blocks.length}>
-            <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
-              {blocks.map(block => (
-                <SortableBlock key={block.id} block={block}
-                  onUpdate={cfg => onChange(blocks.map(b => b.id === block.id ? { ...b, config: cfg } : b))}
-                  onRemove={() => onChange(blocks.filter(b => b.id !== block.id))} />
-              ))}
-            </SortableContext>
-          </CanvasDropZone>
+        {/* Page canvas */}
+        <div className="flex-1 min-w-0 overflow-y-auto" ref={dropRef}>
+          <div className="bg-white rounded-xl border border-slate-200 shadow-lg mx-auto p-6 min-h-[500px]" style={{ maxWidth: 680 }}>
+            <CanvasDropZone isEmpty={!blocks.length} isOver={isOver}>
+              <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+                {blocks.map(block => (
+                  <SortablePageBlock key={block.id} block={block} estilo={estilo}
+                    isSelected={selectedId === block.id}
+                    onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
+                    onUpdate={cfg => onChange(blocks.map(b => b.id === block.id ? { ...b, config: cfg } : b))}
+                    onRemove={() => { onChange(blocks.filter(b => b.id !== block.id)); if (selectedId === block.id) setSelectedId(null); }} />
+                ))}
+              </SortableContext>
+            </CanvasDropZone>
+          </div>
         </div>
       </div>
 
-      <DragOverlay>
-        {draggingType && <DragGhost typeKey={draggingType} />}
-      </DragOverlay>
+      <DragOverlay>{draggingType && (
+        <div className="bg-white border border-primary shadow-xl rounded-xl px-4 py-3 flex items-center gap-2 opacity-90 pointer-events-none w-52">
+          <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>{BLOCK_TYPES[draggingType]?.icon}</span>
+          <span className="text-sm font-bold text-slate-800">{BLOCK_TYPES[draggingType]?.label}</span>
+        </div>
+      )}</DragOverlay>
     </DndContext>
   );
 }

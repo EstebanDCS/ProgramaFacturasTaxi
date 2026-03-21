@@ -162,7 +162,7 @@ export default function CrearPlantilla({ editingId, onBack }) {
           </div>
 
           {/* Palette + Canvas in shared DndContext */}
-          <DragCanvas blocks={blocks} onChange={setBlocks} paletteContent={paletteContent} />
+          <DragCanvas blocks={blocks} onChange={setBlocks} paletteContent={paletteContent} estilo={estilo} />
         </div>
 
         {/* Preview panel */}
