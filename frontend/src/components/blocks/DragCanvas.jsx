@@ -131,11 +131,28 @@ function BlockVisual({ block, estilo }) {
       );
 
     case 'detail_sheet':
-      return cfg.activar ? (
-        <div className="bg-violet-50 border border-violet-100 rounded px-3 py-2 text-[9px] text-violet-700">
-          <b>{cfg.titulo || 'Ticket'}</b> — {(cfg.campos || []).map(c => c.nombre).join(', ') || 'Sin campos'}
+      if (!cfg.activar) return <div className="text-[9px] text-slate-300 italic">Tickets desactivados</div>;
+      return (
+        <div className="border border-violet-200 rounded-lg overflow-hidden">
+          <div className="bg-violet-600 text-white px-3 py-1.5 flex items-center justify-between">
+            <span className="text-[10px] font-bold">{cfg.titulo || 'Ticket'}</span>
+            <span className="text-[8px] opacity-70">× N hojas</span>
+          </div>
+          <div className="bg-violet-50/50 px-3 py-2">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              {(cfg.campos || []).map((c, i) => (
+                <div key={i} className="flex items-center gap-1.5">
+                  <span className="text-[8px] text-violet-400">
+                    {c.tipo === 'checkbox' ? '☑' : c.tipo === 'dropdown' ? '▾' : c.tipo === 'fecha' ? '📅' : c.tipo === 'moneda' ? '€' : c.tipo === 'numero' ? '#' : '—'}
+                  </span>
+                  <span className="text-[9px] text-violet-700 font-medium">{c.nombre}</span>
+                </div>
+              ))}
+            </div>
+            {!(cfg.campos || []).length && <span className="text-[9px] text-violet-300 italic">Sin campos definidos</span>}
+          </div>
         </div>
-      ) : <div className="text-[9px] text-slate-300 italic">Tickets desactivados</div>;
+      );
 
     default:
       return <div className="text-[9px] text-slate-400">{BLOCK_TYPES[block.type]?.label || block.type}</div>;
@@ -150,18 +167,13 @@ function SortablePageBlock({ block, estilo, isSelected, onSelect, onUpdate, onRe
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 };
 
   return (
-    <div ref={setNodeRef} style={style}
-      className={`relative group mb-1 rounded-lg transition-all cursor-pointer
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}
+      className={`relative group mb-1 rounded-lg transition-all cursor-grab active:cursor-grabbing
         ${isSelected ? 'ring-2 ring-primary bg-blue-50/30' : 'hover:bg-slate-50/50'}`}
       onClick={() => onSelect(block.id)}>
 
-      {/* Drag handle + type badge */}
-      <div className="absolute -left-7 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center gap-1">
-        <span {...attributes} {...listeners} className="material-symbols-outlined text-slate-300 cursor-grab active:cursor-grabbing hover:text-primary" style={{ fontSize: 16 }}>drag_indicator</span>
-      </div>
-
       {/* Delete button */}
-      <button onClick={e => { e.stopPropagation(); onRemove(); }}
+      <button onClick={e => { e.stopPropagation(); onRemove(); }} onPointerDown={e => e.stopPropagation()}
         className="absolute -right-2 -top-2 opacity-0 group-hover:opacity-100 bg-white border border-slate-200 rounded-full w-5 h-5 flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 shadow-sm transition-all z-10">
         <span className="material-symbols-outlined" style={{ fontSize: 12 }}>close</span>
       </button>
@@ -173,7 +185,8 @@ function SortablePageBlock({ block, estilo, isSelected, onSelect, onUpdate, onRe
 
       {/* Inline editor (when selected) */}
       {isSelected && (
-        <div className="border-t border-primary/20 bg-blue-50/50 px-4 py-3 rounded-b-lg" onClick={e => e.stopPropagation()}>
+        <div className="border-t border-primary/20 bg-blue-50/50 px-4 py-3 rounded-b-lg cursor-default"
+          onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>{typeDef.icon}</span>
             <span className="text-xs font-bold text-primary">Editar: {typeDef.label}</span>
