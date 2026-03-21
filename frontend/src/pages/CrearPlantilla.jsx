@@ -120,13 +120,25 @@ export default function CrearPlantilla({ editingId, onBack }) {
   const handleDragEnd = (e) => {
     const { active, over } = e;
     setDraggingType(null);
+    if (!over) return;
 
-    // From palette → canvas
-    if (active.data.current?.origin === 'palette' && over) {
+    // From palette → insertion zone or canvas
+    if (active.data.current?.origin === 'palette') {
       const newBlock = createBlock(active.data.current.typeKey);
       if (!newBlock) return;
-      const target = over.id;
-      if (target === 'ticket-canvas' || (ticketsOn && activeCanvas === 'ticket')) {
+      const target = String(over.id);
+
+      // Dropped on an insertion zone: "main-insert-N" or "ticket-insert-N"
+      if (target.includes('-insert-')) {
+        const idx = parseInt(target.split('-insert-')[1]) || 0;
+        if (target.startsWith('ticket')) {
+          setTicketBlocks(prev => { const n = [...prev]; n.splice(idx, 0, newBlock); return n; });
+        } else {
+          setBlocks(prev => { const n = [...prev]; n.splice(idx, 0, newBlock); return n; });
+        }
+      }
+      // Dropped on canvas itself
+      else if (target === 'ticket-canvas') {
         setTicketBlocks(prev => [...prev, newBlock]);
       } else {
         setBlocks(prev => [...prev, newBlock]);
@@ -136,8 +148,7 @@ export default function CrearPlantilla({ editingId, onBack }) {
     }
 
     // Reorder within canvas
-    if (!over || active.id === over.id) return;
-    // Check which array contains the block
+    if (active.id === over.id) return;
     const inMain = blocks.findIndex(b => b.id === active.id);
     const inTicket = ticketBlocks.findIndex(b => b.id === active.id);
     if (inMain >= 0) {
@@ -240,7 +251,7 @@ export default function CrearPlantilla({ editingId, onBack }) {
                 <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>description</span>
                 <span className="text-sm font-bold text-slate-700">Hoja de factura</span>
               </div>
-              <DropCanvas blocks={blocks} onChange={setBlocks} estilo={estilo} isDraggingFromPalette={!!draggingType} />
+              <DropCanvas canvasId="main" blocks={blocks} onChange={setBlocks} estilo={estilo} isDraggingFromPalette={!!draggingType} />
             </div>
 
             {/* Ticket canvas */}
@@ -256,7 +267,7 @@ export default function CrearPlantilla({ editingId, onBack }) {
                       className="rounded-lg border-violet-200 bg-violet-50 px-2 py-1 text-sm text-violet-700 w-32" />
                   </div>
                 </div>
-                <DropCanvas blocks={ticketBlocks} onChange={setTicketBlocks} estilo={estilo} isTicket isDraggingFromPalette={!!draggingType} />
+                <DropCanvas canvasId="ticket" blocks={ticketBlocks} onChange={setTicketBlocks} estilo={estilo} isTicket isDraggingFromPalette={!!draggingType} />
               </div>
             )}
           </div>

@@ -5,8 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { BLOCK_TYPES, CATEGORIES } from '../../utils/blockTypes';
 import BlockRenderer from './BlockRenderer';
 
-
-// ── Palette item (draggable) ──
+// ── Palette item ──
 export function PaletteItem({ typeKey, typeDef, onAdd }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `palette-${typeKey}`, data: { origin: 'palette', typeKey },
@@ -53,13 +52,25 @@ export function BlockPalette({ onAddBlock }) {
   );
 }
 
+// ── Insertion zone between blocks ──
+function InsertZone({ id, active }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div ref={setNodeRef}
+      className={`transition-all duration-150 ${active ? 'py-1' : 'py-0'}`}>
+      <div className={`transition-all duration-150 rounded-full mx-4 ${
+        isOver ? 'h-1 bg-primary shadow-lg shadow-primary/30' :
+        active ? 'h-0.5 bg-primary/20' : 'h-0'
+      }`} />
+    </div>
+  );
+}
 
-// ── Visual block on the page ──
+// ── Visual block ──
 function BlockVisual({ block, estilo }) {
   const c1 = estilo?.color_primario || '#1a2e4a';
   const c2 = estilo?.color_secundario || '#0d6dfd';
   const cfg = block.config;
-
   switch (block.type) {
     case 'header':
       return (
@@ -110,14 +121,8 @@ function BlockVisual({ block, estilo }) {
           </div>
         </div>
       );
-    case 'notes':
-      return <div className="text-[9px] text-slate-400 italic py-1">{cfg.placeholder || 'Notas...'}</div>;
-    case 'footer':
-      return (
-        <div className="text-[9px] text-slate-400 border-t border-slate-200 pt-1">
-          {cfg.texto || 'Pie de página'}{cfg.mostrar_datos_pago && cfg.datos_pago ? ` · ${cfg.datos_pago}` : ''}
-        </div>
-      );
+    case 'notes': return <div className="text-[9px] text-slate-400 italic py-1">{cfg.placeholder || 'Notas...'}</div>;
+    case 'footer': return <div className="text-[9px] text-slate-400 border-t border-slate-200 pt-1">{cfg.texto || 'Pie de página'}</div>;
     case 'text_field': case 'number_field': case 'currency_field': case 'date_field':
       return (
         <div className="flex items-center gap-3 py-1">
@@ -153,31 +158,25 @@ function BlockVisual({ block, estilo }) {
           <span className="text-[9px] text-slate-400">{cfg.label || 'Imagen'}</span>
         </div>
       );
-    default:
-      return <div className="text-[9px] text-slate-400">{BLOCK_TYPES[block.type]?.label || block.type}</div>;
+    default: return <div className="text-[9px] text-slate-400">{BLOCK_TYPES[block.type]?.label || block.type}</div>;
   }
 }
-
 
 // ── Sortable block ──
 function SortablePageBlock({ block, estilo, isSelected, onSelect, onUpdate, onRemove }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   const typeDef = BLOCK_TYPES[block.type] || {};
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 };
-
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}
-      className={`relative group mb-1 rounded-lg transition-all cursor-grab active:cursor-grabbing
+      className={`relative group rounded-lg transition-all cursor-grab active:cursor-grabbing
         ${isSelected ? 'ring-2 ring-primary bg-blue-50/30' : 'hover:bg-slate-50/50'}`}
       onClick={(e) => { e.stopPropagation(); onSelect(block.id); }}>
-
       <button onClick={e => { e.stopPropagation(); onRemove(); }} onPointerDown={e => e.stopPropagation()}
         className="absolute -right-2 -top-2 opacity-0 group-hover:opacity-100 bg-white border border-slate-200 rounded-full w-5 h-5 flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 shadow-sm transition-all z-10">
         <span className="material-symbols-outlined" style={{ fontSize: 12 }}>close</span>
       </button>
-
       <div className="px-3 py-2"><BlockVisual block={block} estilo={estilo} /></div>
-
       {isSelected && (
         <div className="border-t border-primary/20 bg-blue-50/50 px-4 py-3 rounded-b-lg cursor-default"
           onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
@@ -192,50 +191,41 @@ function SortablePageBlock({ block, estilo, isSelected, onSelect, onUpdate, onRe
   );
 }
 
-
-// ── Droppable canvas (no DndContext — expects parent to provide it) ──
-export function DropCanvas({ blocks, onChange, estilo, isTicket, isDraggingFromPalette }) {
+// ── Canvas with insertion zones ──
+export function DropCanvas({ canvasId, blocks, onChange, estilo, isTicket, isDraggingFromPalette }) {
   const [selectedId, setSelectedId] = useState(null);
-  const { setNodeRef, isOver } = useDroppable({ id: isTicket ? 'ticket-canvas' : 'main-canvas' });
-
+  const { setNodeRef, isOver } = useDroppable({ id: canvasId || (isTicket ? 'ticket-canvas' : 'main-canvas') });
   const accent = isTicket ? 'border-violet-200' : 'border-slate-200';
-  const showDropZone = isDraggingFromPalette && isOver;
-  const showDimmed = isDraggingFromPalette && !isOver;
 
   return (
     <div ref={setNodeRef}
-      className={`bg-white rounded-xl border ${accent} shadow-lg mx-auto p-6 min-h-[200px] transition-all duration-200
-        ${showDropZone ? 'ring-4 ring-primary/30 bg-primary/5 scale-[1.01]' : ''}
-        ${showDimmed ? 'opacity-60' : ''}`}
+      className={`relative bg-white rounded-xl border ${accent} shadow-lg mx-auto p-6 min-h-[200px] transition-all duration-200
+        ${isDraggingFromPalette && isOver ? 'ring-2 ring-primary/20' : ''}`}
       style={{ maxWidth: 680 }}
       onClick={() => setSelectedId(null)}>
 
-      {/* Drop indicator overlay */}
-      {showDropZone && (
-        <div className="absolute inset-4 border-2 border-dashed border-primary/40 rounded-xl flex items-center justify-center pointer-events-none z-20">
-          <div className="bg-primary/10 backdrop-blur-sm px-4 py-2 rounded-lg">
-            <span className="text-sm font-bold text-primary flex items-center gap-2">
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add_circle</span>
-              Soltar aquí
-            </span>
-          </div>
-        </div>
-      )}
-
       {!blocks.length ? (
-        <div className={`flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-xl transition-colors
-          ${isDraggingFromPalette ? 'border-primary bg-primary/5 animate-pulse' : isTicket ? 'border-violet-200' : 'border-slate-200'} text-slate-300`}>
+        <div className={`flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-xl transition-all duration-200
+          ${isDraggingFromPalette ? 'border-primary bg-primary/5' : isTicket ? 'border-violet-200' : 'border-slate-200'} text-slate-300`}>
           <span className="material-symbols-outlined text-3xl mb-2">{isDraggingFromPalette ? 'download' : 'add_circle'}</span>
-          <p className="text-xs font-medium">{isDraggingFromPalette ? 'Suelta el bloque aquí' : 'Haz clic en un bloque de la paleta'}</p>
+          <p className="text-xs font-medium">{isDraggingFromPalette ? 'Suelta el bloque aquí' : 'Haz clic en la paleta para añadir bloques'}</p>
         </div>
       ) : (
         <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
-          {blocks.map(block => (
-            <SortablePageBlock key={block.id} block={block} estilo={estilo}
-              isSelected={selectedId === block.id}
-              onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
-              onUpdate={cfg => onChange(blocks.map(b => b.id === block.id ? { ...b, config: cfg } : b))}
-              onRemove={() => { onChange(blocks.filter(b => b.id !== block.id)); if (selectedId === block.id) setSelectedId(null); }} />
+          {/* Insertion zone before first block */}
+          <InsertZone id={`${canvasId || 'main'}-insert-0`} active={isDraggingFromPalette} />
+
+          {blocks.map((block, idx) => (
+            <div key={block.id}>
+              <SortablePageBlock block={block} estilo={estilo}
+                isSelected={selectedId === block.id}
+                onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
+                onUpdate={cfg => onChange(blocks.map(b => b.id === block.id ? { ...b, config: cfg } : b))}
+                onRemove={() => { onChange(blocks.filter(b => b.id !== block.id)); if (selectedId === block.id) setSelectedId(null); }} />
+
+              {/* Insertion zone after each block */}
+              <InsertZone id={`${canvasId || 'main'}-insert-${idx + 1}`} active={isDraggingFromPalette} />
+            </div>
           ))}
         </SortableContext>
       )}
