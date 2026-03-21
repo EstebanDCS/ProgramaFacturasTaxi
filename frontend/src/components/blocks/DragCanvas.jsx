@@ -1,21 +1,15 @@
 import { useState } from 'react';
-import {
-  DndContext, closestCenter, DragOverlay,
-  PointerSensor, useSensor, useSensors,
-  useDroppable, useDraggable
-} from '@dnd-kit/core';
-import {
-  SortableContext, verticalListSortingStrategy,
-  useSortable, arrayMove
-} from '@dnd-kit/sortable';
+import { useDroppable, useDraggable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { BLOCK_TYPES, CATEGORIES, createBlock } from '../../utils/blockTypes';
+import { BLOCK_TYPES, CATEGORIES } from '../../utils/blockTypes';
 import BlockRenderer from './BlockRenderer';
 
 
-function PaletteItem({ typeKey, typeDef, onAdd }) {
+// ── Palette item (draggable) ──
+export function PaletteItem({ typeKey, typeDef, onAdd }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `palette-${typeKey}`, data: { type: 'palette', typeKey },
+    id: `palette-${typeKey}`, data: { origin: 'palette', typeKey },
   });
   const colors = {
     blue: 'bg-blue-50 text-blue-600 border-blue-100 hover:border-blue-300',
@@ -27,7 +21,7 @@ function PaletteItem({ typeKey, typeDef, onAdd }) {
   };
   return (
     <div ref={setNodeRef} {...attributes} {...listeners} onClick={() => onAdd(typeKey)}
-      className={`w-full flex items-center gap-2 p-2 rounded-lg border cursor-grab active:cursor-grabbing text-left transition-all ${colors[typeDef.color] || colors.slate} ${isDragging ? 'opacity-40' : ''}`}>
+      className={`w-full flex items-center gap-2 p-2 rounded-lg border cursor-grab active:cursor-grabbing text-left transition-all ${colors[typeDef.color] || colors.slate} ${isDragging ? 'opacity-30 scale-95' : ''}`}>
       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{typeDef.icon}</span>
       <span className="text-[11px] font-bold truncate">{typeDef.label}</span>
     </div>
@@ -124,11 +118,7 @@ function BlockVisual({ block, estilo }) {
           {cfg.texto || 'Pie de página'}{cfg.mostrar_datos_pago && cfg.datos_pago ? ` · ${cfg.datos_pago}` : ''}
         </div>
       );
-    // Data/interactive blocks show a field preview
-    case 'text_field':
-    case 'number_field':
-    case 'currency_field':
-    case 'date_field':
+    case 'text_field': case 'number_field': case 'currency_field': case 'date_field':
       return (
         <div className="flex items-center gap-3 py-1">
           <span className="text-[9px] font-semibold text-slate-600 w-20">{cfg.label || 'Campo'}</span>
@@ -186,9 +176,7 @@ function SortablePageBlock({ block, estilo, isSelected, onSelect, onUpdate, onRe
         <span className="material-symbols-outlined" style={{ fontSize: 12 }}>close</span>
       </button>
 
-      <div className="px-3 py-2">
-        <BlockVisual block={block} estilo={estilo} />
-      </div>
+      <div className="px-3 py-2"><BlockVisual block={block} estilo={estilo} /></div>
 
       {isSelected && (
         <div className="border-t border-primary/20 bg-blue-50/50 px-4 py-3 rounded-b-lg cursor-default"
@@ -205,46 +193,52 @@ function SortablePageBlock({ block, estilo, isSelected, onSelect, onUpdate, onRe
 }
 
 
-// ── Main canvas (standalone, no built-in palette) ──
-export function DragCanvas({ blocks, onChange, estilo, isTicket }) {
+// ── Droppable canvas (no DndContext — expects parent to provide it) ──
+export function DropCanvas({ blocks, onChange, estilo, isTicket, isDraggingFromPalette }) {
   const [selectedId, setSelectedId] = useState(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-  const { setNodeRef: dropRef, isOver } = useDroppable({ id: isTicket ? 'ticket-drop' : 'canvas-drop' });
+  const { setNodeRef, isOver } = useDroppable({ id: isTicket ? 'ticket-canvas' : 'main-canvas' });
 
-  const handleDragEnd = (e) => {
-    const { active, over } = e;
-    if (!over || active.id === over.id) return;
-    const oi = blocks.findIndex(b => b.id === active.id);
-    const ni = blocks.findIndex(b => b.id === over.id);
-    if (oi >= 0 && ni >= 0) onChange(arrayMove(blocks, oi, ni));
-  };
-
-  const accent = isTicket ? 'border-violet-200 shadow-violet-100/50' : 'border-slate-200';
-  const emptyBorder = isTicket ? 'border-violet-200' : 'border-slate-200';
+  const accent = isTicket ? 'border-violet-200' : 'border-slate-200';
+  const showDropZone = isDraggingFromPalette && isOver;
+  const showDimmed = isDraggingFromPalette && !isOver;
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <div ref={dropRef}
-        className={`bg-white rounded-xl border ${accent} shadow-lg mx-auto p-6 min-h-[200px] transition-colors ${isOver ? 'ring-2 ring-primary/20' : ''}`}
-        style={{ maxWidth: 680 }}
-        onClick={() => setSelectedId(null)}>
-        {!blocks.length ? (
-          <div className={`flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-xl ${emptyBorder} text-slate-300`}>
-            <span className="material-symbols-outlined text-3xl mb-2">add_circle</span>
-            <p className="text-xs font-medium">Haz clic en un bloque de la paleta para añadirlo</p>
+    <div ref={setNodeRef}
+      className={`bg-white rounded-xl border ${accent} shadow-lg mx-auto p-6 min-h-[200px] transition-all duration-200
+        ${showDropZone ? 'ring-4 ring-primary/30 bg-primary/5 scale-[1.01]' : ''}
+        ${showDimmed ? 'opacity-60' : ''}`}
+      style={{ maxWidth: 680 }}
+      onClick={() => setSelectedId(null)}>
+
+      {/* Drop indicator overlay */}
+      {showDropZone && (
+        <div className="absolute inset-4 border-2 border-dashed border-primary/40 rounded-xl flex items-center justify-center pointer-events-none z-20">
+          <div className="bg-primary/10 backdrop-blur-sm px-4 py-2 rounded-lg">
+            <span className="text-sm font-bold text-primary flex items-center gap-2">
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add_circle</span>
+              Soltar aquí
+            </span>
           </div>
-        ) : (
-          <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
-            {blocks.map(block => (
-              <SortablePageBlock key={block.id} block={block} estilo={estilo}
-                isSelected={selectedId === block.id}
-                onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
-                onUpdate={cfg => onChange(blocks.map(b => b.id === block.id ? { ...b, config: cfg } : b))}
-                onRemove={() => { onChange(blocks.filter(b => b.id !== block.id)); if (selectedId === block.id) setSelectedId(null); }} />
-            ))}
-          </SortableContext>
-        )}
-      </div>
-    </DndContext>
+        </div>
+      )}
+
+      {!blocks.length ? (
+        <div className={`flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-xl transition-colors
+          ${isDraggingFromPalette ? 'border-primary bg-primary/5 animate-pulse' : isTicket ? 'border-violet-200' : 'border-slate-200'} text-slate-300`}>
+          <span className="material-symbols-outlined text-3xl mb-2">{isDraggingFromPalette ? 'download' : 'add_circle'}</span>
+          <p className="text-xs font-medium">{isDraggingFromPalette ? 'Suelta el bloque aquí' : 'Haz clic en un bloque de la paleta'}</p>
+        </div>
+      ) : (
+        <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+          {blocks.map(block => (
+            <SortablePageBlock key={block.id} block={block} estilo={estilo}
+              isSelected={selectedId === block.id}
+              onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
+              onUpdate={cfg => onChange(blocks.map(b => b.id === block.id ? { ...b, config: cfg } : b))}
+              onRemove={() => { onChange(blocks.filter(b => b.id !== block.id)); if (selectedId === block.id) setSelectedId(null); }} />
+          ))}
+        </SortableContext>
+      )}
+    </div>
   );
 }

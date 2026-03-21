@@ -3,7 +3,9 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { apiFetch, authHeaders } from '../utils/api';
 import { API_URL } from '../config';
-import { BlockPalette, DragCanvas } from '../components/blocks/DragCanvas';
+import { DndContext, closestCenter, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
+import { BlockPalette, DropCanvas } from '../components/blocks/DragCanvas';
 import { BLOCK_TYPES, createBlock } from '../utils/blockTypes';
 
 export default function CrearPlantilla({ editingId, onBack }) {
@@ -16,16 +18,17 @@ export default function CrearPlantilla({ editingId, onBack }) {
   const [ticketsOn, setTicketsOn] = useState(false);
   const [ticketBlocks, setTicketBlocks] = useState([]);
   const [ticketNombre, setTicketNombre] = useState('Ticket');
-  const [activeCanvas, setActiveCanvas] = useState('main'); // 'main' or 'ticket'
+  const [activeCanvas, setActiveCanvas] = useState('main');
+  const [draggingType, setDraggingType] = useState(null);
 
-  // Default blocks for new template
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
   useEffect(() => {
     if (!editingId && blocks.length === 0) {
       setBlocks([createBlock('header'), createBlock('client'), createBlock('items_table'), createBlock('totals'), createBlock('notes')]);
     }
   }, []);
 
-  // Load for editing
   useEffect(() => {
     if (!editingId || !token) return;
     (async () => {
@@ -49,16 +52,11 @@ export default function CrearPlantilla({ editingId, onBack }) {
         if (cfg.pie) { const b = createBlock('footer'); b.config = cfg.pie; loaded.push(b); }
         loaded.push(createBlock('notes'));
         if (loaded.length) setBlocks(loaded);
-        // Ticket canvas
         if (cfg.hoja_detalle?.activar) {
           setTicketsOn(true);
           setTicketNombre(cfg.hoja_detalle.titulo || 'Ticket');
           if (cfg.hoja_detalle.bloques?.length) {
-            setTicketBlocks(cfg.hoja_detalle.bloques.map(b => {
-              const nb = createBlock(b.type);
-              if (nb) nb.config = b.config;
-              return nb;
-            }).filter(Boolean));
+            setTicketBlocks(cfg.hoja_detalle.bloques.map(b => { const nb = createBlock(b.type); if (nb) nb.config = b.config; return nb; }).filter(Boolean));
           }
         }
       } catch { toast('Error cargando', 'error'); }
@@ -81,12 +79,10 @@ export default function CrearPlantilla({ editingId, onBack }) {
     });
     if (ticketsOn) {
       cfg.hoja_detalle = {
-        activar: true,
-        titulo: ticketNombre,
+        activar: true, titulo: ticketNombre,
         bloques: ticketBlocks.map(b => ({ type: b.type, config: b.config })),
-        // Legacy campos for NuevaFactura
         campos: ticketBlocks.filter(b => ['text_field','number_field','currency_field','date_field','dropdown','checkbox'].includes(b.type)).map(b => ({
-          nombre: b.config.label || b.config.nombre || '', campo: b.config.campo || '',
+          nombre: b.config.label || '', campo: b.config.campo || '',
           tipo: b.type === 'currency_field' ? 'moneda' : b.type === 'number_field' ? 'numero' : b.type === 'date_field' ? 'fecha' : b.type === 'dropdown' ? 'dropdown' : b.type === 'checkbox' ? 'checkbox' : 'texto',
           opciones: b.config.opciones,
         })),
@@ -111,12 +107,46 @@ export default function CrearPlantilla({ editingId, onBack }) {
   const addBlock = (typeKey) => {
     const b = createBlock(typeKey);
     if (!b) return;
-    if (activeCanvas === 'ticket') {
-      setTicketBlocks([...ticketBlocks, b]);
-    } else {
-      setBlocks([...blocks, b]);
-    }
+    if (activeCanvas === 'ticket' && ticketsOn) setTicketBlocks([...ticketBlocks, b]);
+    else setBlocks([...blocks, b]);
     toast(`${BLOCK_TYPES[typeKey]?.label} añadido`, 'info');
+  };
+
+  // ── Shared drag handlers ──
+  const handleDragStart = (e) => {
+    if (e.active.data.current?.origin === 'palette') setDraggingType(e.active.data.current.typeKey);
+  };
+
+  const handleDragEnd = (e) => {
+    const { active, over } = e;
+    setDraggingType(null);
+
+    // From palette → canvas
+    if (active.data.current?.origin === 'palette' && over) {
+      const newBlock = createBlock(active.data.current.typeKey);
+      if (!newBlock) return;
+      const target = over.id;
+      if (target === 'ticket-canvas' || (ticketsOn && activeCanvas === 'ticket')) {
+        setTicketBlocks(prev => [...prev, newBlock]);
+      } else {
+        setBlocks(prev => [...prev, newBlock]);
+      }
+      toast(`${BLOCK_TYPES[active.data.current.typeKey]?.label} añadido`, 'info');
+      return;
+    }
+
+    // Reorder within canvas
+    if (!over || active.id === over.id) return;
+    // Check which array contains the block
+    const inMain = blocks.findIndex(b => b.id === active.id);
+    const inTicket = ticketBlocks.findIndex(b => b.id === active.id);
+    if (inMain >= 0) {
+      const ni = blocks.findIndex(b => b.id === over.id);
+      if (ni >= 0) setBlocks(arrayMove(blocks, inMain, ni));
+    } else if (inTicket >= 0) {
+      const ni = ticketBlocks.findIndex(b => b.id === over.id);
+      if (ni >= 0) setTicketBlocks(arrayMove(ticketBlocks, inTicket, ni));
+    }
   };
 
   if (tab === 'excel') return (
@@ -130,112 +160,117 @@ export default function CrearPlantilla({ editingId, onBack }) {
     </div>
   );
 
-  const paletteContent = (
-    <div>
-      <BlockPalette onAddBlock={addBlock} />
-      <div className="border-t border-slate-100 mt-3 pt-3 px-1">
-        <button onClick={() => setTab('excel')}
-          className="w-full flex items-center gap-2 p-2 rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-600 text-left hover:border-emerald-300 transition-all">
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>upload_file</span>
-          <span className="text-[11px] font-bold">Subir Excel</span>
-        </button>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="animate-fadeIn flex flex-col h-[calc(100vh-3rem)]">
-      {/* Top bar */}
-      <header className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400"><span className="material-symbols-outlined">arrow_back</span></button>
-          <div>
-            <h2 className="text-xl font-bold">{editingId ? 'Editar Plantilla' : 'Nueva Plantilla'}</h2>
-            <p className="text-xs text-slate-400">{nombre || 'Sin nombre'}</p>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <div className="animate-fadeIn flex flex-col h-[calc(100vh-3rem)]">
+        {/* Top bar */}
+        <header className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <button onClick={onBack} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400"><span className="material-symbols-outlined">arrow_back</span></button>
+            <div>
+              <h2 className="text-xl font-bold">{editingId ? 'Editar Plantilla' : 'Nueva Plantilla'}</h2>
+              <p className="text-xs text-slate-400">{nombre || 'Sin nombre'}</p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* Ticket toggle */}
-          <button onClick={() => { const next = !ticketsOn; setTicketsOn(next); if (next && !ticketBlocks.length) setTicketBlocks([createBlock('text_field'), createBlock('currency_field')]); }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all border ${ticketsOn ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-200' : 'bg-white text-slate-500 border-slate-200 hover:border-violet-300 hover:text-violet-600'}`}>
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{ticketsOn ? 'check_circle' : 'add_circle'}</span>
-            Tickets
-          </button>
-          <button onClick={guardar} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm">
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>save</span> {editingId ? 'Actualizar' : 'Guardar'}
-          </button>
-        </div>
-      </header>
+          <div className="flex items-center gap-3">
+            <button onClick={() => { const next = !ticketsOn; setTicketsOn(next); if (next && !ticketBlocks.length) setTicketBlocks([createBlock('text_field'), createBlock('currency_field')]); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all border ${ticketsOn ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-200' : 'bg-white text-slate-500 border-slate-200 hover:border-violet-300 hover:text-violet-600'}`}>
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{ticketsOn ? 'check_circle' : 'add_circle'}</span>
+              Tickets
+            </button>
+            <button onClick={guardar} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm">
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>save</span> {editingId ? 'Actualizar' : 'Guardar'}
+            </button>
+          </div>
+        </header>
 
-      {/* Body */}
-      <div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
-        {/* Palette */}
-        <div className="w-52 flex-shrink-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-y-auto">
-          <div className="p-3 border-b border-slate-100 flex items-center justify-between">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bloques</p>
+        {/* Body */}
+        <div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
+          {/* Palette */}
+          <div className="w-52 flex-shrink-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-y-auto">
+            <div className="p-3 border-b border-slate-100 flex items-center justify-between">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bloques</p>
+              {ticketsOn && (
+                <div className="flex gap-1">
+                  <button onClick={() => setActiveCanvas('main')} className={`text-[10px] font-bold px-2 py-0.5 rounded ${activeCanvas === 'main' ? 'bg-primary text-white' : 'text-slate-400 hover:bg-slate-100'}`}>Factura</button>
+                  <button onClick={() => setActiveCanvas('ticket')} className={`text-[10px] font-bold px-2 py-0.5 rounded ${activeCanvas === 'ticket' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>Ticket</button>
+                </div>
+              )}
+            </div>
+            <div className="p-2">
+              <BlockPalette onAddBlock={addBlock} />
+              <div className="border-t border-slate-100 mt-3 pt-3 px-1">
+                <button onClick={() => setTab('excel')}
+                  className="w-full flex items-center gap-2 p-2 rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-600 text-left hover:border-emerald-300 transition-all">
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>upload_file</span>
+                  <span className="text-[11px] font-bold">Subir Excel</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Canvas area */}
+          <div className="flex-1 min-w-0 overflow-y-auto space-y-6">
+            {/* Style bar */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3">
+              <div className="grid grid-cols-[1fr_70px_70px_60px] gap-3 items-end">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-slate-500">Nombre</label>
+                  <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Factura servicios"
+                    className="rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:ring-primary" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-slate-500">Color 1</label>
+                  <input type="color" value={estilo.color_primario} onChange={e => setEstilo({...estilo, color_primario: e.target.value})} className="w-full h-9 rounded-lg border-slate-200 cursor-pointer" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-slate-500">Color 2</label>
+                  <input type="color" value={estilo.color_secundario} onChange={e => setEstilo({...estilo, color_secundario: e.target.value})} className="w-full h-9 rounded-lg border-slate-200 cursor-pointer" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-slate-500">Txt</label>
+                  <input type="number" value={estilo.tam_fuente} onChange={e => setEstilo({...estilo, tam_fuente: parseInt(e.target.value)||10})} className="rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm" min={8} max={16} />
+                </div>
+              </div>
+            </div>
+
+            {/* Main canvas */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>description</span>
+                <span className="text-sm font-bold text-slate-700">Hoja de factura</span>
+              </div>
+              <DropCanvas blocks={blocks} onChange={setBlocks} estilo={estilo} isDraggingFromPalette={!!draggingType} />
+            </div>
+
+            {/* Ticket canvas */}
             {ticketsOn && (
-              <div className="flex gap-1">
-                <button onClick={() => setActiveCanvas('main')} className={`text-[10px] font-bold px-2 py-0.5 rounded ${activeCanvas === 'main' ? 'bg-primary text-white' : 'text-slate-400 hover:bg-slate-100'}`}>Factura</button>
-                <button onClick={() => setActiveCanvas('ticket')} className={`text-[10px] font-bold px-2 py-0.5 rounded ${activeCanvas === 'ticket' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>Ticket</button>
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="material-symbols-outlined text-violet-600" style={{ fontSize: 18 }}>auto_awesome</span>
+                  <span className="text-sm font-bold text-violet-700">Hoja de ticket</span>
+                  <span className="text-xs text-violet-400">— cada ticket usa este diseño</span>
+                  <div className="ml-auto flex items-center gap-2">
+                    <label className="text-[11px] font-semibold text-violet-500">Nombre:</label>
+                    <input value={ticketNombre} onChange={e => setTicketNombre(e.target.value)}
+                      className="rounded-lg border-violet-200 bg-violet-50 px-2 py-1 text-sm text-violet-700 w-32" />
+                  </div>
+                </div>
+                <DropCanvas blocks={ticketBlocks} onChange={setTicketBlocks} estilo={estilo} isTicket isDraggingFromPalette={!!draggingType} />
               </div>
             )}
           </div>
-          <div className="p-2">{paletteContent}</div>
-        </div>
-
-        {/* Canvas area */}
-        <div className="flex-1 min-w-0 overflow-y-auto space-y-6">
-          {/* Style bar */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3">
-            <div className="grid grid-cols-[1fr_70px_70px_60px] gap-3 items-end">
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-500">Nombre</label>
-                <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Factura servicios"
-                  className="rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:ring-primary" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-500">Color 1</label>
-                <input type="color" value={estilo.color_primario} onChange={e => setEstilo({...estilo, color_primario: e.target.value})} className="w-full h-9 rounded-lg border-slate-200 cursor-pointer" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-500">Color 2</label>
-                <input type="color" value={estilo.color_secundario} onChange={e => setEstilo({...estilo, color_secundario: e.target.value})} className="w-full h-9 rounded-lg border-slate-200 cursor-pointer" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-500">Txt</label>
-                <input type="number" value={estilo.tam_fuente} onChange={e => setEstilo({...estilo, tam_fuente: parseInt(e.target.value)||10})} className="rounded-lg border-slate-200 bg-slate-50 px-2 py-2 text-sm" min={8} max={16} />
-              </div>
-            </div>
-          </div>
-
-          {/* Main invoice canvas */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>description</span>
-              <span className="text-sm font-bold text-slate-700">Hoja de factura</span>
-            </div>
-            <DragCanvas blocks={blocks} onChange={setBlocks} estilo={estilo} />
-          </div>
-
-          {/* Ticket canvas */}
-          {ticketsOn && (
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="material-symbols-outlined text-violet-600" style={{ fontSize: 18 }}>auto_awesome</span>
-                <span className="text-sm font-bold text-violet-700">Hoja de ticket</span>
-                <span className="text-xs text-violet-400">— cada ticket genera una hoja con este diseño</span>
-                <div className="ml-auto flex items-center gap-2">
-                  <label className="text-[11px] font-semibold text-violet-500">Nombre:</label>
-                  <input value={ticketNombre} onChange={e => setTicketNombre(e.target.value)}
-                    className="rounded-lg border-violet-200 bg-violet-50 px-2 py-1 text-sm text-violet-700 w-32" />
-                </div>
-              </div>
-              <DragCanvas blocks={ticketBlocks} onChange={setTicketBlocks} estilo={estilo} isTicket />
-            </div>
-          )}
         </div>
       </div>
-    </div>
+
+      {/* Drag overlay ghost */}
+      <DragOverlay>{draggingType && (
+        <div className="bg-white border-2 border-primary shadow-2xl rounded-xl px-4 py-3 flex items-center gap-2 opacity-90 pointer-events-none w-52">
+          <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>{BLOCK_TYPES[draggingType]?.icon}</span>
+          <span className="text-sm font-bold text-slate-800">{BLOCK_TYPES[draggingType]?.label}</span>
+        </div>
+      )}</DragOverlay>
+    </DndContext>
   );
 }
 
