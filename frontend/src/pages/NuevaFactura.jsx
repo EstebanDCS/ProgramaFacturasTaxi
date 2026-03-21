@@ -4,6 +4,7 @@ import { useToast } from '../components/Toast';
 import { apiFetch, authHeaders } from '../utils/api';
 import { API_URL, COL_PRESETS } from '../config';
 import { evalFormulaClient, descargarBlob } from '../utils/helpers';
+import DownloadModal from '../components/DownloadModal';
 
 export default function NuevaFactura({ editingId, onClearEdit }) {
   const { token } = useAuth();
@@ -16,21 +17,34 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
   const [cliente, setCliente] = useState({ nombre: '', cif: '', direccion: '', email: '', telefono: '' });
   const [lineas, setLineas] = useState([{}]);
   const [step, setStep] = useState('selector');
+  const [showDownload, setShowDownload] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const cargarPlantillas = useCallback(async () => {
     try {
       const r = await apiFetch(`${API_URL}/plantillas`, { headers: authHeaders(token) });
-      setPlantillas(await r.json());
-    } catch {}
+      return await r.json();
+    } catch { return []; }
   }, [token]);
 
-  useEffect(() => { if (token) cargarPlantillas(); }, [token, cargarPlantillas]);
-
-  // Load editing factura
   useEffect(() => {
-    if (!editingId || !token) return;
+    if (!token) return;
+    cargarPlantillas().then(data => {
+      setPlantillas(data);
+    });
+  }, [token, cargarPlantillas]);
+
+  // Load editing factura — auto-select plantilla
+  useEffect(() => {
+    if (!editingId || !token || !plantillas.length) return;
     (async () => {
       try {
+        // Get factura metadata (includes plantilla_nombre)
+        const rh = await apiFetch(`${API_URL}/historial`, { headers: authHeaders(token) });
+        const historial = await rh.json();
+        const facturaMeta = historial.find(f => f.id === editingId);
+
+        // Get factura data
         const r = await apiFetch(`${API_URL}/factura/${editingId}`, { headers: authHeaders(token) });
         if (!r.ok) return;
         const data = await r.json();
@@ -40,12 +54,27 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
           const raw = await descifrar(data.datos_json_cifrado);
           datos = JSON.parse(raw);
         }
-        if (datos.numero_factura) {
-          setForm({ numero_factura: datos.numero_factura || '', fecha: datos.fecha || '', referencia: datos.referencia || '', notas: datos.notas || '' });
-          setCliente(datos.cliente || {});
-          setLineas(datos.lineas?.length ? datos.lineas : [{}]);
-          if (plantillas.length === 1) seleccionar(plantillas[0]);
-          else { setStep('selector'); toast('Selecciona la plantilla para editar', 'info'); }
+        if (!datos.numero_factura && !datos.lineas) {
+          toast('Formato de factura legacy — solo se puede descargar', 'info');
+          return;
+        }
+
+        // Fill form data
+        setForm({
+          numero_factura: datos.numero_factura || '',
+          fecha: datos.fecha || '',
+          referencia: datos.referencia || '',
+          notas: datos.notas || '',
+        });
+        setCliente(datos.cliente || { nombre: '', cif: '', direccion: '', email: '', telefono: '' });
+        setLineas(datos.lineas?.length ? datos.lineas : [{}]);
+
+        // Auto-select plantilla by name match or first available
+        const pNombre = facturaMeta?.plantilla_nombre || facturaMeta?.barco || '';
+        const match = plantillas.find(p => p.nombre === pNombre) || plantillas[0];
+        if (match) {
+          await seleccionar(match);
+          toast('Factura cargada para editar', 'success');
         }
       } catch { toast('Error cargando factura', 'error'); }
     })();
@@ -71,7 +100,6 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
   const updateLinea = (idx, campo, valor) => {
     const nuevo = [...lineas];
     nuevo[idx] = { ...nuevo[idx], [campo]: valor };
-    // Recalcular fórmulas
     cols.filter(c => c.tipo === 'formula' && c.formula).forEach(c => {
       nuevo[idx][c.campo] = evalFormulaClient(c.formula, nuevo[idx]);
     });
@@ -102,17 +130,25 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
     } catch { toast('Error de conexión', 'error'); }
   };
 
-  const descargar = async (formato = 'pdf') => {
+  const descargar = async (formato) => {
     if (!selectedId) { toast('Selecciona plantilla', 'warn'); return; }
     const data = recogerDatos();
     if (!data) return;
+    setDownloading(true);
     try {
       const r = await apiFetch(`${API_URL}/generar-con-plantilla?formato=${formato}&plantilla_id=${selectedId}`, {
         method: 'POST', headers: authHeaders(token, { 'Content-Type': 'application/json' }), body: JSON.stringify(data)
       });
-      if (r.ok) descargarBlob(await r.blob(), r.headers.get('Content-Disposition'), `Factura_${data.numero_factura}`, formato);
-      else { const err = await r.json().catch(() => ({})); toast(err.detail || 'Error generando', 'error'); }
+      if (r.ok) {
+        descargarBlob(await r.blob(), r.headers.get('Content-Disposition'), `Factura_${data.numero_factura}`, formato);
+        setShowDownload(false);
+        toast('Archivo descargado', 'success');
+      } else {
+        const err = await r.json().catch(() => ({}));
+        toast(err.detail || 'Error generando', 'error');
+      }
     } catch { toast('Error de conexión', 'error'); }
+    setDownloading(false);
   };
 
   // STEP 1: Selector
@@ -149,10 +185,13 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
   // STEP 2: Form
   return (
     <div className="animate-fadeIn w-full max-w-[1400px]">
+      <DownloadModal open={showDownload} onClose={() => { setShowDownload(false); setDownloading(false); }}
+        onSelect={descargar} loading={downloading} />
+
       <header className="mb-6 pb-6 border-b border-slate-200 flex items-center gap-4">
         <button onClick={() => { setStep('selector'); setSelectedId(null); setConfig(null); if (onClearEdit) onClearEdit(); }}
           className="p-2 rounded-lg hover:bg-slate-100 text-slate-400"><span className="material-symbols-outlined">arrow_back</span></button>
-        <h2 className="text-2xl font-bold">Nueva Factura</h2>
+        <h2 className="text-2xl font-bold">{editingId ? 'Editar Factura' : 'Nueva Factura'}</h2>
       </header>
 
       <div className="bg-violet-50 border border-violet-200 px-4 py-3 rounded-lg mb-6 flex items-center gap-2">
@@ -200,7 +239,7 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
         {lineas.map((linea, idx) => (
           <div key={idx} className="grid gap-2 mb-2" style={{ gridTemplateColumns: visCols.map(c => c.tipo === 'texto' ? '2fr' : '1fr').join(' ') + ' 40px' }}>
             {visCols.map(c => (
-              <input key={c.campo} type={c.tipo === 'texto' ? 'text' : 'text'}
+              <input key={c.campo} type="text"
                 value={linea[c.campo] || ''}
                 readOnly={c.tipo === 'formula'}
                 onChange={e => updateLinea(idx, c.campo, e.target.value)}
@@ -229,8 +268,8 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
         <button onClick={guardar} className="flex-1 flex items-center justify-center gap-2 px-8 py-3.5 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 shadow-lg transition-all">
           <span className="material-symbols-outlined">cloud_upload</span> GUARDAR EN NUBE
         </button>
-        <button onClick={() => descargar('pdf')} className="flex-1 flex items-center justify-center gap-2 px-8 py-3.5 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all">
-          <span className="material-symbols-outlined">download</span> DESCARGAR PDF
+        <button onClick={() => setShowDownload(true)} className="flex-1 flex items-center justify-center gap-2 px-8 py-3.5 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 transition-all">
+          <span className="material-symbols-outlined">download</span> DESCARGAR
         </button>
       </div>
     </div>

@@ -3,13 +3,16 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { apiFetch, authHeaders } from '../utils/api';
 import { API_URL } from '../config';
-import { esc, descargarBlob } from '../utils/helpers';
+import { descargarBlob } from '../utils/helpers';
+import DownloadModal from '../components/DownloadModal';
 
 export default function Historial({ onEditFactura }) {
   const { token } = useAuth();
   const toast = useToast();
   const [facturas, setFacturas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [downloadId, setDownloadId] = useState(null);
+  const [downloading, setDownloading] = useState(false);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -34,16 +37,25 @@ export default function Historial({ onEditFactura }) {
     cargar();
   };
 
-  const descargar = async (id, formato = 'pdf') => {
+  const descargar = async (formato) => {
+    if (!downloadId) return;
+    setDownloading(true);
     try {
-      const r = await apiFetch(`${API_URL}/re-descargar/${id}?formato=${formato}`, { headers: authHeaders(token) });
-      if (r.ok) descargarBlob(await r.blob(), r.headers.get('Content-Disposition'), `Fra_${id}`, formato);
-      else toast('Error al descargar', 'error');
+      const r = await apiFetch(`${API_URL}/re-descargar/${downloadId}?formato=${formato}`, { headers: authHeaders(token) });
+      if (r.ok) {
+        descargarBlob(await r.blob(), r.headers.get('Content-Disposition'), `Fra_${downloadId}`, formato);
+        setDownloadId(null);
+        toast('Archivo descargado', 'success');
+      } else toast('Error al descargar', 'error');
     } catch { toast('Error de conexión', 'error'); }
+    setDownloading(false);
   };
 
   return (
     <div className="animate-fadeIn w-full max-w-[1400px]">
+      <DownloadModal open={!!downloadId} onClose={() => { setDownloadId(null); setDownloading(false); }}
+        onSelect={descargar} loading={downloading} />
+
       <header className="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Historial</h2>
@@ -76,7 +88,7 @@ export default function Historial({ onEditFactura }) {
                     <button onClick={() => onEditFactura && onEditFactura(f.id)} className="text-amber-500 hover:text-amber-700 p-1" title="Editar">
                       <span className="material-symbols-outlined text-lg">edit</span>
                     </button>
-                    <button onClick={() => descargar(f.id, 'pdf')} className="text-primary hover:text-blue-800 p-1" title="Descargar">
+                    <button onClick={() => setDownloadId(f.id)} className="text-primary hover:text-blue-800 p-1" title="Descargar">
                       <span className="material-symbols-outlined text-lg">download</span>
                     </button>
                     <button onClick={() => eliminar(f.id)} className="text-slate-400 hover:text-red-500 p-1" title="Eliminar">
