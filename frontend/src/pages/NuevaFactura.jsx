@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { apiFetch, authHeaders } from '../utils/api';
 import { API_URL, COL_PRESETS } from '../config';
-import { evalFormulaClient, computeLineas, calcSubtotal, calcTotales, calcTicketsSummary, fmt, descargarBlob } from '../utils/helpers';
+import { evalFormulaClient, computeLineas, calcSubtotal, calcTotales, calcTicketsSummary, buildFormulaContext, fmt, descargarBlob } from '../utils/helpers';
 import DownloadModal from '../components/DownloadModal';
 
 export default function NuevaFactura({ editingId, onClearEdit }) {
@@ -68,7 +68,8 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
   // ── Auto-calculate ──
   const computedLineas = useMemo(() => computeLineas(lineas, cols), [lineas, cols]);
   const subtotalLineas = useMemo(() => calcSubtotal(computedLineas, cols), [computedLineas, cols]);
-  const totalesLineas = useMemo(() => calcTotales(subtotalLineas, impuestos), [subtotalLineas, impuestos]);
+  const formulaCtx = useMemo(() => buildFormulaContext(subtotalLineas, tickets, ticketCfg?.campos), [subtotalLineas, tickets, ticketCfg?.campos]);
+  const totalesLineas = useMemo(() => calcTotales(subtotalLineas, impuestos, formulaCtx), [subtotalLineas, impuestos, formulaCtx]);
   const ticketSummary = useMemo(() => calcTicketsSummary(tickets, ticketCfg?.campos), [tickets, ticketCfg?.campos]);
   const ticketTotal = useMemo(() => Object.values(ticketSummary.sumas).reduce((s, v) => s + v.total, 0), [ticketSummary]);
   const grandTotal = totalesLineas.total + ticketTotal;

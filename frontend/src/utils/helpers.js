@@ -34,24 +34,59 @@ export function evalFormulaClient(formula, linea) {
 }
 
 /**
- * Compute all formula columns in all lines, returns new array with computed values
+ * Build a context object with all available variables for formulas.
+ *   subtotal            — sum of line items
+ *   tickets_count       — number of tickets
+ *   tickets_sum_X       — sum of field X across all tickets
+ *   tickets_avg_X       — average of field X
+ *   tickets_min_X / tickets_max_X
+ */
+export function buildFormulaContext(subtotal, tickets, ticketCampos) {
+  const ctx = { subtotal: subtotal || 0 };
+  const tix = tickets || [];
+  ctx.tickets_count = tix.length;
+  const numCampos = (ticketCampos || []).filter(c => c.tipo === 'moneda' || c.tipo === 'numero');
+  numCampos.forEach(c => {
+    const vals = tix.map(t => parseFloat(t[c.campo]) || 0);
+    const sum = vals.reduce((s, v) => s + v, 0);
+    ctx[`tickets_sum_${c.campo}`] = sum;
+    ctx[`tickets_avg_${c.campo}`] = vals.length ? sum / vals.length : 0;
+    ctx[`tickets_min_${c.campo}`] = vals.length ? Math.min(...vals) : 0;
+    ctx[`tickets_max_${c.campo}`] = vals.length ? Math.max(...vals) : 0;
+  });
+  return ctx;
+}
+
+/**
+ * Evaluate a formula using a context of named variables (longest-first replacement)
+ */
+export function evalWithContext(formula, ctx) {
+  if (!formula || !formula.startsWith('=')) return null;
+  let expr = formula.slice(1).trim();
+  const keys = Object.keys(ctx).sort((a, b) => b.length - a.length);
+  for (const key of keys) expr = expr.replaceAll(key, String(ctx[key] || 0));
+  if (/^[\d\s.+\-*/()]+$/.test(expr)) {
+    try { return new Function(`return (${expr})`)(); } catch { return 0; }
+  }
+  return 0;
+}
+
+/**
+ * Compute all formula columns in all lines
  */
 export function computeLineas(lineas, columnas) {
   const formulaCols = (columnas || []).filter(c => c.tipo === 'formula' && c.formula);
   return lineas.map(linea => {
     const computed = { ...linea };
-    formulaCols.forEach(c => {
-      computed[c.campo] = evalFormulaClient(c.formula, computed);
-    });
+    formulaCols.forEach(c => { computed[c.campo] = evalFormulaClient(c.formula, computed); });
     return computed;
   });
 }
 
 /**
- * Calculate subtotal: sum the last numeric/formula/moneda column across all lines
+ * Calculate subtotal from lines
  */
 export function calcSubtotal(lineas, columnas) {
-  // Find the "total" column: prefer formula, then moneda, then last numeric
   const cols = columnas || [];
   const totalCol = cols.find(c => c.tipo === 'formula') || cols.find(c => c.tipo === 'moneda') || cols.findLast(c => c.tipo === 'numero');
   if (!totalCol) return 0;
@@ -59,17 +94,14 @@ export function calcSubtotal(lineas, columnas) {
 }
 
 /**
- * Calculate taxes and grand total. Supports formula override per tax.
- * Formula can use 'subtotal' variable, e.g. =subtotal*0.21 or =-subtotal*0.15
+ * Calculate taxes with formula context (supports ticket variables)
  */
-export function calcTotales(subtotal, impuestos) {
+export function calcTotales(subtotal, impuestos, formulaCtx) {
+  const ctx = formulaCtx || { subtotal };
   const taxes = (impuestos || []).map(imp => {
     let monto;
     if (imp.formula && imp.formula.startsWith('=')) {
-      let expr = imp.formula.slice(1).trim().replaceAll('subtotal', String(subtotal));
-      if (/^[\d\s.+\-*/()]+$/.test(expr)) {
-        try { monto = new Function(`return (${expr})`)(); } catch { monto = 0; }
-      } else { monto = 0; }
+      monto = evalWithContext(imp.formula, ctx);
     } else {
       monto = subtotal * (imp.porcentaje || 0) / 100;
     }
@@ -93,7 +125,7 @@ export function calcTicketsSummary(tickets, campos) {
 }
 
 /**
- * Format a number as currency
+ * Format number as currency
  */
 export function fmt(num, moneda = '€') {
   return `${(num || 0).toFixed(2)} ${moneda}`;

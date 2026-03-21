@@ -144,9 +144,12 @@ function TotalsEditor({ config, update }) {
       </div>
 
       <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-[10px] text-amber-700 leading-relaxed">
-        <b>Variables disponibles:</b> <code className="bg-amber-100 px-1 rounded">subtotal</code> = suma de líneas.
-        Descuento: <code className="bg-amber-100 px-1 rounded">=-subtotal*0.05</code>.
-        Recargo fijo: <code className="bg-amber-100 px-1 rounded">=50</code>
+        <b>Variables disponibles en fórmulas:</b><br/>
+        <code className="bg-amber-100 px-1 rounded">subtotal</code> = suma de líneas<br/>
+        <code className="bg-amber-100 px-1 rounded">tickets_count</code> = nº de tickets<br/>
+        <code className="bg-amber-100 px-1 rounded">tickets_sum_<i>campo</i></code> = suma del campo en todos los tickets<br/>
+        <code className="bg-amber-100 px-1 rounded">tickets_avg_<i>campo</i></code> / <code className="bg-amber-100 px-1 rounded">tickets_min_<i>campo</i></code> / <code className="bg-amber-100 px-1 rounded">tickets_max_<i>campo</i></code><br/>
+        Ej: <code className="bg-amber-100 px-1 rounded">=subtotal+tickets_sum_importe</code> para sumar líneas + tickets
       </div>
     </div>
   );
