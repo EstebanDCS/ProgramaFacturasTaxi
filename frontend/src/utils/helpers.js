@@ -59,21 +59,24 @@ export function calcSubtotal(lineas, columnas) {
 }
 
 /**
- * Calculate taxes and grand total
+ * Calculate taxes and grand total. Supports formula override per tax.
+ * Formula can use 'subtotal' variable, e.g. =subtotal*0.21 or =-subtotal*0.15
  */
 export function calcTotales(subtotal, impuestos) {
-  const taxes = (impuestos || []).map(imp => ({
-    nombre: imp.nombre || 'IVA',
-    porcentaje: imp.porcentaje || 0,
-    monto: subtotal * (imp.porcentaje || 0) / 100,
-  }));
+  const taxes = (impuestos || []).map(imp => {
+    let monto;
+    if (imp.formula && imp.formula.startsWith('=')) {
+      let expr = imp.formula.slice(1).trim().replaceAll('subtotal', String(subtotal));
+      if (/^[\d\s.+\-*/()]+$/.test(expr)) {
+        try { monto = new Function(`return (${expr})`)(); } catch { monto = 0; }
+      } else { monto = 0; }
+    } else {
+      monto = subtotal * (imp.porcentaje || 0) / 100;
+    }
+    return { nombre: imp.nombre || 'IVA', porcentaje: imp.porcentaje || 0, monto, hasFormula: !!imp.formula };
+  });
   const totalImpuestos = taxes.reduce((s, t) => s + t.monto, 0);
-  return {
-    subtotal,
-    taxes,
-    totalImpuestos,
-    total: subtotal + totalImpuestos,
-  };
+  return { subtotal, taxes, totalImpuestos, total: subtotal + totalImpuestos };
 }
 
 /**

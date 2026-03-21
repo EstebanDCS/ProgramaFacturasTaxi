@@ -1,7 +1,7 @@
-import { BLOCK_TYPES, COL_PRESETS } from '../../utils/blockTypes';
+import { BLOCK_TYPES } from '../../utils/blockTypes';
 
-const Inp = ({ label, value, onChange, ...props }) => (
-  <div className="flex flex-col gap-1">
+const Inp = ({ label, value, onChange, className = '', ...props }) => (
+  <div className={`flex flex-col gap-1 ${className}`}>
     <label className="text-[11px] font-semibold text-slate-500">{label}</label>
     <input value={value || ''} onChange={e => onChange(e.target.value)}
       className="rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:ring-primary focus:border-primary" {...props} />
@@ -34,18 +34,7 @@ export default function BlockRenderer({ block, onChange }) {
       return <ColumnsEditor columnas={config.columnas || []} onChange={cols => update('columnas', cols)} />;
 
     case 'totals':
-      return (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Inp label="Título factura" value={config.titulo} onChange={v => update('titulo', v)} />
-          <Inp label="Impuesto" value={config.impuestos?.[0]?.nombre} onChange={v => update('impuestos', [{ ...config.impuestos?.[0], nombre: v }])} />
-          <Inp label="%" type="number" value={config.impuestos?.[0]?.porcentaje} onChange={v => update('impuestos', [{ ...config.impuestos?.[0], porcentaje: parseFloat(v) || 0 }])} />
-          <Inp label="Moneda" value={config.moneda} onChange={v => update('moneda', v)} />
-          <label className="flex items-center gap-2 text-sm col-span-2">
-            <input type="checkbox" checked={config.mostrar_desglose !== false} onChange={e => update('mostrar_desglose', e.target.checked)} className="rounded text-primary" />
-            Mostrar desglose subtotal + impuesto
-          </label>
-        </div>
-      );
+      return <TotalsEditor config={config} update={update} />;
 
     case 'notes':
       return <Inp label="Placeholder" value={config.placeholder} onChange={v => update('placeholder', v)} />;
@@ -62,10 +51,7 @@ export default function BlockRenderer({ block, onChange }) {
         </div>
       );
 
-    case 'text_field':
-    case 'number_field':
-    case 'currency_field':
-    case 'date_field':
+    case 'text_field': case 'number_field': case 'currency_field': case 'date_field':
       return (
         <div className="grid grid-cols-2 gap-3">
           <Inp label="Etiqueta" value={config.label} onChange={v => update('label', v)} />
@@ -111,6 +97,63 @@ export default function BlockRenderer({ block, onChange }) {
 }
 
 
+// ── Totals editor: multiple taxes, formula support ──
+function TotalsEditor({ config, update }) {
+  const impuestos = config.impuestos || [{ nombre: 'IVA', porcentaje: 21, formula: '' }];
+  const updateImp = (i, field, val) => { const n = [...impuestos]; n[i] = { ...n[i], [field]: val }; update('impuestos', n); };
+  const addImp = () => update('impuestos', [...impuestos, { nombre: '', porcentaje: 0, formula: '' }]);
+  const removeImp = (i) => update('impuestos', impuestos.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <Inp label="Título factura" value={config.titulo} onChange={v => update('titulo', v)} />
+        <Inp label="Moneda" value={config.moneda} onChange={v => update('moneda', v)} />
+      </div>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={config.mostrar_desglose !== false} onChange={e => update('mostrar_desglose', e.target.checked)} className="rounded text-primary" />
+        Mostrar desglose (subtotal + impuestos)
+      </label>
+
+      <div>
+        <label className="text-[11px] font-semibold text-slate-500 block mb-2">Impuestos / recargos / descuentos</label>
+        {impuestos.map((imp, i) => (
+          <div key={i} className="bg-slate-50 rounded-lg p-3 mb-2 relative group">
+            <button onClick={() => removeImp(i)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-opacity">
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+            </button>
+            <div className="grid grid-cols-[1fr_80px] gap-2 mb-2">
+              <Inp label="Nombre" value={imp.nombre} onChange={v => updateImp(i, 'nombre', v)} placeholder="IVA, IRPF, Descuento..." />
+              <Inp label="%" type="number" value={imp.porcentaje} onChange={v => updateImp(i, 'porcentaje', parseFloat(v) || 0)} />
+            </div>
+            <div>
+              <label className="text-[10px] text-violet-500 flex items-center gap-1 mb-1">
+                <span className="material-symbols-outlined" style={{ fontSize: 11 }}>functions</span>
+                Fórmula (opcional, sobreescribe %)
+              </label>
+              <input value={imp.formula || ''} onChange={e => updateImp(i, 'formula', e.target.value)}
+                placeholder="Ej: =subtotal*0.21, =-subtotal*0.15"
+                className="w-full rounded-md border-violet-200 bg-violet-50 px-2 py-1.5 text-xs font-mono text-violet-700" />
+            </div>
+          </div>
+        ))}
+        <button onClick={addImp} className="w-full flex items-center justify-center gap-1 py-1.5 border-2 border-dashed border-slate-200 rounded-lg text-xs font-bold text-slate-400 hover:border-amber-400 hover:text-amber-600 transition-colors">
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span> Añadir impuesto / recargo
+        </button>
+      </div>
+
+      <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-[10px] text-amber-700 leading-relaxed">
+        <b>Variables disponibles:</b> <code className="bg-amber-100 px-1 rounded">subtotal</code> = suma de líneas.
+        Descuento: <code className="bg-amber-100 px-1 rounded">=-subtotal*0.05</code>.
+        Recargo fijo: <code className="bg-amber-100 px-1 rounded">=50</code>
+      </div>
+    </div>
+  );
+}
+
+
+// ── Columns editor (card layout) ──
 function ColumnsEditor({ columnas, onChange }) {
   const addCol = () => onChange([...columnas, { nombre: '', campo: '', alineacion: 'left', tipo: 'texto', formula: '' }]);
   const removeCol = (i) => onChange(columnas.filter((_, idx) => idx !== i));
@@ -140,37 +183,55 @@ function ColumnsEditor({ columnas, onChange }) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs text-slate-400">Preset:</span>
+        <span className="text-[10px] text-slate-400">Preset:</span>
         {['simple', 'detallado', 'servicios'].map(k => (
           <button key={k} onClick={() => loadPreset(k)}
-            className="text-[11px] font-bold px-2.5 py-1 rounded-md bg-slate-100 hover:bg-primary/10 hover:text-primary transition-colors capitalize">{k}</button>
+            className="text-[10px] font-bold px-2 py-1 rounded-md bg-slate-100 hover:bg-primary/10 hover:text-primary transition-colors capitalize">{k}</button>
         ))}
       </div>
-      <div className="grid grid-cols-[1fr_1fr_60px_80px_1fr_24px] gap-1.5 mb-1.5">
-        {['Nombre', 'ID', 'Alin.', 'Tipo', 'Fórmula', ''].map(h => (
-          <span key={h} className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{h}</span>
-        ))}
-      </div>
+
       {columnas.map((c, i) => (
-        <div key={i} className="grid grid-cols-[1fr_1fr_60px_80px_1fr_24px] gap-1.5 items-center mb-1">
-          <input value={c.nombre} onChange={e => updateCol(i, 'nombre', e.target.value)} className="rounded-md border-slate-200 bg-slate-50 px-2 py-1.5 text-xs" placeholder="Nombre" />
-          <input value={c.campo} onChange={e => updateCol(i, 'campo', e.target.value)} className="rounded-md border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-mono text-slate-500" placeholder="id" />
-          <select value={c.alineacion} onChange={e => updateCol(i, 'alineacion', e.target.value)} className="rounded-md border-slate-200 bg-slate-50 px-1 py-1.5 text-xs">
-            <option value="left">Izq</option><option value="center">Cen</option><option value="right">Der</option>
-          </select>
-          <select value={c.tipo} onChange={e => updateCol(i, 'tipo', e.target.value)} className="rounded-md border-slate-200 bg-slate-50 px-1 py-1.5 text-xs">
-            <option value="texto">Texto</option><option value="numero">Nº</option><option value="moneda">€</option><option value="formula">ƒx</option>
-          </select>
-          {c.tipo === 'formula' ? (
-            <input value={c.formula || ''} onChange={e => updateCol(i, 'formula', e.target.value)} placeholder="=cant*precio"
-              className="rounded-md border-violet-200 bg-violet-50 px-2 py-1.5 text-xs font-mono text-violet-700" />
-          ) : <span />}
-          <button onClick={() => removeCol(i)} className="text-slate-300 hover:text-red-500">
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+        <div key={i} className="bg-slate-50 rounded-lg p-2.5 mb-2 relative group">
+          <button onClick={() => removeCol(i)} className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-opacity">
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
           </button>
+          <div className="grid grid-cols-2 gap-2 mb-1.5">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9px] font-bold text-slate-400 uppercase">Nombre</span>
+              <input value={c.nombre} onChange={e => updateCol(i, 'nombre', e.target.value)} placeholder="Descripción"
+                className="rounded-md border-slate-200 bg-white px-2 py-1.5 text-xs" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9px] font-bold text-slate-400 uppercase">ID campo</span>
+              <input value={c.campo} onChange={e => updateCol(i, 'campo', e.target.value)} placeholder="campo_id"
+                className="rounded-md border-slate-200 bg-white px-2 py-1.5 text-xs font-mono text-slate-500" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <div className="flex flex-col gap-0.5 w-24">
+              <span className="text-[9px] font-bold text-slate-400 uppercase">Alin.</span>
+              <select value={c.alineacion} onChange={e => updateCol(i, 'alineacion', e.target.value)} className="rounded-md border-slate-200 bg-white px-1.5 py-1.5 text-xs">
+                <option value="left">← Izq</option><option value="center">Centro</option><option value="right">Der →</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5 w-28">
+              <span className="text-[9px] font-bold text-slate-400 uppercase">Tipo</span>
+              <select value={c.tipo} onChange={e => updateCol(i, 'tipo', e.target.value)} className="rounded-md border-slate-200 bg-white px-1.5 py-1.5 text-xs">
+                <option value="texto">Texto</option><option value="numero">Número</option><option value="moneda">Moneda €</option><option value="formula">ƒx Fórmula</option>
+              </select>
+            </div>
+            {c.tipo === 'formula' && (
+              <div className="flex flex-col gap-0.5 flex-1">
+                <span className="text-[9px] font-bold text-violet-400 uppercase">Fórmula</span>
+                <input value={c.formula || ''} onChange={e => updateCol(i, 'formula', e.target.value)} placeholder="=cantidad*precio"
+                  className="rounded-md border-violet-200 bg-violet-50 px-2 py-1.5 text-xs font-mono text-violet-700" />
+              </div>
+            )}
+          </div>
         </div>
       ))}
-      <button onClick={addCol} className="mt-2 w-full flex items-center justify-center gap-1 py-1.5 border-2 border-dashed border-slate-200 rounded-lg text-xs font-bold text-slate-400 hover:border-primary hover:text-primary transition-colors">
+
+      <button onClick={addCol} className="mt-1 w-full flex items-center justify-center gap-1 py-2 border-2 border-dashed border-slate-200 rounded-lg text-xs font-bold text-slate-400 hover:border-primary hover:text-primary transition-colors">
         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span> Columna
       </button>
     </div>
