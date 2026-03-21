@@ -170,7 +170,7 @@ function SortablePageBlock({ block, estilo, isSelected, onSelect, onUpdate, onRe
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}
       className={`relative group mb-1 rounded-lg transition-all cursor-grab active:cursor-grabbing
         ${isSelected ? 'ring-2 ring-primary bg-blue-50/30' : 'hover:bg-slate-50/50'}`}
-      onClick={() => onSelect(block.id)}>
+      onClick={(e) => { e.stopPropagation(); onSelect(block.id); }}>
 
       {/* Delete button */}
       <button onClick={e => { e.stopPropagation(); onRemove(); }} onPointerDown={e => e.stopPropagation()}
@@ -246,7 +246,8 @@ export function DragCanvas({ blocks, onChange, paletteContent, estilo }) {
 
         {/* Page canvas */}
         <div className="flex-1 min-w-0 overflow-y-auto" ref={dropRef}>
-          <div className="bg-white rounded-xl border border-slate-200 shadow-lg mx-auto p-6 min-h-[500px]" style={{ maxWidth: 680 }}>
+          <div className="bg-white rounded-xl border border-slate-200 shadow-lg mx-auto p-6 min-h-[500px]" style={{ maxWidth: 680 }}
+            onClick={() => setSelectedId(null)}>
             <CanvasDropZone isEmpty={!blocks.length} isOver={isOver}>
               <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
                 {blocks.map(block => (
