@@ -64,9 +64,17 @@ export const BLOCK_TYPES = {
   detail_sheet: {
     category: 'section',
     icon: 'auto_awesome',
-    label: 'Hoja de detalle',
+    label: 'Tickets / sub-items',
     color: 'violet',
-    defaultConfig: { activar: false, titulo: 'Detalle' },
+    defaultConfig: {
+      activar: true,
+      titulo: 'Ticket',
+      campos: [
+        { nombre: 'Nº Ticket', campo: 'numero_ticket', tipo: 'texto' },
+        { nombre: 'Importe', campo: 'importe', tipo: 'moneda' },
+        { nombre: 'Observaciones', campo: 'comentarios', tipo: 'texto' },
+      ],
+    },
   },
 
   // ── Data blocks ──

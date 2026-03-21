@@ -16,6 +16,7 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
   const [form, setForm] = useState({ numero_factura: '', fecha: '', referencia: '', notas: '' });
   const [cliente, setCliente] = useState({ nombre: '', cif: '', direccion: '', email: '', telefono: '' });
   const [lineas, setLineas] = useState([{}]);
+  const [tickets, setTickets] = useState([]);
   const [step, setStep] = useState('selector');
   const [showDownload, setShowDownload] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -27,56 +28,32 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
     } catch { return []; }
   }, [token]);
 
-  useEffect(() => {
-    if (!token) return;
-    cargarPlantillas().then(data => {
-      setPlantillas(data);
-    });
-  }, [token, cargarPlantillas]);
+  useEffect(() => { if (token) cargarPlantillas().then(setPlantillas); }, [token, cargarPlantillas]);
 
-  // Load editing factura — auto-select plantilla
+  // Load editing factura
   useEffect(() => {
     if (!editingId || !token || !plantillas.length) return;
     (async () => {
       try {
-        // Get factura metadata (includes plantilla_nombre)
         const rh = await apiFetch(`${API_URL}/historial`, { headers: authHeaders(token) });
         const historial = await rh.json();
-        const facturaMeta = historial.find(f => f.id === editingId);
-
-        // Get factura data
+        const meta = historial.find(f => f.id === editingId);
         const r = await apiFetch(`${API_URL}/factura/${editingId}`, { headers: authHeaders(token) });
         if (!r.ok) return;
         const data = await r.json();
         let datos = data;
         if (data.datos_json_cifrado) {
           const { descifrar } = await import('../utils/crypto');
-          const raw = await descifrar(data.datos_json_cifrado);
-          datos = JSON.parse(raw);
+          datos = JSON.parse(await descifrar(data.datos_json_cifrado));
         }
-        if (!datos.numero_factura && !datos.lineas) {
-          toast('Formato de factura legacy — solo se puede descargar', 'info');
-          return;
-        }
-
-        // Fill form data
-        setForm({
-          numero_factura: datos.numero_factura || '',
-          fecha: datos.fecha || '',
-          referencia: datos.referencia || '',
-          notas: datos.notas || '',
-        });
-        setCliente(datos.cliente || { nombre: '', cif: '', direccion: '', email: '', telefono: '' });
+        if (!datos.numero_factura && !datos.lineas) { toast('Formato legacy', 'info'); return; }
+        setForm({ numero_factura: datos.numero_factura || '', fecha: datos.fecha || '', referencia: datos.referencia || '', notas: datos.notas || '' });
+        setCliente(datos.cliente || {});
         setLineas(datos.lineas?.length ? datos.lineas : [{}]);
-
-        // Auto-select plantilla by name match or first available
-        const pNombre = facturaMeta?.plantilla_nombre || facturaMeta?.barco || '';
-        const match = plantillas.find(p => p.nombre === pNombre) || plantillas[0];
-        if (match) {
-          await seleccionar(match);
-          toast('Factura cargada para editar', 'success');
-        }
-      } catch { toast('Error cargando factura', 'error'); }
+        if (datos.tickets?.length) setTickets(datos.tickets);
+        const match = plantillas.find(p => p.nombre === (meta?.plantilla_nombre || meta?.barco)) || plantillas[0];
+        if (match) { await seleccionar(match); toast('Factura cargada', 'success'); }
+      } catch { toast('Error cargando', 'error'); }
     })();
   }, [editingId, token, plantillas]);
 
@@ -85,73 +62,71 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
     setNombre(`${p.nombre} (${p.tipo})`);
     try {
       const r = await apiFetch(`${API_URL}/plantillas/${p.id}`, { headers: authHeaders(token) });
-      if (r.ok) {
-        const data = await r.json();
-        setConfig(JSON.parse(data.config_json || '{}'));
-      }
+      if (r.ok) { const data = await r.json(); setConfig(JSON.parse(data.config_json || '{}')); }
     } catch { setConfig(null); }
     setStep('form');
   };
 
+  // Derived from config
   const cols = config?.columnas || COL_PRESETS.simple;
   const visCols = cols.filter(c => !c.oculta);
   const showCli = config?.cliente?.mostrar !== false;
+  const ticketCfg = config?.hoja_detalle;
+  const hasTickets = ticketCfg?.activar && ticketCfg?.campos?.length;
 
   const updateLinea = (idx, campo, valor) => {
-    const nuevo = [...lineas];
-    nuevo[idx] = { ...nuevo[idx], [campo]: valor };
-    cols.filter(c => c.tipo === 'formula' && c.formula).forEach(c => {
-      nuevo[idx][c.campo] = evalFormulaClient(c.formula, nuevo[idx]);
-    });
-    setLineas(nuevo);
+    const n = [...lineas]; n[idx] = { ...n[idx], [campo]: valor };
+    cols.filter(c => c.tipo === 'formula' && c.formula).forEach(c => { n[idx][c.campo] = evalFormulaClient(c.formula, n[idx]); });
+    setLineas(n);
   };
 
-  const addLinea = () => setLineas([...lineas, {}]);
-  const removeLinea = (idx) => setLineas(lineas.filter((_, i) => i !== idx));
+  const addTicket = () => {
+    const empty = {};
+    (ticketCfg?.campos || []).forEach(c => { empty[c.campo] = ''; });
+    setTickets([...tickets, empty]);
+  };
+  const removeTicket = (idx) => setTickets(tickets.filter((_, i) => i !== idx));
+  const updateTicket = (idx, campo, valor) => {
+    const n = [...tickets]; n[idx] = { ...n[idx], [campo]: valor }; setTickets(n);
+  };
 
   const recogerDatos = () => {
-    const data = { ...form, cliente, lineas: lineas.filter(l => Object.values(l).some(v => v)) };
-    if (!data.numero_factura) { toast('Indica el nº de factura', 'warn'); return null; }
-    if (!data.lineas.length) { toast('Añade al menos una línea', 'warn'); return null; }
+    const data = {
+      ...form, cliente,
+      lineas: lineas.filter(l => Object.values(l).some(v => v)),
+      tickets: hasTickets ? tickets.filter(t => Object.values(t).some(v => v)) : [],
+    };
+    if (!data.numero_factura) { toast('Nº factura requerido', 'warn'); return null; }
+    if (!data.lineas.length && !data.tickets.length) { toast('Añade datos', 'warn'); return null; }
     return data;
   };
 
   const guardar = async () => {
-    if (!selectedId) { toast('Selecciona plantilla', 'warn'); return; }
-    const data = recogerDatos();
-    if (!data) return;
+    if (!selectedId) return;
+    const data = recogerDatos(); if (!data) return;
     try {
       if (editingId) await apiFetch(`${API_URL}/eliminar-factura/${editingId}`, { method: 'DELETE', headers: authHeaders(token) });
       const r = await apiFetch(`${API_URL}/guardar-con-plantilla?plantilla_id=${selectedId}`, {
-        method: 'POST', headers: authHeaders(token, { 'Content-Type': 'application/json' }), body: JSON.stringify(data)
-      });
-      if (r.ok) { toast(editingId ? 'Factura actualizada' : 'Guardada en la nube', 'success'); if (onClearEdit) onClearEdit(); }
+        method: 'POST', headers: authHeaders(token, { 'Content-Type': 'application/json' }), body: JSON.stringify(data) });
+      if (r.ok) { toast(editingId ? 'Actualizada' : 'Guardada', 'success'); if (onClearEdit) onClearEdit(); }
       else { const err = await r.json().catch(() => ({})); toast(err.detail || 'Error', 'error'); }
     } catch { toast('Error de conexión', 'error'); }
   };
 
   const descargar = async (formato) => {
-    if (!selectedId) { toast('Selecciona plantilla', 'warn'); return; }
-    const data = recogerDatos();
-    if (!data) return;
+    if (!selectedId) return;
+    const data = recogerDatos(); if (!data) return;
     setDownloading(true);
     try {
       const r = await apiFetch(`${API_URL}/generar-con-plantilla?formato=${formato}&plantilla_id=${selectedId}`, {
-        method: 'POST', headers: authHeaders(token, { 'Content-Type': 'application/json' }), body: JSON.stringify(data)
-      });
-      if (r.ok) {
-        descargarBlob(await r.blob(), r.headers.get('Content-Disposition'), `Factura_${data.numero_factura}`, formato);
-        setShowDownload(false);
-        toast('Archivo descargado', 'success');
-      } else {
-        const err = await r.json().catch(() => ({}));
-        toast(err.detail || 'Error generando', 'error');
-      }
-    } catch { toast('Error de conexión', 'error'); }
+        method: 'POST', headers: authHeaders(token, { 'Content-Type': 'application/json' }), body: JSON.stringify(data) });
+      if (r.ok) { descargarBlob(await r.blob(), r.headers.get('Content-Disposition'), `Factura_${data.numero_factura}`, formato); setShowDownload(false); }
+      else { const err = await r.json().catch(() => ({})); toast(err.detail || 'Error', 'error'); }
+    } catch { toast('Error', 'error'); }
     setDownloading(false);
   };
 
-  // STEP 1: Selector
+  // ── SELECTOR ──
   if (step === 'selector') return (
     <div className="animate-fadeIn w-full max-w-[1400px]">
       <header className="mb-8 pb-6 border-b border-slate-200">
@@ -159,14 +134,14 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
           <span className="material-symbols-outlined text-primary text-2xl">note_add</span> Nueva Factura
         </h2>
       </header>
-      <p className="text-slate-500 text-sm mb-4">Selecciona una plantilla para crear tu factura:</p>
+      <p className="text-slate-500 text-sm mb-4">Selecciona una plantilla:</p>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
         {plantillas.map(p => (
           <button key={p.id} onClick={() => seleccionar(p)}
             className="bg-white rounded-xl border-2 border-slate-200 p-6 shadow-sm hover:border-primary hover:shadow-md transition-all text-left group">
             <div className="flex items-center justify-between mb-3">
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.tipo === 'visual' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{p.tipo}</span>
-              <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">chevron_right</span>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${p.tipo === 'visual' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{p.tipo}</span>
+              <span className="material-symbols-outlined text-slate-300 group-hover:text-primary">chevron_right</span>
             </div>
             <h3 className="font-bold text-slate-900 text-lg">{p.nombre}</h3>
             <p className="text-xs text-slate-400 mt-1">{new Date(p.created_at).toLocaleDateString('es-ES')}</p>
@@ -176,17 +151,16 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
       {!plantillas.length && (
         <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl">
           <span className="material-symbols-outlined text-4xl text-slate-300 mb-2 block">add_circle</span>
-          <p className="text-slate-500 font-medium mb-3">Crea tu primera plantilla para empezar</p>
+          <p className="text-slate-500 font-medium">Crea una plantilla primero</p>
         </div>
       )}
     </div>
   );
 
-  // STEP 2: Form
+  // ── FORM ──
   return (
     <div className="animate-fadeIn w-full max-w-[1400px]">
-      <DownloadModal open={showDownload} onClose={() => { setShowDownload(false); setDownloading(false); }}
-        onSelect={descargar} loading={downloading} />
+      <DownloadModal open={showDownload} onClose={() => { setShowDownload(false); setDownloading(false); }} onSelect={descargar} loading={downloading} />
 
       <header className="mb-6 pb-6 border-b border-slate-200 flex items-center gap-4">
         <button onClick={() => { setStep('selector'); setSelectedId(null); setConfig(null); if (onClearEdit) onClearEdit(); }}
@@ -199,72 +173,95 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
         <span className="text-sm font-semibold text-violet-700">{nombre}</span>
       </div>
 
-      {/* Datos básicos */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-        <h3 className="text-lg font-bold text-primary flex items-center gap-2 mb-6"><span className="material-symbols-outlined">info</span> Detalles</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div><label className="text-sm font-semibold text-slate-600 block mb-1">Nº Factura</label>
-            <input type="text" value={form.numero_factura} onChange={e => setForm({...form, numero_factura: e.target.value})}
-              className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary" placeholder="2026-0001" /></div>
+      {/* ── Datos básicos ── */}
+      <Section icon="info" title="Detalles de factura">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <Field label="Nº Factura" value={form.numero_factura} onChange={v => setForm({...form, numero_factura: v})} placeholder="2026-0001" />
           <div><label className="text-sm font-semibold text-slate-600 block mb-1">Fecha</label>
             <input type="date" value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})}
               className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary" /></div>
         </div>
-        <div className="mt-4"><label className="text-sm font-semibold text-slate-600 block mb-1">Referencia</label>
-          <input type="text" value={form.referencia} onChange={e => setForm({...form, referencia: e.target.value})}
-            className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm" placeholder="Proyecto Alpha" /></div>
-      </div>
+        <Field label="Referencia" value={form.referencia} onChange={v => setForm({...form, referencia: v})} placeholder="Proyecto Alpha" className="mt-4" />
+      </Section>
 
-      {/* Cliente */}
+      {/* ── Cliente ── */}
       {showCli && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-          <h3 className="text-lg font-bold text-primary flex items-center gap-2 mb-6"><span className="material-symbols-outlined">person</span> Cliente</h3>
+        <Section icon="person" title="Cliente">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[['nombre','Nombre'],['cif','CIF'],['direccion','Dirección'],['email','Email'],['telefono','Teléfono']].map(([k,l]) => (
-              <div key={k}><label className="text-sm font-semibold text-slate-600 block mb-1">{l}</label>
-                <input type="text" value={cliente[k]||''} onChange={e => setCliente({...cliente, [k]: e.target.value})}
-                  className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-2.5 text-sm" /></div>
+              <Field key={k} label={l} value={cliente[k]||''} onChange={v => setCliente({...cliente, [k]: v})} />
             ))}
           </div>
-        </div>
+        </Section>
       )}
 
-      {/* Líneas */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-        <h3 className="text-lg font-bold text-primary flex items-center gap-2 mb-4"><span className="material-symbols-outlined">list</span> Líneas</h3>
-        <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: visCols.map(c => c.tipo === 'texto' ? '2fr' : '1fr').join(' ') + ' 40px' }}>
+      {/* ── Líneas (tabla de items) ── */}
+      <Section icon="list" title="Líneas de factura">
+        <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: visCols.map(c => c.tipo === 'texto' ? '2fr' : '1fr').join(' ') + ' 36px' }}>
           {visCols.map(c => <span key={c.campo} className="text-[10px] font-bold text-slate-400 uppercase px-1">{c.nombre}{c.tipo === 'formula' ? ' ƒx' : ''}</span>)}
           <span />
         </div>
         {lineas.map((linea, idx) => (
-          <div key={idx} className="grid gap-2 mb-2" style={{ gridTemplateColumns: visCols.map(c => c.tipo === 'texto' ? '2fr' : '1fr').join(' ') + ' 40px' }}>
+          <div key={idx} className="grid gap-2 mb-2" style={{ gridTemplateColumns: visCols.map(c => c.tipo === 'texto' ? '2fr' : '1fr').join(' ') + ' 36px' }}>
             {visCols.map(c => (
-              <input key={c.campo} type="text"
-                value={linea[c.campo] || ''}
-                readOnly={c.tipo === 'formula'}
+              <input key={c.campo} type="text" value={linea[c.campo] || ''} readOnly={c.tipo === 'formula'}
                 onChange={e => updateLinea(idx, c.campo, e.target.value)}
                 className={`rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm ${c.tipo === 'formula' ? 'bg-violet-50 text-violet-700 font-mono' : ''}`}
                 placeholder={c.tipo === 'formula' ? 'auto' : c.nombre} />
             ))}
-            <button onClick={() => removeLinea(idx)} className="text-slate-300 hover:text-red-500 flex items-center justify-center">
-              <span className="material-symbols-outlined text-base">close</span>
-            </button>
+            <button onClick={() => setLineas(lineas.filter((_, i) => i !== idx))} className="text-slate-300 hover:text-red-500 flex items-center justify-center">
+              <span className="material-symbols-outlined text-base">close</span></button>
           </div>
         ))}
-        <button onClick={addLinea} className="mt-2 w-full flex items-center justify-center gap-1 py-2 border-2 border-dashed border-slate-200 rounded-lg text-xs font-bold text-slate-400 hover:border-primary hover:text-primary transition-colors">
+        <button onClick={() => setLineas([...lineas, {}])} className="mt-2 w-full flex items-center justify-center gap-1 py-2 border-2 border-dashed border-slate-200 rounded-lg text-xs font-bold text-slate-400 hover:border-primary hover:text-primary transition-colors">
           <span className="material-symbols-outlined text-sm">add</span> Añadir línea
         </button>
-      </div>
+      </Section>
 
-      {/* Notas */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-        <h3 className="text-sm font-bold text-slate-700 mb-2">Notas</h3>
+      {/* ── Tickets / Sub-items ── */}
+      {hasTickets && (
+        <Section icon="auto_awesome" title={`${ticketCfg.titulo || 'Tickets'} (${tickets.length})`} color="violet">
+          {tickets.map((ticket, ti) => (
+            <div key={ti} className="bg-violet-50/50 border border-violet-100 rounded-lg p-4 mb-3">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-bold text-violet-700">{ticketCfg.titulo} #{ti + 1}</span>
+                <button onClick={() => removeTicket(ti)} className="text-violet-300 hover:text-red-500 transition-colors">
+                  <span className="material-symbols-outlined text-base">close</span></button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {(ticketCfg.campos || []).map(campo => (
+                  <div key={campo.campo}>
+                    <label className="text-xs font-semibold text-violet-600 block mb-1">{campo.nombre}</label>
+                    {campo.tipo === 'checkbox' ? (
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={!!ticket[campo.campo]} onChange={e => updateTicket(ti, campo.campo, e.target.checked)}
+                          className="rounded text-violet-600" /> {campo.nombre}
+                      </label>
+                    ) : (
+                      <input type={campo.tipo === 'numero' || campo.tipo === 'moneda' ? 'number' : 'text'}
+                        value={ticket[campo.campo] || ''} onChange={e => updateTicket(ti, campo.campo, e.target.value)}
+                        step={campo.tipo === 'moneda' ? '0.01' : undefined}
+                        className="w-full rounded-lg border-violet-200 bg-white px-3 py-2 text-sm focus:ring-violet-400" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          <button onClick={addTicket} className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-violet-200 rounded-lg text-sm font-bold text-violet-400 hover:border-violet-400 hover:text-violet-600 transition-colors">
+            <span className="material-symbols-outlined">add_circle</span> Añadir {ticketCfg.titulo || 'ticket'}
+          </button>
+        </Section>
+      )}
+
+      {/* ── Notas ── */}
+      <Section icon="sticky_note_2" title="Notas">
         <textarea value={form.notas} onChange={e => setForm({...form, notas: e.target.value})}
           className="w-full rounded-lg border-slate-200 bg-slate-50 p-4 min-h-[80px] text-sm" placeholder="Condiciones de pago..." />
-      </div>
+      </Section>
 
-      {/* Actions */}
-      <div className="flex flex-col md:flex-row gap-4">
+      {/* ── Actions ── */}
+      <div className="flex flex-col md:flex-row gap-4 mt-2">
         <button onClick={guardar} className="flex-1 flex items-center justify-center gap-2 px-8 py-3.5 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 shadow-lg transition-all">
           <span className="material-symbols-outlined">cloud_upload</span> GUARDAR EN NUBE
         </button>
@@ -272,6 +269,29 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
           <span className="material-symbols-outlined">download</span> DESCARGAR
         </button>
       </div>
+    </div>
+  );
+}
+
+
+function Section({ icon, title, children, color = 'primary' }) {
+  const colors = { primary: 'text-primary', violet: 'text-violet-600', amber: 'text-amber-600' };
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-5">
+      <h3 className={`text-lg font-bold ${colors[color] || colors.primary} flex items-center gap-2 mb-5`}>
+        <span className="material-symbols-outlined">{icon}</span> {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
+function Field({ label, value, onChange, className = '', ...props }) {
+  return (
+    <div className={className}>
+      <label className="text-sm font-semibold text-slate-600 block mb-1">{label}</label>
+      <input type="text" value={value || ''} onChange={e => onChange(e.target.value)}
+        className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:ring-primary" {...props} />
     </div>
   );
 }

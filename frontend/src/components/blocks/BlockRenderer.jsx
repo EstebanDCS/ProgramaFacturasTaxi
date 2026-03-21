@@ -67,9 +67,35 @@ export default function BlockRenderer({ block, onChange }) {
         <div className="space-y-3">
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={!!config.activar} onChange={e => update('activar', e.target.checked)} className="rounded text-primary" />
-            Generar hoja de detalle por cada línea
+            Activar tickets / sub-items en esta plantilla
           </label>
-          {config.activar && <Inp label="Título de la hoja" value={config.titulo} onChange={v => update('titulo', v)} />}
+          {config.activar && <>
+            <Inp label="Nombre del ticket" value={config.titulo} onChange={v => update('titulo', v)} placeholder="Ej: Ticket, Bono, Servicio" />
+            <div>
+              <label className="text-[11px] font-semibold text-slate-500 block mb-2">Campos del ticket</label>
+              <div className="grid grid-cols-[1fr_1fr_80px_24px] gap-1.5 mb-1.5">
+                {['Nombre', 'ID campo', 'Tipo', ''].map(h => <span key={h} className="text-[9px] font-bold text-slate-400 uppercase">{h}</span>)}
+              </div>
+              {(config.campos || []).map((c, i) => (
+                <div key={i} className="grid grid-cols-[1fr_1fr_80px_24px] gap-1.5 items-center mb-1">
+                  <input value={c.nombre} onChange={e => { const n = [...config.campos]; n[i] = {...n[i], nombre: e.target.value}; update('campos', n); }}
+                    className="rounded-md border-slate-200 bg-slate-50 px-2 py-1.5 text-xs" placeholder="Nombre" />
+                  <input value={c.campo} onChange={e => { const n = [...config.campos]; n[i] = {...n[i], campo: e.target.value}; update('campos', n); }}
+                    className="rounded-md border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-mono text-slate-500" placeholder="id" />
+                  <select value={c.tipo} onChange={e => { const n = [...config.campos]; n[i] = {...n[i], tipo: e.target.value}; update('campos', n); }}
+                    className="rounded-md border-slate-200 bg-slate-50 px-1 py-1.5 text-xs">
+                    <option value="texto">Texto</option><option value="numero">Nº</option><option value="moneda">€</option><option value="checkbox">✓</option>
+                  </select>
+                  <button onClick={() => { const n = config.campos.filter((_, idx) => idx !== i); update('campos', n); }}
+                    className="text-slate-300 hover:text-red-500"><span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span></button>
+                </div>
+              ))}
+              <button onClick={() => update('campos', [...(config.campos||[]), { nombre: '', campo: '', tipo: 'texto' }])}
+                className="mt-2 w-full flex items-center justify-center gap-1 py-1.5 border-2 border-dashed border-slate-200 rounded-lg text-xs font-bold text-slate-400 hover:border-violet-400 hover:text-violet-500 transition-colors">
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span> Añadir campo
+              </button>
+            </div>
+          </>}
         </div>
       );
 
