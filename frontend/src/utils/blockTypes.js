@@ -61,21 +61,7 @@ export const BLOCK_TYPES = {
     color: 'slate',
     defaultConfig: { texto: '', mostrar_datos_pago: false, datos_pago: '' },
   },
-  detail_sheet: {
-    category: 'section',
-    icon: 'auto_awesome',
-    label: 'Tickets / sub-items',
-    color: 'violet',
-    defaultConfig: {
-      activar: true,
-      titulo: 'Ticket',
-      campos: [
-        { nombre: 'Nº Ticket', campo: 'numero_ticket', tipo: 'texto' },
-        { nombre: 'Importe', campo: 'importe', tipo: 'moneda' },
-        { nombre: 'Observaciones', campo: 'comentarios', tipo: 'texto' },
-      ],
-    },
-  },
+  // (tickets handled as second canvas, not a block)
 
   // ── Data blocks ──
   text_field: {
