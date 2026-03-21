@@ -156,11 +156,11 @@ export default function CrearPlantilla({ editingId, onBack }) {
         </div>
         <div className="flex items-center gap-3">
           {/* Ticket toggle */}
-          <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
-            <input type="checkbox" checked={ticketsOn} onChange={e => { setTicketsOn(e.target.checked); if (e.target.checked && !ticketBlocks.length) setTicketBlocks([createBlock('text_field'), createBlock('currency_field')]); }}
-              className="rounded text-violet-600" />
-            <span className="font-medium">Tickets</span>
-          </label>
+          <button onClick={() => { const next = !ticketsOn; setTicketsOn(next); if (next && !ticketBlocks.length) setTicketBlocks([createBlock('text_field'), createBlock('currency_field')]); }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all border ${ticketsOn ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-200' : 'bg-white text-slate-500 border-slate-200 hover:border-violet-300 hover:text-violet-600'}`}>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{ticketsOn ? 'check_circle' : 'add_circle'}</span>
+            Tickets
+          </button>
           <button onClick={guardar} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm">
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>save</span> {editingId ? 'Actualizar' : 'Guardar'}
           </button>
