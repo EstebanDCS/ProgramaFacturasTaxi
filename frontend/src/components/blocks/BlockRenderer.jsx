@@ -1,4 +1,5 @@
 import { BLOCK_TYPES } from '../../utils/blockTypes';
+import FormulaInput from '../FormulaInput';
 
 const Inp = ({ label, value, onChange, className = '', ...props }) => (
   <div className={`flex flex-col gap-1 ${className}`}>
@@ -8,7 +9,7 @@ const Inp = ({ label, value, onChange, className = '', ...props }) => (
   </div>
 );
 
-export default function BlockRenderer({ block, onChange }) {
+export default function BlockRenderer({ block, onChange, formulaVariables }) {
   const { type, config } = block;
   const update = (key, val) => onChange({ ...config, [key]: val });
 
@@ -26,15 +27,15 @@ export default function BlockRenderer({ block, onChange }) {
       return (
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={config.mostrar !== false} onChange={e => update('mostrar', e.target.checked)} className="rounded text-primary" />
-          Mostrar sección de cliente en la factura
+          Mostrar sección de cliente
         </label>
       );
 
     case 'items_table':
-      return <ColumnsEditor columnas={config.columnas || []} onChange={cols => update('columnas', cols)} />;
+      return <ColumnsEditor columnas={config.columnas || []} onChange={cols => update('columnas', cols)} variables={formulaVariables} />;
 
     case 'totals':
-      return <TotalsEditor config={config} update={update} />;
+      return <TotalsEditor config={config} update={update} variables={formulaVariables} />;
 
     case 'notes':
       return <Inp label="Placeholder" value={config.placeholder} onChange={v => update('placeholder', v)} />;
@@ -45,7 +46,7 @@ export default function BlockRenderer({ block, onChange }) {
           <Inp label="Texto del pie" value={config.texto} onChange={v => update('texto', v)} />
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={!!config.mostrar_datos_pago} onChange={e => update('mostrar_datos_pago', e.target.checked)} className="rounded text-primary" />
-            Mostrar datos de pago
+            Datos de pago
           </label>
           {config.mostrar_datos_pago && <Inp label="Datos de pago" value={config.datos_pago} onChange={v => update('datos_pago', v)} />}
         </div>
@@ -53,9 +54,22 @@ export default function BlockRenderer({ block, onChange }) {
 
     case 'text_field': case 'number_field': case 'currency_field': case 'date_field':
       return (
-        <div className="grid grid-cols-2 gap-3">
-          <Inp label="Etiqueta" value={config.label} onChange={v => update('label', v)} />
-          <Inp label="ID campo" value={config.campo} onChange={v => update('campo', v)} placeholder="campo_id" />
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Inp label="Etiqueta" value={config.label} onChange={v => update('label', v)} />
+            <Inp label="ID campo" value={config.campo} onChange={v => update('campo', v)} placeholder="campo_id" />
+          </div>
+          {/* Auto-fill formula for dates/numbers */}
+          {(formulaVariables || []).length > 0 && (
+            <div>
+              <label className="text-[10px] text-violet-500 flex items-center gap-1 mb-1">
+                <span className="material-symbols-outlined" style={{ fontSize: 11 }}>functions</span>
+                Auto-rellenar (opcional)
+              </label>
+              <FormulaInput value={config.autoFill || ''} onChange={v => update('autoFill', v)}
+                variables={formulaVariables} placeholder="Ej: =tickets_max_fecha" />
+            </div>
+          )}
         </div>
       );
 
@@ -97,8 +111,7 @@ export default function BlockRenderer({ block, onChange }) {
 }
 
 
-// ── Totals editor: multiple taxes, formula support ──
-function TotalsEditor({ config, update }) {
+function TotalsEditor({ config, update, variables }) {
   const impuestos = config.impuestos || [{ nombre: 'IVA', porcentaje: 21, formula: '' }];
   const updateImp = (i, field, val) => { const n = [...impuestos]; n[i] = { ...n[i], [field]: val }; update('impuestos', n); };
   const addImp = () => update('impuestos', [...impuestos, { nombre: '', porcentaje: 0, formula: '' }]);
@@ -113,7 +126,7 @@ function TotalsEditor({ config, update }) {
 
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={config.mostrar_desglose !== false} onChange={e => update('mostrar_desglose', e.target.checked)} className="rounded text-primary" />
-        Mostrar desglose (subtotal + impuestos)
+        Mostrar desglose
       </label>
 
       <div>
@@ -124,17 +137,16 @@ function TotalsEditor({ config, update }) {
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
             </button>
             <div className="grid grid-cols-[1fr_80px] gap-2 mb-2">
-              <Inp label="Nombre" value={imp.nombre} onChange={v => updateImp(i, 'nombre', v)} placeholder="IVA, IRPF, Descuento..." />
+              <Inp label="Nombre" value={imp.nombre} onChange={v => updateImp(i, 'nombre', v)} placeholder="IVA, IRPF..." />
               <Inp label="%" type="number" value={imp.porcentaje} onChange={v => updateImp(i, 'porcentaje', parseFloat(v) || 0)} />
             </div>
             <div>
               <label className="text-[10px] text-violet-500 flex items-center gap-1 mb-1">
                 <span className="material-symbols-outlined" style={{ fontSize: 11 }}>functions</span>
-                Fórmula (opcional, sobreescribe %)
+                Fórmula (sobreescribe %)
               </label>
-              <input value={imp.formula || ''} onChange={e => updateImp(i, 'formula', e.target.value)}
-                placeholder="Ej: =subtotal*0.21, =-subtotal*0.15"
-                className="w-full rounded-md border-violet-200 bg-violet-50 px-2 py-1.5 text-xs font-mono text-violet-700" />
+              <FormulaInput value={imp.formula || ''} onChange={v => updateImp(i, 'formula', v)}
+                variables={variables} placeholder="=subtotal*0.21" />
             </div>
           </div>
         ))}
@@ -142,22 +154,12 @@ function TotalsEditor({ config, update }) {
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span> Añadir impuesto / recargo
         </button>
       </div>
-
-      <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-[10px] text-amber-700 leading-relaxed">
-        <b>Variables disponibles en fórmulas:</b><br/>
-        <code className="bg-amber-100 px-1 rounded">subtotal</code> = suma de líneas<br/>
-        <code className="bg-amber-100 px-1 rounded">tickets_count</code> = nº de tickets<br/>
-        <code className="bg-amber-100 px-1 rounded">tickets_sum_<i>campo</i></code> = suma del campo en todos los tickets<br/>
-        <code className="bg-amber-100 px-1 rounded">tickets_avg_<i>campo</i></code> / <code className="bg-amber-100 px-1 rounded">tickets_min_<i>campo</i></code> / <code className="bg-amber-100 px-1 rounded">tickets_max_<i>campo</i></code><br/>
-        Ej: <code className="bg-amber-100 px-1 rounded">=subtotal+tickets_sum_importe</code> para sumar líneas + tickets
-      </div>
     </div>
   );
 }
 
 
-// ── Columns editor (card layout) ──
-function ColumnsEditor({ columnas, onChange }) {
+function ColumnsEditor({ columnas, onChange, variables }) {
   const addCol = () => onChange([...columnas, { nombre: '', campo: '', alineacion: 'left', tipo: 'texto', formula: '' }]);
   const removeCol = (i) => onChange(columnas.filter((_, idx) => idx !== i));
   const updateCol = (i, field, val) => { const n = [...columnas]; n[i] = { ...n[i], [field]: val }; onChange(n); };
@@ -226,8 +228,7 @@ function ColumnsEditor({ columnas, onChange }) {
             {c.tipo === 'formula' && (
               <div className="flex flex-col gap-0.5 flex-1">
                 <span className="text-[9px] font-bold text-violet-400 uppercase">Fórmula</span>
-                <input value={c.formula || ''} onChange={e => updateCol(i, 'formula', e.target.value)} placeholder="=cantidad*precio"
-                  className="rounded-md border-violet-200 bg-violet-50 px-2 py-1.5 text-xs font-mono text-violet-700" />
+                <FormulaInput value={c.formula || ''} onChange={v => updateCol(i, 'formula', v)} variables={variables} placeholder="=cantidad*precio" />
               </div>
             )}
           </div>

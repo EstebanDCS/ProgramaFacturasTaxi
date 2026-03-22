@@ -34,27 +34,61 @@ export function evalFormulaClient(formula, linea) {
 }
 
 /**
- * Build a context object with all available variables for formulas.
- *   subtotal            — sum of line items
- *   tickets_count       — number of tickets
- *   tickets_sum_X       — sum of field X across all tickets
- *   tickets_avg_X       — average of field X
- *   tickets_min_X / tickets_max_X
+ * Build formula context with ALL available variables from lines and tickets.
+ * Generates aggregates for every numeric/currency field AND date fields.
+ * Returns { variables, ctx } where variables is a descriptive list for the UI.
  */
-export function buildFormulaContext(subtotal, tickets, ticketCampos) {
+export function buildFormulaContext(subtotal, tickets, ticketCampos, lineas, columnas) {
   const ctx = { subtotal: subtotal || 0 };
+  const variables = [
+    { key: 'subtotal', desc: 'Suma de líneas', group: 'Factura' },
+  ];
+
+  // Line column totals
+  (columnas || []).filter(c => c.tipo === 'numero' || c.tipo === 'moneda' || c.tipo === 'formula').forEach(c => {
+    const sum = (lineas || []).reduce((s, l) => s + (parseFloat(l[c.campo]) || 0), 0);
+    ctx[`lineas_sum_${c.campo}`] = sum;
+    ctx[`lineas_count`] = (lineas || []).length;
+    variables.push({ key: `lineas_sum_${c.campo}`, desc: `Suma "${c.nombre}"`, group: 'Líneas' });
+  });
+
+  // Ticket aggregates
   const tix = tickets || [];
   ctx.tickets_count = tix.length;
-  const numCampos = (ticketCampos || []).filter(c => c.tipo === 'moneda' || c.tipo === 'numero');
-  numCampos.forEach(c => {
-    const vals = tix.map(t => parseFloat(t[c.campo]) || 0);
-    const sum = vals.reduce((s, v) => s + v, 0);
-    ctx[`tickets_sum_${c.campo}`] = sum;
-    ctx[`tickets_avg_${c.campo}`] = vals.length ? sum / vals.length : 0;
-    ctx[`tickets_min_${c.campo}`] = vals.length ? Math.min(...vals) : 0;
-    ctx[`tickets_max_${c.campo}`] = vals.length ? Math.max(...vals) : 0;
+  if (tix.length) variables.push({ key: 'tickets_count', desc: 'Nº de tickets', group: 'Tickets' });
+
+  (ticketCampos || []).forEach(c => {
+    const isNum = c.tipo === 'moneda' || c.tipo === 'numero';
+    const isDate = c.tipo === 'fecha';
+
+    if (isNum) {
+      const vals = tix.map(t => parseFloat(t[c.campo]) || 0);
+      const sum = vals.reduce((s, v) => s + v, 0);
+      ctx[`tickets_sum_${c.campo}`] = sum;
+      ctx[`tickets_avg_${c.campo}`] = vals.length ? sum / vals.length : 0;
+      ctx[`tickets_min_${c.campo}`] = vals.length ? Math.min(...vals) : 0;
+      ctx[`tickets_max_${c.campo}`] = vals.length ? Math.max(...vals) : 0;
+      variables.push(
+        { key: `tickets_sum_${c.campo}`, desc: `Suma "${c.nombre}"`, group: 'Tickets' },
+        { key: `tickets_avg_${c.campo}`, desc: `Media "${c.nombre}"`, group: 'Tickets' },
+        { key: `tickets_min_${c.campo}`, desc: `Mínimo "${c.nombre}"`, group: 'Tickets' },
+        { key: `tickets_max_${c.campo}`, desc: `Máximo "${c.nombre}"`, group: 'Tickets' },
+      );
+    }
+
+    if (isDate) {
+      const dates = tix.map(t => t[c.campo]).filter(Boolean).sort();
+      ctx[`tickets_min_${c.campo}`] = dates[0] || '';
+      ctx[`tickets_max_${c.campo}`] = dates[dates.length - 1] || '';
+      // For date: not usable in math formulas, but usable as auto-fill values
+      variables.push(
+        { key: `tickets_min_${c.campo}`, desc: `Fecha más antigua "${c.nombre}"`, group: 'Tickets (fechas)', isDate: true },
+        { key: `tickets_max_${c.campo}`, desc: `Fecha más reciente "${c.nombre}"`, group: 'Tickets (fechas)', isDate: true },
+      );
+    }
   });
-  return ctx;
+
+  return { ctx, variables };
 }
 
 /**
@@ -69,6 +103,16 @@ export function evalWithContext(formula, ctx) {
     try { return new Function(`return (${expr})`)(); } catch { return 0; }
   }
   return 0;
+}
+
+/**
+ * Resolve a variable reference (for non-math fields like dates)
+ * Usage: put =tickets_max_fecha in a date field
+ */
+export function resolveVariable(formula, ctx) {
+  if (!formula || !formula.startsWith('=')) return formula;
+  const key = formula.slice(1).trim();
+  return ctx[key] !== undefined ? ctx[key] : formula;
 }
 
 /**

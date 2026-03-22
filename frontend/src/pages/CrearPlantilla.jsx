@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { apiFetch, authHeaders } from '../utils/api';
@@ -103,6 +103,41 @@ export default function CrearPlantilla({ editingId, onBack }) {
       else toast('Error', 'error');
     } catch { toast('Error de conexión', 'error'); }
   };
+
+  // ── Compute available formula variables from template config ──
+  const formulaVariables = useMemo(() => {
+    const vars = [{ key: 'subtotal', desc: 'Suma de líneas', group: 'Factura' }];
+    // From line columns
+    const tableBlock = blocks.find(b => b.type === 'items_table');
+    const cols = tableBlock?.config?.columnas || [];
+    cols.filter(c => c.tipo === 'numero' || c.tipo === 'moneda' || c.tipo === 'formula').forEach(c => {
+      if (c.campo) vars.push({ key: `lineas_sum_${c.campo}`, desc: `Suma "${c.nombre || c.campo}"`, group: 'Líneas' });
+    });
+    // From ticket fields
+    if (ticketsOn && ticketBlocks.length) {
+      vars.push({ key: 'tickets_count', desc: 'Nº de tickets', group: 'Tickets' });
+      ticketBlocks.forEach(b => {
+        const campo = b.config?.campo;
+        const label = b.config?.label || campo;
+        if (!campo) return;
+        if (['number_field', 'currency_field'].includes(b.type)) {
+          vars.push(
+            { key: `tickets_sum_${campo}`, desc: `Suma "${label}"`, group: 'Tickets' },
+            { key: `tickets_avg_${campo}`, desc: `Media "${label}"`, group: 'Tickets' },
+            { key: `tickets_min_${campo}`, desc: `Mínimo "${label}"`, group: 'Tickets' },
+            { key: `tickets_max_${campo}`, desc: `Máximo "${label}"`, group: 'Tickets' },
+          );
+        }
+        if (b.type === 'date_field') {
+          vars.push(
+            { key: `tickets_min_${campo}`, desc: `Fecha más antigua "${label}"`, group: 'Tickets (fechas)', isDate: true },
+            { key: `tickets_max_${campo}`, desc: `Fecha más reciente "${label}"`, group: 'Tickets (fechas)', isDate: true },
+          );
+        }
+      });
+    }
+    return vars;
+  }, [blocks, ticketBlocks, ticketsOn]);
 
   const addBlock = (typeKey) => {
     const b = createBlock(typeKey);
@@ -251,7 +286,7 @@ export default function CrearPlantilla({ editingId, onBack }) {
                 <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>description</span>
                 <span className="text-sm font-bold text-slate-700">Hoja de factura</span>
               </div>
-              <DropCanvas canvasId="main" blocks={blocks} onChange={setBlocks} estilo={estilo} isDraggingFromPalette={!!draggingType} />
+              <DropCanvas canvasId="main" blocks={blocks} onChange={setBlocks} estilo={estilo} isDraggingFromPalette={!!draggingType} formulaVariables={formulaVariables} />
             </div>
 
             {/* Ticket canvas */}
@@ -267,7 +302,7 @@ export default function CrearPlantilla({ editingId, onBack }) {
                       className="rounded-lg border-violet-200 bg-violet-50 px-2 py-1 text-sm text-violet-700 w-32" />
                   </div>
                 </div>
-                <DropCanvas canvasId="ticket" blocks={ticketBlocks} onChange={setTicketBlocks} estilo={estilo} isTicket isDraggingFromPalette={!!draggingType} />
+                <DropCanvas canvasId="ticket" blocks={ticketBlocks} onChange={setTicketBlocks} estilo={estilo} isTicket isDraggingFromPalette={!!draggingType} formulaVariables={formulaVariables} />
               </div>
             )}
           </div>

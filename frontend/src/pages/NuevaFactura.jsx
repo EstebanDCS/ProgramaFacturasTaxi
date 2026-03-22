@@ -68,7 +68,10 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
   // ── Auto-calculate ──
   const computedLineas = useMemo(() => computeLineas(lineas, cols), [lineas, cols]);
   const subtotalLineas = useMemo(() => calcSubtotal(computedLineas, cols), [computedLineas, cols]);
-  const formulaCtx = useMemo(() => buildFormulaContext(subtotalLineas, tickets, ticketCfg?.campos), [subtotalLineas, tickets, ticketCfg?.campos]);
+  const { ctx: formulaCtx, variables: formulaVars } = useMemo(
+    () => buildFormulaContext(subtotalLineas, tickets, ticketCfg?.campos, computedLineas, cols),
+    [subtotalLineas, tickets, ticketCfg?.campos, computedLineas, cols]
+  );
   const totalesLineas = useMemo(() => calcTotales(subtotalLineas, impuestos, formulaCtx), [subtotalLineas, impuestos, formulaCtx]);
   const ticketSummary = useMemo(() => calcTicketsSummary(tickets, ticketCfg?.campos), [tickets, ticketCfg?.campos]);
   const ticketTotal = useMemo(() => Object.values(ticketSummary.sumas).reduce((s, v) => s + v.total, 0), [ticketSummary]);
