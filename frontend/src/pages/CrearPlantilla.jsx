@@ -104,37 +104,44 @@ export default function CrearPlantilla({ editingId, onBack }) {
     } catch { toast('Error de conexión', 'error'); }
   };
 
-  // ── Compute available formula helpers from template config ──
+  // ── Compute available formula variables from template config ──
   const formulaVariables = useMemo(() => {
     const vars = [];
 
-    // Global variables
+    // Globals
     vars.push({ key: 'subtotal', desc: 'Suma total de líneas', type: 'global' });
     if (ticketsOn) vars.push({ key: 'tickets_count', desc: 'Nº de tickets', type: 'global' });
 
-    // Functions (user appends field ID)
-    if (ticketsOn && ticketBlocks.some(b => b.config?.campo)) {
-      vars.push(
-        { key: 'tickets_sum_', desc: 'Suma del campo en todos los tickets', type: 'function' },
-        { key: 'tickets_avg_', desc: 'Media del campo', type: 'function' },
-        { key: 'tickets_min_', desc: 'Mínimo (nº o fecha más antigua)', type: 'function' },
-        { key: 'tickets_max_', desc: 'Máximo (nº o fecha más reciente)', type: 'function' },
-      );
-    }
-
-    // Field IDs from line columns
+    // Line column aggregates (only numeric types)
     const tableBlock = blocks.find(b => b.type === 'items_table');
     (tableBlock?.config?.columnas || []).forEach(c => {
-      if (c.campo) vars.push({ key: c.campo, desc: `Columna: ${c.nombre || c.campo}`, type: 'field' });
+      if (!c.campo) return;
+      if (c.tipo === 'numero' || c.tipo === 'moneda' || c.tipo === 'formula') {
+        vars.push({ key: `lineas_sum_${c.campo}`, desc: `Suma columna "${c.nombre}"`, type: 'ready' });
+      }
     });
 
-    // Field IDs from ticket blocks
+    // Ticket field aggregates (composed, ready to use)
     if (ticketsOn) {
       ticketBlocks.forEach(b => {
         const campo = b.config?.campo;
+        const label = b.config?.label || campo;
         if (!campo) return;
-        const isDate = b.type === 'date_field';
-        vars.push({ key: campo, desc: `Ticket: ${b.config?.label || campo}`, type: 'field', isDate });
+
+        if (['number_field', 'currency_field'].includes(b.type)) {
+          vars.push(
+            { key: `tickets_sum_${campo}`, desc: `Suma "${label}" de tickets`, type: 'ready' },
+            { key: `tickets_avg_${campo}`, desc: `Media "${label}" de tickets`, type: 'ready' },
+            { key: `tickets_min_${campo}`, desc: `Mínimo "${label}" de tickets`, type: 'ready' },
+            { key: `tickets_max_${campo}`, desc: `Máximo "${label}" de tickets`, type: 'ready' },
+          );
+        }
+        if (b.type === 'date_field') {
+          vars.push(
+            { key: `tickets_min_${campo}`, desc: `Fecha más antigua "${label}"`, type: 'ready', isDate: true },
+            { key: `tickets_max_${campo}`, desc: `Fecha más reciente "${label}"`, type: 'ready', isDate: true },
+          );
+        }
       });
     }
 
