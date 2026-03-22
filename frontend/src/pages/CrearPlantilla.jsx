@@ -88,6 +88,13 @@ export default function CrearPlantilla({ editingId, onBack }) {
         })),
       };
     }
+    // Tag mapping for Excel (campo → {{campo}})
+    const allBlocks = [...blocks, ...ticketBlocks];
+    const tagMapping = allBlocks
+      .filter(b => b.config?.campo)
+      .map(b => ({ campo: b.config.campo, label: b.config.label || b.config.campo, tipo: b.type }));
+    if (tagMapping.length) cfg.tag_mapping = tagMapping;
+
     return cfg;
   };
 
@@ -211,7 +218,11 @@ export default function CrearPlantilla({ editingId, onBack }) {
         <h2 className="text-xl font-bold">Subir Excel</h2>
         <button onClick={() => setTab('visual')} className="ml-auto text-sm text-primary font-bold hover:underline">Visual</button>
       </header>
-      <ExcelUpload token={token} toast={toast} onBack={onBack} />
+      <ExcelUpload token={token} toast={toast} onBack={onBack} onImportBlocks={(newBlocks, excelNombre) => {
+        setBlocks(prev => [...prev, ...newBlocks]);
+        if (excelNombre && !nombre) setNombre(excelNombre);
+        setTab('visual');
+      }} />
     </div>
   );
 
@@ -329,9 +340,66 @@ export default function CrearPlantilla({ editingId, onBack }) {
   );
 }
 
-function ExcelUpload({ token, toast, onBack }) {
+function ExcelUpload({ token, toast, onBack, onImportBlocks }) {
   const [nombre, setNombre] = useState('');
   const [file, setFile] = useState(null);
+  const [tagResult, setTagResult] = useState(null);
+  const [scanning, setScanning] = useState(false);
+
+  // Auto-scan when file selected
+  const handleFile = async (f) => {
+    setFile(f);
+    if (!f) { setTagResult(null); return; }
+    setScanning(true);
+    try {
+      const XLSX = await import('xlsx');
+      const data = await f.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array' });
+      const tagPattern = /\{\{([^}]+)\}\}/g;
+      const tagMap = {};
+      wb.SheetNames.forEach(name => {
+        const ws = wb.Sheets[name];
+        const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+        for (let r = range.s.r; r <= range.e.r; r++) {
+          for (let c = range.s.c; c <= range.e.c; c++) {
+            const cell = ws[XLSX.utils.encode_cell({ r, c })];
+            if (!cell?.v) continue;
+            let m; tagPattern.lastIndex = 0;
+            while ((m = tagPattern.exec(String(cell.v))) !== null) {
+              const tag = m[1].trim();
+              if (!tagMap[tag]) tagMap[tag] = { tag, sheets: new Set(), count: 0 };
+              tagMap[tag].sheets.add(name);
+              tagMap[tag].count++;
+            }
+          }
+        }
+      });
+      const tags = Object.values(tagMap).map(t => ({ ...t, sheets: [...t.sheets] }));
+      setTagResult({ tags, sheetCount: wb.SheetNames.length });
+    } catch { setTagResult({ tags: [], error: true }); }
+    setScanning(false);
+  };
+
+  const guessType = (tag) => {
+    const t = tag.toLowerCase();
+    if (t.includes('fecha') || t.includes('date')) return 'date_field';
+    if (t.includes('importe') || t.includes('total') || t.includes('precio') || t.includes('amount') || t.includes('eur') || t.includes('coste')) return 'currency_field';
+    if (t.includes('cantidad') || t.includes('numero') || t.includes('horas') || t.includes('km') || t.includes('num')) return 'number_field';
+    return 'text_field';
+  };
+
+  const importAsBlocks = () => {
+    if (!tagResult?.tags?.length || !onImportBlocks) return;
+    const newBlocks = tagResult.tags.map(t => {
+      const type = guessType(t.tag);
+      const b = createBlock(type);
+      if (b) { b.config.label = t.tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; }
+      return b;
+    }).filter(Boolean);
+    onImportBlocks(newBlocks, nombre);
+    toast(`${newBlocks.length} bloques creados desde Excel`, 'success');
+  };
+
   const subir = async () => {
     if (!nombre.trim()) { toast('Indica nombre', 'warn'); return; }
     if (!file) { toast('Selecciona archivo', 'warn'); return; }
@@ -343,13 +411,61 @@ function ExcelUpload({ token, toast, onBack }) {
       else { const err = await r.json().catch(() => ({})); toast(err.detail || 'Error', 'error'); }
     } catch { toast('Error', 'error'); }
   };
+
+  const BTYPES = { text_field: 'Texto', number_field: 'Número', currency_field: 'Moneda', date_field: 'Fecha', checkbox: 'Check' };
+
   return (
-    <div className="max-w-lg space-y-4">
-      <div className="flex flex-col gap-1"><label className="text-xs font-semibold text-slate-500">Nombre</label>
-        <input value={nombre} onChange={e => setNombre(e.target.value)} className="rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" /></div>
-      <div className="flex flex-col gap-1"><label className="text-xs font-semibold text-slate-500">Archivo Excel</label>
-        <input type="file" accept=".xlsx,.xlsm" onChange={e => setFile(e.target.files[0])} className="text-sm" /></div>
-      <button onClick={subir} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg">Subir</button>
+    <div className="max-w-2xl space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1"><label className="text-xs font-semibold text-slate-500">Nombre</label>
+          <input value={nombre} onChange={e => setNombre(e.target.value)} className="rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Mi plantilla Excel" /></div>
+        <div className="flex flex-col gap-1"><label className="text-xs font-semibold text-slate-500">Archivo Excel</label>
+          <input type="file" accept=".xlsx,.xlsm" onChange={e => handleFile(e.target.files[0])} className="text-sm" /></div>
+      </div>
+
+      {scanning && <div className="flex items-center gap-2 text-sm text-slate-400"><span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>refresh</span> Escaneando tags...</div>}
+
+      {/* Tags found */}
+      {tagResult && !tagResult.error && (
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-emerald-600" style={{ fontSize: 18 }}>{tagResult.tags.length ? 'check_circle' : 'info'}</span>
+              <span className="text-sm font-bold text-slate-700">
+                {tagResult.tags.length ? `${tagResult.tags.length} tags encontrados` : 'No se encontraron tags {{...}}'}
+              </span>
+            </div>
+            {tagResult.tags.length > 0 && onImportBlocks && (
+              <button onClick={importAsBlocks}
+                className="flex items-center gap-1 bg-violet-600 hover:bg-violet-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>auto_fix_high</span>
+                Importar como bloques
+              </button>
+            )}
+          </div>
+          {tagResult.tags.length > 0 && (
+            <div className="p-3 space-y-1">
+              {tagResult.tags.map(t => (
+                <div key={t.tag} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50">
+                  <code className="text-xs font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded">{`{{${t.tag}}}`}</code>
+                  <span className="text-[10px] text-slate-400 flex-1">{t.sheets.join(', ')} · {t.count}×</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold">{BTYPES[guessType(t.tag)] || 'Texto'}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex gap-3">
+        <button onClick={subir} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-lg text-sm flex items-center gap-2">
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>cloud_upload</span> Subir como plantilla Excel
+        </button>
+        {tagResult?.tags?.length > 0 && (
+          <p className="text-xs text-slate-400 flex items-center">ó usa "Importar como bloques" para editar visualmente</p>
+        )}
+      </div>
     </div>
   );
 }
