@@ -104,38 +104,40 @@ export default function CrearPlantilla({ editingId, onBack }) {
     } catch { toast('Error de conexión', 'error'); }
   };
 
-  // ── Compute available formula variables from template config ──
+  // ── Compute available formula helpers from template config ──
   const formulaVariables = useMemo(() => {
-    const vars = [{ key: 'subtotal', desc: 'Suma de líneas', group: 'Factura' }];
-    // From line columns
+    const vars = [];
+
+    // Global variables
+    vars.push({ key: 'subtotal', desc: 'Suma total de líneas', type: 'global' });
+    if (ticketsOn) vars.push({ key: 'tickets_count', desc: 'Nº de tickets', type: 'global' });
+
+    // Functions (user appends field ID)
+    if (ticketsOn && ticketBlocks.some(b => b.config?.campo)) {
+      vars.push(
+        { key: 'tickets_sum_', desc: 'Suma del campo en todos los tickets', type: 'function' },
+        { key: 'tickets_avg_', desc: 'Media del campo', type: 'function' },
+        { key: 'tickets_min_', desc: 'Mínimo (nº o fecha más antigua)', type: 'function' },
+        { key: 'tickets_max_', desc: 'Máximo (nº o fecha más reciente)', type: 'function' },
+      );
+    }
+
+    // Field IDs from line columns
     const tableBlock = blocks.find(b => b.type === 'items_table');
-    const cols = tableBlock?.config?.columnas || [];
-    cols.filter(c => c.tipo === 'numero' || c.tipo === 'moneda' || c.tipo === 'formula').forEach(c => {
-      if (c.campo) vars.push({ key: `lineas_sum_${c.campo}`, desc: `Suma "${c.nombre || c.campo}"`, group: 'Líneas' });
+    (tableBlock?.config?.columnas || []).forEach(c => {
+      if (c.campo) vars.push({ key: c.campo, desc: `Columna: ${c.nombre || c.campo}`, type: 'field' });
     });
-    // From ticket fields
-    if (ticketsOn && ticketBlocks.length) {
-      vars.push({ key: 'tickets_count', desc: 'Nº de tickets', group: 'Tickets' });
+
+    // Field IDs from ticket blocks
+    if (ticketsOn) {
       ticketBlocks.forEach(b => {
         const campo = b.config?.campo;
-        const label = b.config?.label || campo;
         if (!campo) return;
-        if (['number_field', 'currency_field'].includes(b.type)) {
-          vars.push(
-            { key: `tickets_sum_${campo}`, desc: `Suma "${label}"`, group: 'Tickets' },
-            { key: `tickets_avg_${campo}`, desc: `Media "${label}"`, group: 'Tickets' },
-            { key: `tickets_min_${campo}`, desc: `Mínimo "${label}"`, group: 'Tickets' },
-            { key: `tickets_max_${campo}`, desc: `Máximo "${label}"`, group: 'Tickets' },
-          );
-        }
-        if (b.type === 'date_field') {
-          vars.push(
-            { key: `tickets_min_${campo}`, desc: `Fecha más antigua "${label}"`, group: 'Tickets (fechas)', isDate: true },
-            { key: `tickets_max_${campo}`, desc: `Fecha más reciente "${label}"`, group: 'Tickets (fechas)', isDate: true },
-          );
-        }
+        const isDate = b.type === 'date_field';
+        vars.push({ key: campo, desc: `Ticket: ${b.config?.label || campo}`, type: 'field', isDate });
       });
     }
+
     return vars;
   }, [blocks, ticketBlocks, ticketsOn]);
 
