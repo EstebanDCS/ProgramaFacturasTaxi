@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { apiFetch, authHeaders } from '../utils/api';
@@ -20,6 +20,7 @@ export default function CrearPlantilla({ editingId, onBack }) {
   const [ticketNombre, setTicketNombre] = useState('Ticket');
   const [activeCanvas, setActiveCanvas] = useState('main');
   const [draggingType, setDraggingType] = useState(null);
+  const excelFileRef = useRef(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -111,6 +112,8 @@ export default function CrearPlantilla({ editingId, onBack }) {
     const fd = new FormData();
     fd.append('nombre', nombre);
     fd.append('config_json', JSON.stringify(buildConfig()));
+    // If we have an Excel file from import, attach it for generation
+    if (excelFileRef.current) fd.append('file', excelFileRef.current);
     try {
       const url = editingId ? `${API_URL}/plantillas/${editingId}` : `${API_URL}/plantillas/crear-visual`;
       const r = await apiFetch(url, { method: editingId ? 'PUT' : 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
@@ -226,11 +229,20 @@ export default function CrearPlantilla({ editingId, onBack }) {
         <h2 className="text-xl font-bold">Subir Excel</h2>
         <button onClick={() => setTab('visual')} className="ml-auto text-sm text-primary font-bold hover:underline">Visual</button>
       </header>
-      <ExcelUpload token={token} toast={toast} onBack={onBack} onImportBlocks={(newBlocks, excelNombre) => {
-        setBlocks(prev => [...prev, ...newBlocks]);
-        if (excelNombre && !nombre) setNombre(excelNombre);
-        setTab('visual');
-      }} />
+      <ExcelUpload token={token} toast={toast} onBack={onBack}
+        onImportBlocks={({ mainBlocks, ticketBlocks: tBlocks, excelNombre, excelFile }) => {
+          // Replace canvas with imported blocks (don't append to defaults)
+          setBlocks(mainBlocks);
+          if (tBlocks.length) {
+            setTicketBlocks(tBlocks);
+            setTicketsOn(true);
+            setTicketNombre(excelNombre ? `Ticket ${excelNombre}` : 'Ticket');
+          }
+          if (excelNombre && !nombre) setNombre(excelNombre);
+          // Store Excel file for later upload alongside config
+          if (excelFile) excelFileRef.current = excelFile;
+          setTab('visual');
+        }} />
     </div>
   );
 
@@ -354,7 +366,6 @@ function ExcelUpload({ token, toast, onBack, onImportBlocks }) {
   const [tagResult, setTagResult] = useState(null);
   const [scanning, setScanning] = useState(false);
 
-  // Auto-scan when file selected
   const handleFile = async (f) => {
     setFile(f);
     if (!f) { setTagResult(null); return; }
@@ -364,10 +375,12 @@ function ExcelUpload({ token, toast, onBack, onImportBlocks }) {
       const data = await f.arrayBuffer();
       const wb = XLSX.read(data, { type: 'array' });
       const tagPattern = /\{\{([^}]+)\}\}/g;
-      const tagMap = {};
-      wb.SheetNames.forEach(name => {
+      const sheets = [];
+
+      wb.SheetNames.forEach((name, si) => {
         const ws = wb.Sheets[name];
         const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+        const sheetTags = [];
         for (let r = range.s.r; r <= range.e.r; r++) {
           for (let c = range.s.c; c <= range.e.c; c++) {
             const cell = ws[XLSX.utils.encode_cell({ r, c })];
@@ -375,40 +388,45 @@ function ExcelUpload({ token, toast, onBack, onImportBlocks }) {
             let m; tagPattern.lastIndex = 0;
             while ((m = tagPattern.exec(String(cell.v))) !== null) {
               const tag = m[1].trim();
-              if (!tagMap[tag]) tagMap[tag] = { tag, sheets: new Set(), count: 0 };
-              tagMap[tag].sheets.add(name);
-              tagMap[tag].count++;
+              if (!sheetTags.find(t => t.tag === tag)) sheetTags.push({ tag, count: 1 });
+              else sheetTags.find(t => t.tag === tag).count++;
             }
           }
         }
+        sheets.push({ name, index: si, tags: sheetTags, isTicket: si > 0 });
       });
-      const tags = Object.values(tagMap).map(t => ({ ...t, sheets: [...t.sheets] }));
-      setTagResult({ tags, sheetCount: wb.SheetNames.length });
-    } catch { setTagResult({ tags: [], error: true }); }
+
+      setTagResult({ sheets });
+      if (!nombre) setNombre(f.name.replace(/\.(xlsx|xlsm)$/i, ''));
+    } catch { setTagResult({ sheets: [], error: true }); }
     setScanning(false);
   };
 
+  // ── Prefix convention ──
   const guessType = (tag) => {
     const t = tag.toLowerCase();
     if (t.startsWith('ch_')) return 'checkbox';
+    if (t.startsWith('fecha_') || t.startsWith('date_')) return 'date_field';
+    if (t.startsWith('num_')) return 'number_field';
+    if (t.startsWith('eur_') || t.startsWith('mon_')) return 'currency_field';
+    if (t.startsWith('dd_')) return 'dropdown';
+    // Fallback: guess from name
     if (t.includes('fecha') || t.includes('date')) return 'date_field';
-    if (t.includes('importe') || t.includes('total') || t.includes('precio') || t.includes('amount') || t.includes('eur') || t.includes('coste') || t.includes('base_imponible') || t.includes('iva')) return 'currency_field';
+    if (t.includes('importe') || t.includes('total') || t.includes('precio') || t.includes('base_imponible') || t.includes('iva')) return 'currency_field';
     if (t.includes('cantidad') || t.includes('horas') || t.includes('km')) return 'number_field';
     return 'text_field';
   };
 
-  const importAsBlocks = () => {
-    if (!tagResult?.tags?.length || !onImportBlocks) return;
-    const tags = tagResult.tags;
-    const newBlocks = [];
+  const BTYPES = { text_field: 'Texto', number_field: 'Nº', currency_field: '€', date_field: 'Fecha', checkbox: 'Check', dropdown: 'Lista' };
 
-    // Group ch_GROUP_OPTION tags into checkbox_group blocks
+  const tagsToBlocks = (tags) => {
+    const blocks = [];
     const chTags = tags.filter(t => t.tag.startsWith('ch_'));
     const otherTags = tags.filter(t => !t.tag.startsWith('ch_'));
     const textoTags = otherTags.filter(t => t.tag.endsWith('_texto'));
     const dataTags = otherTags.filter(t => !t.tag.endsWith('_texto'));
 
-    // Detect groups: ch_GROUP_OPTION → group by GROUP
+    // Group ch_GROUP_OPTION
     const groups = {};
     const standalone = [];
     chTags.forEach(t => {
@@ -418,7 +436,6 @@ function ExcelUpload({ token, toast, onBack, onImportBlocks }) {
         const group = parts[0];
         const option = parts.slice(1).join('_');
         if (!groups[group]) groups[group] = [];
-        // Find associated _texto tag
         const textoTag = textoTags.find(tx => tx.tag === `${group}_${option}_texto`);
         groups[group].push({ id: t.tag, nombre: option.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), texto_campo: textoTag ? textoTag.tag : '' });
       } else {
@@ -426,47 +443,55 @@ function ExcelUpload({ token, toast, onBack, onImportBlocks }) {
       }
     });
 
-    // Create checkbox_group blocks
     Object.entries(groups).forEach(([group, opciones]) => {
       if (opciones.length > 1) {
         const b = createBlock('checkbox_group');
-        if (b) {
-          b.config.label = group.replace(/\b\w/g, c => c.toUpperCase());
-          b.config.campo = group;
-          b.config.opciones = opciones;
-          newBlocks.push(b);
-        }
+        if (b) { b.config.label = group.replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = group; b.config.opciones = opciones; blocks.push(b); }
       } else {
-        // Single option in group → standalone checkbox
         const b = createBlock('checkbox');
-        if (b) { b.config.label = opciones[0].nombre; b.config.campo = opciones[0].id; newBlocks.push(b); }
+        if (b) { b.config.label = opciones[0].nombre; b.config.campo = opciones[0].id; blocks.push(b); }
       }
     });
 
-    // Standalone ch_ checkboxes
     standalone.forEach(t => {
       const b = createBlock('checkbox');
-      if (b) { b.config.label = t.tag.replace('ch_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; newBlocks.push(b); }
+      if (b) { b.config.label = t.tag.replace('ch_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; blocks.push(b); }
     });
 
-    // Regular data tags (skip _texto tags that are associated with checkbox groups)
     const usedTextos = new Set();
     Object.values(groups).flat().forEach(o => { if (o.texto_campo) usedTextos.add(o.texto_campo); });
 
     dataTags.forEach(t => {
       const type = guessType(t.tag);
       const b = createBlock(type);
-      if (b) { b.config.label = t.tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; newBlocks.push(b); }
+      if (b) { b.config.label = t.tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; blocks.push(b); }
     });
 
-    // Remaining _texto tags not consumed by groups
     textoTags.filter(t => !usedTextos.has(t.tag)).forEach(t => {
       const b = createBlock('text_field');
-      if (b) { b.config.label = t.tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; newBlocks.push(b); }
+      if (b) { b.config.label = t.tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; blocks.push(b); }
     });
 
-    onImportBlocks(newBlocks, nombre);
-    toast(`${newBlocks.length} bloques creados (${Object.keys(groups).length} grupos)`, 'success');
+    return blocks;
+  };
+
+  const importAsBlocks = () => {
+    if (!tagResult?.sheets?.length || !onImportBlocks) return;
+    const mainSheet = tagResult.sheets[0];
+    const ticketSheets = tagResult.sheets.slice(1);
+
+    const mainBlocks = tagsToBlocks(mainSheet?.tags || []);
+    const allTicketTags = ticketSheets.flatMap(s => s.tags);
+    const ticketBlocks = tagsToBlocks(allTicketTags);
+
+    const nGroups = Object.keys(
+      allTicketTags.filter(t => t.tag.startsWith('ch_')).reduce((g, t) => {
+        const p = t.tag.replace('ch_', '').split('_')[0]; g[p] = 1; return g;
+      }, {})
+    ).length;
+
+    onImportBlocks({ mainBlocks, ticketBlocks, excelNombre: nombre, excelFile: file });
+    toast(`${mainBlocks.length} bloques factura + ${ticketBlocks.length} bloques ticket${nGroups ? ` (${nGroups} grupos)` : ''}`, 'success');
   };
 
   const subir = async () => {
@@ -481,30 +506,41 @@ function ExcelUpload({ token, toast, onBack, onImportBlocks }) {
     } catch { toast('Error', 'error'); }
   };
 
-  const BTYPES = { text_field: 'Texto', number_field: 'Número', currency_field: 'Moneda', date_field: 'Fecha', checkbox: 'Check ✓' };
+  const totalTags = (tagResult?.sheets || []).reduce((s, sh) => s + sh.tags.length, 0);
 
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="max-w-3xl space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1"><label className="text-xs font-semibold text-slate-500">Nombre</label>
-          <input value={nombre} onChange={e => setNombre(e.target.value)} className="rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Mi plantilla Excel" /></div>
-        <div className="flex flex-col gap-1"><label className="text-xs font-semibold text-slate-500">Archivo Excel</label>
+          <input value={nombre} onChange={e => setNombre(e.target.value)} className="rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Mi plantilla" /></div>
+        <div className="flex flex-col gap-1"><label className="text-xs font-semibold text-slate-500">Archivo Excel (.xlsx / .xlsm)</label>
           <input type="file" accept=".xlsx,.xlsm" onChange={e => handleFile(e.target.files[0])} className="text-sm" /></div>
       </div>
 
+      {/* Prefix convention */}
+      <details className="text-xs">
+        <summary className="text-slate-400 cursor-pointer hover:text-slate-600 font-medium">Convención de prefijos para tags</summary>
+        <div className="mt-2 bg-slate-50 rounded-lg p-3 grid grid-cols-2 gap-x-6 gap-y-1">
+          <span><code className="bg-violet-50 text-violet-700 px-1 rounded">ch_grupo_opcion</code> Checkbox</span>
+          <span><code className="bg-emerald-50 text-emerald-700 px-1 rounded">fecha_*</code> Fecha</span>
+          <span><code className="bg-amber-50 text-amber-700 px-1 rounded">eur_*</code> / <code className="bg-amber-50 text-amber-700 px-1 rounded">mon_*</code> Moneda</span>
+          <span><code className="bg-blue-50 text-blue-700 px-1 rounded">num_*</code> Número</span>
+          <span><code className="bg-violet-50 text-violet-700 px-1 rounded">dd_*</code> Desplegable</span>
+          <span><code className="bg-slate-100 text-slate-600 px-1 rounded">sin prefijo</code> Texto</span>
+        </div>
+      </details>
+
       {scanning && <div className="flex items-center gap-2 text-sm text-slate-400"><span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>refresh</span> Escaneando tags...</div>}
 
-      {/* Tags found */}
-      {tagResult && !tagResult.error && (
+      {/* Tags by sheet */}
+      {tagResult && !tagResult.error && tagResult.sheets.length > 0 && (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
           <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-emerald-600" style={{ fontSize: 18 }}>{tagResult.tags.length ? 'check_circle' : 'info'}</span>
-              <span className="text-sm font-bold text-slate-700">
-                {tagResult.tags.length ? `${tagResult.tags.length} tags encontrados` : 'No se encontraron tags {{...}}'}
-              </span>
+              <span className="material-symbols-outlined text-emerald-600" style={{ fontSize: 18 }}>{totalTags ? 'check_circle' : 'info'}</span>
+              <span className="text-sm font-bold text-slate-700">{totalTags} tags en {tagResult.sheets.length} hoja{tagResult.sheets.length > 1 ? 's' : ''}</span>
             </div>
-            {tagResult.tags.length > 0 && onImportBlocks && (
+            {totalTags > 0 && onImportBlocks && (
               <button onClick={importAsBlocks}
                 className="flex items-center gap-1 bg-violet-600 hover:bg-violet-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>auto_fix_high</span>
@@ -512,28 +548,43 @@ function ExcelUpload({ token, toast, onBack, onImportBlocks }) {
               </button>
             )}
           </div>
-          {tagResult.tags.length > 0 && (
-            <div className="p-3 space-y-1">
-              {tagResult.tags.map(t => (
-                <div key={t.tag} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50">
-                  <code className="text-xs font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded">{`{{${t.tag}}}`}</code>
-                  <span className="text-[10px] text-slate-400 flex-1">{t.sheets.join(', ')} · {t.count}×</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold">{BTYPES[guessType(t.tag)] || 'Texto'}</span>
-                </div>
-              ))}
+
+          {tagResult.sheets.map(sheet => sheet.tags.length > 0 && (
+            <div key={sheet.name} className="border-b border-slate-100 last:border-0">
+              <div className={`px-4 py-2 flex items-center gap-2 ${sheet.isTicket ? 'bg-violet-50/50' : 'bg-blue-50/30'}`}>
+                <span className={`material-symbols-outlined ${sheet.isTicket ? 'text-violet-500' : 'text-primary'}`} style={{ fontSize: 16 }}>
+                  {sheet.isTicket ? 'auto_awesome' : 'description'}
+                </span>
+                <span className="text-xs font-bold text-slate-600">{sheet.name}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${sheet.isTicket ? 'bg-violet-100 text-violet-600' : 'bg-blue-100 text-blue-600'}`}>
+                  {sheet.isTicket ? 'Ticket' : 'Factura'} · {sheet.tags.length} tags
+                </span>
+              </div>
+              <div className="px-3 py-2 space-y-0.5">
+                {sheet.tags.map(t => (
+                  <div key={t.tag} className="flex items-center gap-3 px-2 py-1 rounded hover:bg-slate-50 text-xs">
+                    <code className="font-mono bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">{`{{${t.tag}}}`}</code>
+                    <span className="flex-1" />
+                    <span className={`px-1.5 py-0.5 rounded-full font-bold text-[10px] ${
+                      guessType(t.tag) === 'checkbox' ? 'bg-emerald-50 text-emerald-600' :
+                      guessType(t.tag) === 'date_field' ? 'bg-teal-50 text-teal-600' :
+                      guessType(t.tag) === 'currency_field' ? 'bg-amber-50 text-amber-600' :
+                      guessType(t.tag) === 'number_field' ? 'bg-blue-50 text-blue-600' :
+                      'bg-slate-100 text-slate-500'
+                    }`}>{BTYPES[guessType(t.tag)] || 'Texto'}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          )}
+          ))}
         </div>
       )}
 
       {/* Actions */}
       <div className="flex gap-3">
         <button onClick={subir} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-lg text-sm flex items-center gap-2">
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>cloud_upload</span> Subir como plantilla Excel
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>cloud_upload</span> Solo subir Excel
         </button>
-        {tagResult?.tags?.length > 0 && (
-          <p className="text-xs text-slate-400 flex items-center">ó usa "Importar como bloques" para editar visualmente</p>
-        )}
       </div>
     </div>
   );

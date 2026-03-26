@@ -40,14 +40,24 @@ async def get_plantilla(p_id: int, user=Depends(verificar_usuario)):
 
 
 @router.post("/plantillas/crear-visual")
-async def crear_plantilla_visual(nombre: str = Form(...), config_json: str = Form(...), user=Depends(verificar_usuario)):
+async def crear_plantilla_visual(nombre: str = Form(...), config_json: str = Form(...), file: Optional[UploadFile] = File(None), user=Depends(verificar_usuario)):
     try:
         json.loads(config_json)
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="JSON inválido")
-    res = supabase.table("plantillas").insert({
-        "user_id": user.id, "nombre": nombre, "tipo": "visual", "config_json": config_json,
-    }).execute()
+
+    excel_path = None
+    if file and file.filename:
+        content = await file.read()
+        storage_path = f"{user.id}/{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}"
+        supabase.storage.from_("plantillas").upload(storage_path, content, {"content-type": file.content_type or "application/octet-stream"})
+        excel_path = storage_path
+
+    data = {"user_id": user.id, "nombre": nombre, "tipo": "visual", "config_json": config_json}
+    if excel_path:
+        data["excel_path"] = excel_path
+
+    res = supabase.table("plantillas").insert(data).execute()
     log_actividad(user.id, "crear_plantilla", f"tipo=visual,nombre={nombre}")
     return {"msg": "Plantilla creada", "id": res.data[0]["id"] if res.data else None}
 
@@ -209,6 +219,31 @@ async def generar_con_plantilla(datos: DatosFacturaGenerica, formato: str = "pdf
 
     if p["tipo"] == "visual":
         config = json.loads(p["config_json"])
+
+        # If visual template has an attached Excel, use Excel flow (fill tags → PDF via LibreOffice)
+        if p.get("excel_path") and formato != "html":
+            excel_bytes = supabase.storage.from_("plantillas").download(p["excel_path"])
+            out = procesar_con_plantilla_excel(excel_bytes, datos.dict(), config)
+            xlsx_name = f"{nombre_base}.xlsx"
+            final_path = os.path.join(TEMP_DIR, xlsx_name)
+            shutil.move(out, final_path)
+            if formato == "excel":
+                return FileResponse(final_path, filename=xlsx_name,
+                                    headers={"Content-Disposition": f"attachment; filename={xlsx_name}"}, background=cleanup)
+            try:
+                lo_profile = os.path.join(TEMP_DIR, "lo_profile_vis")
+                subprocess.run(["libreoffice", f"-env:UserInstallation=file://{lo_profile}",
+                                "--headless", "--convert-to", "pdf", "--outdir", TEMP_DIR, final_path],
+                               check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+                pdf_name = f"{nombre_base}.pdf"
+                pdf_path = os.path.join(TEMP_DIR, pdf_name)
+                return FileResponse(pdf_path, filename=pdf_name,
+                                    headers={"Content-Disposition": f"attachment; filename={pdf_name}"}, background=cleanup)
+            except Exception:
+                return FileResponse(final_path, filename=xlsx_name,
+                                    headers={"Content-Disposition": f"attachment; filename={xlsx_name}"}, background=cleanup)
+
+        # Fallback: generate HTML → WeasyPrint PDF
         html = generar_html_visual(config, datos.dict())
         if formato == "html":
             return Response(content=html, media_type="text/html",
