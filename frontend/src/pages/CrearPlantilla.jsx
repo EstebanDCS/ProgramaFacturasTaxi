@@ -383,8 +383,11 @@ function ExcelUpload({ token, toast, onBack, onImportBlocks }) {
   const guessType = (tag) => {
     const t = tag.toLowerCase();
     if (t.includes('fecha') || t.includes('date')) return 'date_field';
-    if (t.includes('importe') || t.includes('total') || t.includes('precio') || t.includes('amount') || t.includes('eur') || t.includes('coste')) return 'currency_field';
-    if (t.includes('cantidad') || t.includes('numero') || t.includes('horas') || t.includes('km') || t.includes('num')) return 'number_field';
+    if (t.includes('importe') || t.includes('total') || t.includes('precio') || t.includes('amount') || t.includes('eur') || t.includes('coste') || t.includes('base_imponible') || t.includes('iva')) return 'currency_field';
+    if (t.includes('cantidad') || t.includes('horas') || t.includes('km')) return 'number_field';
+    // Checkbox: o_X / d_X (origin/destination) but NOT _texto, also ida_vuelta, si_no, activo, check
+    if (t === 'ida_vuelta' || t.includes('check') || t.includes('si_no') || t.includes('activo')) return 'checkbox';
+    if (/^[od]_/.test(t) && !t.endsWith('_texto')) return 'checkbox';
     return 'text_field';
   };
 
@@ -412,7 +415,7 @@ function ExcelUpload({ token, toast, onBack, onImportBlocks }) {
     } catch { toast('Error', 'error'); }
   };
 
-  const BTYPES = { text_field: 'Texto', number_field: 'Número', currency_field: 'Moneda', date_field: 'Fecha', checkbox: 'Check' };
+  const BTYPES = { text_field: 'Texto', number_field: 'Número', currency_field: 'Moneda', date_field: 'Fecha', checkbox: 'Check ✓' };
 
   return (
     <div className="max-w-2xl space-y-4">
