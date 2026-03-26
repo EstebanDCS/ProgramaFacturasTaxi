@@ -178,7 +178,7 @@ function BlockVisual({ block, estilo }) {
 }
 
 // ── Sortable block ──
-function SortablePageBlock({ block, estilo, isSelected, onSelect, onUpdate, onRemove, formulaVariables }) {
+function SortablePageBlock({ block, estilo, isSelected, onSelect, onUpdate, onRemove, formulaVariables, ticketFields }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   const typeDef = BLOCK_TYPES[block.type] || {};
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 };
@@ -199,7 +199,7 @@ function SortablePageBlock({ block, estilo, isSelected, onSelect, onUpdate, onRe
             <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>{typeDef.icon}</span>
             <span className="text-xs font-bold text-primary">Editar: {typeDef.label}</span>
           </div>
-          <BlockRenderer block={block} onChange={newConfig => onUpdate(newConfig)} formulaVariables={formulaVariables} />
+          <BlockRenderer block={block} onChange={newConfig => onUpdate(newConfig)} formulaVariables={formulaVariables} ticketFields={ticketFields} />
         </div>
       )}
     </div>
@@ -207,7 +207,7 @@ function SortablePageBlock({ block, estilo, isSelected, onSelect, onUpdate, onRe
 }
 
 // ── Canvas with insertion zones ──
-export function DropCanvas({ canvasId, blocks, onChange, estilo, isTicket, isDraggingFromPalette, formulaVariables }) {
+export function DropCanvas({ canvasId, blocks, onChange, estilo, isTicket, isDraggingFromPalette, formulaVariables, ticketFields }) {
   const [selectedId, setSelectedId] = useState(null);
   const { setNodeRef, isOver } = useDroppable({ id: canvasId || (isTicket ? 'ticket-canvas' : 'main-canvas') });
   const accent = isTicket ? 'border-violet-200' : 'border-slate-200';
@@ -237,7 +237,7 @@ export function DropCanvas({ canvasId, blocks, onChange, estilo, isTicket, isDra
                 onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
                 onUpdate={cfg => onChange(blocks.map(b => b.id === block.id ? { ...b, config: cfg } : b))}
                 onRemove={() => { onChange(blocks.filter(b => b.id !== block.id)); if (selectedId === block.id) setSelectedId(null); }}
-                formulaVariables={formulaVariables} />
+                formulaVariables={formulaVariables} ticketFields={ticketFields} />
 
               {/* Insertion zone after each block */}
               <InsertZone id={`${canvasId || 'main'}-insert-${idx + 1}`} active={isDraggingFromPalette} />

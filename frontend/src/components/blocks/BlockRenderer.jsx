@@ -9,7 +9,7 @@ const Inp = ({ label, value, onChange, className = '', ...props }) => (
   </div>
 );
 
-export default function BlockRenderer({ block, onChange, formulaVariables }) {
+export default function BlockRenderer({ block, onChange, formulaVariables, ticketFields }) {
   const { type, config } = block;
   const update = (key, val) => onChange({ ...config, [key]: val });
 
@@ -67,7 +67,7 @@ export default function BlockRenderer({ block, onChange, formulaVariables }) {
                 Auto-rellenar (opcional)
               </label>
               <FormulaInput value={config.autoFill || ''} onChange={v => update('autoFill', v)}
-                variables={formulaVariables} placeholder="Ej: =tickets_max_fecha" />
+                variables={formulaVariables} ticketFields={ticketFields} placeholder="Ej: =tickets_max_fecha" />
             </div>
           )}
         </div>

@@ -184,6 +184,15 @@ export default function CrearPlantilla({ editingId, onBack }) {
     return vars;
   }, [blocks, ticketBlocks, ticketsOn]);
 
+  // Ticket field list for FormulaInput visual mode
+  const ticketFieldList = useMemo(() => {
+    return ticketBlocks.filter(b => b.config?.campo).map(b => ({
+      campo: b.config.campo,
+      label: b.config.label || b.config.campo,
+      tipo: b.type,
+    }));
+  }, [ticketBlocks]);
+
   const addBlock = (typeKey) => {
     const b = createBlock(typeKey);
     if (!b) return;
@@ -344,7 +353,7 @@ export default function CrearPlantilla({ editingId, onBack }) {
                 <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>description</span>
                 <span className="text-sm font-bold text-slate-700">Hoja de factura</span>
               </div>
-              <DropCanvas canvasId="main" blocks={blocks} onChange={setBlocks} estilo={estilo} isDraggingFromPalette={!!draggingType} formulaVariables={formulaVariables} />
+              <DropCanvas canvasId="main" blocks={blocks} onChange={setBlocks} estilo={estilo} isDraggingFromPalette={!!draggingType} formulaVariables={formulaVariables} ticketFields={ticketFieldList} />
             </div>
 
             {/* Ticket canvas */}
