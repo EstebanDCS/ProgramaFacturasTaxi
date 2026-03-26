@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { apiFetch, authHeaders } from '../utils/api';
 import { API_URL, COL_PRESETS } from '../config';
-import { evalFormulaClient, computeLineas, calcSubtotal, calcTotales, calcTicketsSummary, buildFormulaContext, fmt, descargarBlob } from '../utils/helpers';
+import { evalFormulaClient, computeLineas, calcSubtotal, calcTotales, calcTicketsSummary, buildFormulaContext, evalWithContext, resolveVariable, fmt, descargarBlob } from '../utils/helpers';
 import DownloadModal from '../components/DownloadModal';
 
 export default function NuevaFactura({ editingId, onClearEdit }) {
@@ -74,7 +74,29 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
   const ticketTotal = useMemo(() => Object.values(ticketSummary.sumas).reduce((s, v) => s + v.total, 0), [ticketSummary]);
   const grandTotal = totalesLineas.total + ticketTotal;
 
-  const updateField = (campo, valor) => setFormData(prev => ({ ...prev, [campo]: valor }));
+  // Auto-fill: resolve formulas in main block configs
+  const autoFilledData = useMemo(() => {
+    const filled = { ...formData };
+    mainBloques.forEach(b => {
+      const autoFill = b.config?.autoFill;
+      const campo = b.config?.campo;
+      if (autoFill && campo && !formData[`_manual_${campo}`]) {
+        const resolved = resolveVariable(autoFill, formulaCtx);
+        if (resolved !== '' && resolved !== autoFill) {
+          // Format number results for currency fields
+          if (b.type === 'currency_field' && typeof resolved === 'number') {
+            filled[campo] = resolved.toFixed(2);
+          } else {
+            filled[campo] = resolved;
+          }
+        }
+      }
+    });
+    return filled;
+  }, [formData, mainBloques, formulaCtx]);
+
+  const updateField = (campo, valor) => setFormData(prev => ({ ...prev, [campo]: valor, [`_manual_${campo}`]: true }));
+  const clearManual = (campo) => setFormData(prev => { const n = { ...prev }; delete n[`_manual_${campo}`]; delete n[campo]; return n; });
   const updateLinea = (idx, campo, valor) => {
     const n = [...lineas]; n[idx] = { ...n[idx], [campo]: valor };
     cols.filter(c => c.tipo === 'formula' && c.formula).forEach(c => { n[idx][c.campo] = evalFormulaClient(c.formula, n[idx]); });
@@ -86,12 +108,14 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
 
   const recogerDatos = () => {
     const data = {
-      ...formData,
-      numero_factura: formData.numero_factura || '',
+      ...autoFilledData,
+      numero_factura: autoFilledData.numero_factura || formData.numero_factura || '',
       lineas: computedLineas.filter(l => Object.values(l).some(v => v)),
       tickets: hasTickets ? tickets.filter(t => Object.values(t).some(v => v)) : [],
       totales: { subtotal: totalesLineas.subtotal, impuestos: totalesLineas.taxes, total: grandTotal },
     };
+    // Clean internal keys
+    Object.keys(data).filter(k => k.startsWith('_manual_')).forEach(k => delete data[k]);
     if (!data.numero_factura) { toast('Nº factura requerido', 'warn'); return null; }
     return data;
   };
@@ -161,9 +185,17 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
       {hasCustomBloques && (
         <Section icon="description" title="Datos de factura">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {mainBloques.filter(b => ['text_field','number_field','currency_field','date_field','dropdown','checkbox'].includes(b.type)).map((b, i) => (
-              <DynField key={i} block={b} value={formData[b.config?.campo]} onChange={v => updateField(b.config?.campo, v)} />
-            ))}
+            {mainBloques.filter(b => ['text_field','number_field','currency_field','date_field','dropdown','checkbox'].includes(b.type)).map((b, i) => {
+              const campo = b.config?.campo;
+              const hasAuto = b.config?.autoFill && !formData[`_manual_${campo}`];
+              const displayVal = hasAuto ? autoFilledData[campo] : (formData[campo] ?? '');
+              return (
+                <DynField key={i} block={b} value={displayVal}
+                  onChange={v => updateField(campo, v)}
+                  isAuto={hasAuto}
+                  onClearManual={() => clearManual(campo)} />
+              );
+            })}
           </div>
         </Section>
       )}
@@ -316,28 +348,36 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
 }
 
 // Dynamic field renderer based on block type
-function DynField({ block, value, onChange }) {
+function DynField({ block, value, onChange, isAuto, onClearManual }) {
   const cfg = block.config || {};
   const label = cfg.label || cfg.campo || 'Campo';
+  const autoClass = isAuto ? 'border-violet-200 bg-violet-50/50' : 'border-slate-200 bg-slate-50';
+  const autoLabel = isAuto ? (
+    <span className="ml-1 text-[9px] bg-violet-100 text-violet-600 px-1.5 py-0.5 rounded-full font-bold">auto</span>
+  ) : null;
+  const manualBtn = !isAuto && cfg.autoFill ? (
+    <button onClick={onClearManual} className="ml-1 text-[9px] text-violet-400 hover:text-violet-600" title="Volver a auto-rellenar">↺</button>
+  ) : null;
+
   switch (block.type) {
     case 'date_field':
-      return (<div><label className="text-sm font-semibold text-slate-600 block mb-1">{label}</label>
-        <input type="date" value={value || ''} onChange={e => onChange(e.target.value)} className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:ring-primary" /></div>);
+      return (<div><label className="text-sm font-semibold text-slate-600 flex items-center mb-1">{label}{autoLabel}{manualBtn}</label>
+        <input type="date" value={value || ''} onChange={e => onChange(e.target.value)} className={`w-full rounded-lg ${autoClass} px-4 py-3 text-sm focus:ring-primary`} /></div>);
     case 'currency_field':
-      return (<div><label className="text-sm font-semibold text-slate-600 block mb-1">{label}</label>
-        <input type="number" step="0.01" value={value || ''} onChange={e => onChange(e.target.value)} placeholder="0.00" className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:ring-primary" /></div>);
+      return (<div><label className="text-sm font-semibold text-slate-600 flex items-center mb-1">{label}{autoLabel}{manualBtn}</label>
+        <input type="number" step="0.01" value={value || ''} onChange={e => onChange(e.target.value)} placeholder="0.00" className={`w-full rounded-lg ${autoClass} px-4 py-3 text-sm focus:ring-primary`} /></div>);
     case 'number_field':
-      return (<div><label className="text-sm font-semibold text-slate-600 block mb-1">{label}</label>
-        <input type="number" value={value || ''} onChange={e => onChange(e.target.value)} placeholder="0" className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:ring-primary" /></div>);
+      return (<div><label className="text-sm font-semibold text-slate-600 flex items-center mb-1">{label}{autoLabel}{manualBtn}</label>
+        <input type="number" value={value || ''} onChange={e => onChange(e.target.value)} placeholder="0" className={`w-full rounded-lg ${autoClass} px-4 py-3 text-sm focus:ring-primary`} /></div>);
     case 'checkbox':
       return (<div className="flex items-center"><label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={!!value} onChange={e => onChange(e.target.checked)} className="rounded text-primary" />{label}</label></div>);
     case 'dropdown':
-      return (<div><label className="text-sm font-semibold text-slate-600 block mb-1">{label}</label>
+      return (<div><label className="text-sm font-semibold text-slate-600 flex items-center mb-1">{label}</label>
         <select value={value || ''} onChange={e => onChange(e.target.value)} className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm">
           <option value="">Seleccionar...</option>{(cfg.opciones || []).map(op => <option key={op} value={op}>{op}</option>)}</select></div>);
     default:
-      return (<div><label className="text-sm font-semibold text-slate-600 block mb-1">{label}</label>
-        <input type="text" value={value || ''} onChange={e => onChange(e.target.value)} className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:ring-primary" /></div>);
+      return (<div><label className="text-sm font-semibold text-slate-600 flex items-center mb-1">{label}{autoLabel}{manualBtn}</label>
+        <input type="text" value={value || ''} onChange={e => onChange(e.target.value)} className={`w-full rounded-lg ${autoClass} px-4 py-3 text-sm focus:ring-primary`} /></div>);
   }
 }
 

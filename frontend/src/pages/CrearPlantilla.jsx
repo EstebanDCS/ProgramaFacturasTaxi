@@ -174,6 +174,10 @@ export default function CrearPlantilla({ editingId, onBack }) {
             { key: `tickets_max_${campo}`, desc: `Fecha más reciente "${label}"`, type: 'ready', isDate: true },
           );
         }
+        // Join: concatenate values from all tickets
+        if (['text_field', 'number_field', 'currency_field'].includes(b.type)) {
+          vars.push({ key: `tickets_join_${campo}`, desc: `Unir "${label}" de tickets`, type: 'ready', isText: true });
+        }
       });
     }
 

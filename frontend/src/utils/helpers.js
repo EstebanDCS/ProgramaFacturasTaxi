@@ -86,6 +86,13 @@ export function buildFormulaContext(subtotal, tickets, ticketCampos, lineas, col
         { key: `tickets_max_${c.campo}`, desc: `Fecha más reciente "${c.nombre}"`, group: 'Tickets (fechas)', isDate: true },
       );
     }
+
+    // Text join: concatenate values across tickets (numero_ticket, pasajeros, etc.)
+    const vals = tix.map(t => String(t[c.campo] || '')).filter(Boolean);
+    if (vals.length) {
+      ctx[`tickets_join_${c.campo}`] = vals.join(', ');
+      variables.push({ key: `tickets_join_${c.campo}`, desc: `Unir "${c.nombre}" de tickets`, group: 'Tickets (texto)', isText: true });
+    }
   });
 
   return { ctx, variables };
@@ -106,13 +113,28 @@ export function evalWithContext(formula, ctx) {
 }
 
 /**
- * Resolve a variable reference (for non-math fields like dates)
- * Usage: put =tickets_max_fecha in a date field
+ * Resolve a formula/variable reference. Tries:
+ * 1. Direct variable lookup (for dates, text joins)
+ * 2. Math evaluation (for =subtotal*0.10, =tickets_sum_importe)
+ * Returns the resolved value as string, number, or original formula if unresolvable.
  */
 export function resolveVariable(formula, ctx) {
-  if (!formula || !formula.startsWith('=')) return formula;
-  const key = formula.slice(1).trim();
-  return ctx[key] !== undefined ? ctx[key] : formula;
+  if (!formula || !String(formula).startsWith('=')) return formula;
+  const key = String(formula).slice(1).trim();
+  // Direct lookup (dates, text joins, simple vars)
+  if (ctx[key] !== undefined) return ctx[key];
+  // Try math evaluation
+  const result = evalWithContext(formula, ctx);
+  if (result !== null && result !== 0) return result;
+  // Check if it resolved to 0 legitimately (all vars existed)
+  let expr = key;
+  const keys = Object.keys(ctx).sort((a, b) => b.length - a.length);
+  let allResolved = true;
+  for (const k of keys) {
+    if (expr.includes(k)) { expr = expr.replaceAll(k, ''); }
+  }
+  if (/^[\s.+\-*/()0]*$/.test(expr)) return result; // all vars resolved, 0 is real
+  return ''; // unresolvable
 }
 
 /**

@@ -159,6 +159,10 @@ def build_formula_context(subtotal, tickets, ticket_campos):
             dates = sorted([t.get(campo, "") for t in tix if t.get(campo)])
             ctx[f"tickets_min_{campo}"] = dates[0] if dates else ""
             ctx[f"tickets_max_{campo}"] = dates[-1] if dates else ""
+        # Join: concatenate text values across tickets
+        vals = [str(t.get(campo, "")) for t in tix if t.get(campo)]
+        if vals:
+            ctx[f"tickets_join_{campo}"] = ", ".join(vals)
     return ctx
 
 
