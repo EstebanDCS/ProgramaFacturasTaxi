@@ -41,18 +41,26 @@ export default function CrearPlantilla({ editingId, onBack }) {
         const cfg = JSON.parse(p.config_json || '{}');
         setNombre(p.nombre || '');
         if (cfg.estilo) setEstilo(prev => ({ ...prev, ...cfg.estilo }));
-        const loaded = [];
-        if (cfg.empresa) { const b = createBlock('header'); b.config = cfg.empresa; loaded.push(b); }
-        if (cfg.cliente) { const b = createBlock('client'); b.config = cfg.cliente; loaded.push(b); }
-        if (cfg.columnas) { const b = createBlock('items_table'); b.config = { columnas: cfg.columnas }; loaded.push(b); }
-        if (cfg.impuestos || cfg.titulo) {
-          const b = createBlock('totals');
-          b.config = { titulo: cfg.titulo || 'FACTURA', moneda: cfg.moneda || '€', mostrar_desglose: cfg.mostrar_desglose !== false, impuestos: cfg.impuestos || [{ nombre: 'IVA', porcentaje: 21 }] };
-          loaded.push(b);
+
+        // Restore from saved bloques array (new format)
+        if (cfg.bloques?.length) {
+          setBlocks(cfg.bloques.map(b => { const nb = createBlock(b.type); if (nb) nb.config = b.config; return nb; }).filter(Boolean));
+        } else {
+          // Legacy fallback: reconstruct from individual keys
+          const loaded = [];
+          if (cfg.empresa) { const b = createBlock('header'); b.config = cfg.empresa; loaded.push(b); }
+          if (cfg.cliente) { const b = createBlock('client'); b.config = cfg.cliente; loaded.push(b); }
+          if (cfg.columnas) { const b = createBlock('items_table'); b.config = { columnas: cfg.columnas }; loaded.push(b); }
+          if (cfg.impuestos || cfg.titulo) {
+            const b = createBlock('totals');
+            b.config = { titulo: cfg.titulo || 'FACTURA', moneda: cfg.moneda || '€', mostrar_desglose: cfg.mostrar_desglose !== false, impuestos: cfg.impuestos || [{ nombre: 'IVA', porcentaje: 21 }] };
+            loaded.push(b);
+          }
+          if (cfg.pie) { const b = createBlock('footer'); b.config = cfg.pie; loaded.push(b); }
+          loaded.push(createBlock('notes'));
+          if (loaded.length) setBlocks(loaded);
         }
-        if (cfg.pie) { const b = createBlock('footer'); b.config = cfg.pie; loaded.push(b); }
-        loaded.push(createBlock('notes'));
-        if (loaded.length) setBlocks(loaded);
+
         if (cfg.hoja_detalle?.activar) {
           setTicketsOn(true);
           setTicketNombre(cfg.hoja_detalle.titulo || 'Ticket');
@@ -66,6 +74,11 @@ export default function CrearPlantilla({ editingId, onBack }) {
 
   const buildConfig = () => {
     const cfg = { estilo };
+
+    // Save ALL blocks as-is for full restore on edit
+    cfg.bloques = blocks.map(b => ({ type: b.type, config: b.config }));
+
+    // Also extract legacy keys for backward compatibility with backend
     blocks.forEach(b => {
       switch (b.type) {
         case 'header': cfg.empresa = b.config; break;
@@ -78,6 +91,7 @@ export default function CrearPlantilla({ editingId, onBack }) {
         case 'footer': cfg.pie = b.config; break;
       }
     });
+
     if (ticketsOn) {
       cfg.hoja_detalle = {
         activar: true, titulo: ticketNombre,
