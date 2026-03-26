@@ -54,4 +54,6 @@ class DatosFacturaGenerica(BaseModel):
     referencia: str = ""
     cliente: DatosCliente = DatosCliente()
     lineas: List[dict] = []
+    tickets: List[dict] = []
     notas: str = ""
+    totales: dict = {}

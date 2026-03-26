@@ -13,12 +13,14 @@ from starlette.background import BackgroundTask
 from config import BASE_DIR, TEMP_DIR
 from utils import (
     aplicar_formulas, escribir_celda, formatear_fechas,
-    limpiar_temp, rellenar_tags_hoja, escanear_tags_excel
+    limpiar_temp, rellenar_tags_hoja, escanear_tags_excel,
+    build_formula_context, evaluar_con_contexto, resolver_variable,
+    flatten_tickets_to_tags
 )
 
 
 def generar_html_visual(config: dict, datos_dict: dict) -> str:
-    """Genera HTML con CSS moderno para WeasyPrint."""
+    """Generate HTML for WeasyPrint from block-based config."""
     emp = config.get("empresa", {})
     est = config.get("estilo", {})
     pag = config.get("pagina", {})
@@ -26,68 +28,90 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
         {"nombre": "Descripción", "campo": "descripcion", "alineacion": "left"},
         {"nombre": "Importe", "campo": "importe", "alineacion": "right"},
     ])
-    col_importe = config.get("columna_importe", "")
-    if not col_importe and cols:
-        for c in reversed(cols):
-            if c.get("tipo") in ("moneda", "numero", "formula"):
-                col_importe = c["campo"]; break
-        if not col_importe:
-            col_importe = cols[-1].get("campo", "importe")
-
     impuestos = config.get("impuestos", [{"nombre": "IVA", "porcentaje": 21}])
     pie = config.get("pie", {})
     color1 = est.get("color_primario", "#1a2e4a")
     color2 = est.get("color_secundario", "#0d6dfd")
     fuente = est.get("fuente", "Helvetica, Arial, sans-serif")
     tam = est.get("tam_fuente", 10)
-    moneda = config.get("moneda", "\u20ac")
+    moneda = config.get("moneda", "€")
     titulo = config.get("titulo", "FACTURA")
     mg = pag.get("margenes", {})
     mt, mr, mb, ml = mg.get("top", 20), mg.get("right", 15), mg.get("bottom", 20), mg.get("left", 15)
     interlineado = pag.get("interlineado", 1.4)
 
+    # Data
     fecha = datos_dict.get("fecha", "") or datetime.now().strftime("%d/%m/%Y")
     cliente = datos_dict.get("cliente", {})
     lineas = datos_dict.get("lineas", [])
     notas = datos_dict.get("notas", "")
+    tickets = datos_dict.get("tickets", [])
+
+    # Apply formulas to lines
     lineas = aplicar_formulas(lineas, cols)
 
-    # Logo
-    logo_html = ""
-    if emp.get("logo_url"):
-        logo_html = f'<img src="{emp["logo_url"]}" class="logo" />'
+    # Find total column
+    col_importe = ""
+    for c in reversed(cols):
+        if c.get("tipo") in ("moneda", "numero", "formula"):
+            col_importe = c["campo"]; break
+    if not col_importe and cols:
+        col_importe = cols[-1].get("campo", "importe")
 
-    # Empresa
+    # Subtotal
+    subtotal = sum(float(l.get(col_importe, 0) or 0) for l in lineas)
+
+    # Build formula context for cross-block calculations
+    det = config.get("hoja_detalle", {})
+    ticket_campos = det.get("campos", [])
+    ctx = build_formula_context(subtotal, tickets, ticket_campos)
+
+    # Auto-fill date from tickets if configured
+    # (check if fecha field has autoFill in config - scan blocks for it)
+    # For now, if fecha is empty and we have ticket dates, use the latest
+    if not datos_dict.get("fecha") and tickets:
+        for c in ticket_campos:
+            if c.get("tipo") == "fecha":
+                max_key = f"tickets_max_{c['campo']}"
+                if ctx.get(max_key):
+                    fecha = ctx[max_key]
+                    break
+
+    # Calculate taxes (with optional formula override)
+    total_final = subtotal
+    taxes_computed = []
+    for imp in impuestos:
+        if imp.get("formula") and str(imp["formula"]).startswith("="):
+            monto = evaluar_con_contexto(imp["formula"], ctx) or 0
+        else:
+            pct = float(imp.get("porcentaje", 0))
+            monto = subtotal * pct / 100
+        taxes_computed.append({"nombre": imp.get("nombre", "Impuesto"), "porcentaje": imp.get("porcentaje", 0), "monto": monto})
+        total_final += monto
+
+    # ── Build HTML sections ──
+    # Logo
+    logo_html = f'<img src="{emp["logo_url"]}" class="logo" />' if emp.get("logo_url") else ""
+
+    # Empresa info
     emp_nombre = emp.get("nombre", "")
     emp_sub = []
     if emp.get("cif"): emp_sub.append(emp["cif"])
     if emp.get("direccion"): emp_sub.append(emp["direccion"])
-    contacts = []
-    if emp.get("telefono"): contacts.append(emp["telefono"])
-    if emp.get("email"): contacts.append(emp["email"])
+    contacts = [x for x in [emp.get("telefono"), emp.get("email")] if x]
     if contacts: emp_sub.append(" · ".join(contacts))
 
     # Cliente
     cliente_html = ""
     if config.get("cliente", {}).get("mostrar") and cliente:
-        cl = []
-        if cliente.get("nombre"): cl.append(f'<strong>{cliente["nombre"]}</strong>')
-        if cliente.get("cif"): cl.append(f'CIF: {cliente["cif"]}')
-        if cliente.get("direccion"): cl.append(cliente["direccion"])
-        if cliente.get("email"): cl.append(cliente["email"])
+        cl = [f'<strong>{cliente[k]}</strong>' if k == "nombre" else (f'CIF: {cliente[k]}' if k == "cif" else cliente[k])
+              for k in ["nombre", "cif", "direccion", "email"] if cliente.get(k)]
         if cl:
-            cliente_html = f'''<div class="cliente-box">
-<div class="cliente-label">FACTURAR A:</div>
-{"<br>".join(cl)}
-</div>'''
+            cliente_html = f'<div class="cliente-box"><div class="cliente-label">FACTURAR A:</div>{"<br>".join(cl)}</div>'
 
-    # Columnas visibles
+    # Table
     cols_vis = [c for c in cols if not c.get("oculta")]
-
-    # Header
     th_html = "".join(f'<th style="text-align:{c.get("alineacion","left")}">{c["nombre"]}</th>' for c in cols_vis)
-
-    # Filas
     filas_html = ""
     for ri, linea in enumerate(lineas):
         cls = "row-alt" if ri % 2 == 1 else ""
@@ -95,7 +119,7 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
         for c in cols_vis:
             val = linea.get(c.get("campo", ""), "")
             align = c.get("alineacion", "left")
-            if c.get("tipo") in ("moneda", "formula") or c.get("campo") == col_importe:
+            if c.get("tipo") in ("moneda", "formula"):
                 try: display = f'{float(val):,.2f} {moneda}'
                 except: display = str(val)
                 celdas += f'<td class="num" style="text-align:{align}"><strong>{display}</strong></td>'
@@ -104,52 +128,62 @@ def generar_html_visual(config: dict, datos_dict: dict) -> str:
                 except: display = str(val)
                 celdas += f'<td style="text-align:{align}">{display}</td>'
             else:
-                celdas += f'<td style="text-align:{align}">{str(val)}</td>'
+                celdas += f'<td style="text-align:{align}">{val}</td>'
         filas_html += f'<tr class="{cls}">{celdas}</tr>'
 
-    # Totales
-    subtotal = 0
-    for linea in lineas:
-        try: subtotal += float(linea.get(col_importe, 0))
-        except: pass
-
+    # Totals
     totales_html = ""
-    total_final = subtotal
-    if config.get("mostrar_desglose", True) and impuestos:
+    if config.get("mostrar_desglose", True):
         totales_html += f'<tr><td class="tot-label">Subtotal</td><td class="tot-val">{subtotal:,.2f} {moneda}</td></tr>'
-        for imp in impuestos:
-            pct = float(imp.get("porcentaje", 0))
-            monto = subtotal * pct / 100
-            total_final = subtotal + monto
-            totales_html += f'<tr><td class="tot-label">{imp.get("nombre","Impuesto")} ({pct:g}%)</td><td class="tot-val">{monto:,.2f} {moneda}</td></tr>'
-
+        for t in taxes_computed:
+            label = f'{t["nombre"]} ({t["porcentaje"]:g}%)' if t["porcentaje"] else t["nombre"]
+            totales_html += f'<tr><td class="tot-label">{label}</td><td class="tot-val">{t["monto"]:,.2f} {moneda}</td></tr>'
     totales_html += f'<tr class="total-row"><td class="tot-label">TOTAL</td><td class="tot-val">{total_final:,.2f} {moneda}</td></tr>'
 
     ref_html = f'<div style="margin-top:4px"><strong>Ref:</strong> {datos_dict.get("referencia","")}</div>' if datos_dict.get("referencia") else ""
     notas_html = f'<p class="notas">{notas}</p>' if notas else ""
     pago_html = f'<p class="pago">{pie["datos_pago"]}</p>' if pie.get("mostrar_datos_pago") and pie.get("datos_pago") else ""
 
-    # Hojas de detalle
-    det = config.get("hoja_detalle", {})
-    pags_det = ""
-    if det.get("activar") and lineas:
-        titulo_det = det.get("titulo", "Detalle")
-        campos_det = det.get("campos", [c["campo"] for c in cols])
-        nombres = {c["campo"]: c["nombre"] for c in cols}
-        for idx, linea in enumerate(lineas, 1):
-            filas_d = "".join(
-                f'<tr><td class="det-label">{nombres.get(campo, campo.replace("_"," ").title())}</td><td class="det-val">{linea.get(campo,"")}</td></tr>'
-                for campo in campos_det
-            )
-            pags_det += f'''
+    # ── Ticket pages ──
+    pags_tickets = ""
+    if det.get("activar") and tickets and ticket_campos:
+        titulo_ticket = det.get("titulo", "Ticket")
+        # Get ticket block layout if available
+        ticket_bloques = det.get("bloques", [])
+
+        for idx, ticket in enumerate(tickets, 1):
+            # Build ticket content based on campos
+            campos_html = ""
+            for campo in ticket_campos:
+                val = ticket.get(campo.get("campo", ""), "")
+                nombre_campo = campo.get("nombre", campo.get("campo", ""))
+                tipo = campo.get("tipo", "texto")
+
+                if tipo == "checkbox":
+                    display = "☑ Sí" if val else "☐ No"
+                elif tipo == "moneda":
+                    try: display = f"{float(val):,.2f} {moneda}"
+                    except: display = str(val)
+                elif tipo == "fecha" and val:
+                    try:
+                        d = datetime.strptime(str(val), "%Y-%m-%d")
+                        display = d.strftime("%d/%m/%Y")
+                    except: display = str(val)
+                else:
+                    display = str(val) if val else ""
+
+                campos_html += f'<tr><td class="det-label">{nombre_campo}</td><td class="det-val">{display}</td></tr>'
+
+            pags_tickets += f'''
 <div class="page-break"></div>
 <table class="header-table">
 <tr><td class="emp-col">{logo_html}<div class="emp-name" style="font-size:{tam+4}px">{emp_nombre}</div></td>
-<td class="fac-col"><div class="fac-title" style="font-size:{tam+6}px">{titulo_det} #{idx}</div>
+<td class="fac-col"><div class="fac-title" style="font-size:{tam+6}px;color:{color2}">{titulo_ticket} #{idx}</div>
 <div>Factura: {datos_dict.get("numero_factura","")}</div><div>{fecha}</div></td></tr>
 </table>
-<table class="det-table">{filas_d}</table>'''
+<table class="det-table">{campos_html}</table>'''
 
+    # ── Assemble ──
     return f'''<!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <style>
@@ -196,19 +230,19 @@ body {{
     border-top: 2px solid {color1};
     padding: 8px 14px;
     font-weight: 800;
-    font-size: {tam+3}px;
     color: {color1};
-    background-color: #f5f6fa;
+    font-size: {tam+2}px;
 }}
-.notas {{ margin: 12px 0 4px; font-size: {tam-1}px; color: #555; font-style: italic; }}
-.pago {{ font-size: {tam-1}px; color: #666; margin: 4px 0; }}
-.footer {{ margin-top: 30px; padding-top: 10px; border-top: 1px solid #ddd; font-size: {tam-1}px; color: #999; }}
+.notas {{ margin-top: 20px; color: #888; font-size: {tam-1}px; white-space: pre-wrap; }}
+.pago {{ color: #555; margin-top: 6px; }}
+.footer {{ margin-top: 30px; border-top: 1px solid #ddd; padding-top: 10px; font-size: {tam-2}px; color: #999; }}
 .page-break {{ page-break-before: always; }}
-.det-table {{ width: 100%; border-collapse: collapse; }}
-.det-label {{ padding: 8px 14px; font-weight: 600; color: {color1}; width: 40%; background-color: #f5f6fa; border-bottom: 1px solid #eaedf0; }}
-.det-val {{ padding: 8px 14px; border-bottom: 1px solid #eaedf0; }}
-</style></head><body>
-
+.det-table {{ width: 100%; border-collapse: collapse; margin-top: 12px; }}
+.det-table td {{ padding: 6px 10px; border-bottom: 1px solid #eee; }}
+.det-label {{ font-weight: 600; color: #555; width: 40%; }}
+.det-val {{ color: #333; }}
+</style>
+</head><body>
 <table class="header-table">
 <tr>
 <td class="emp-col">
@@ -242,12 +276,13 @@ body {{
 {pie.get("texto","")}{pago_html}
 </div>
 
-{pags_det}
+{pags_tickets}
 
 </body></html>'''
 
+
 def html_a_pdf(html_content: str) -> str:
-    """Convierte HTML a PDF usando WeasyPrint."""
+    """Convert HTML to PDF with WeasyPrint."""
     from weasyprint import HTML as WeasyprintHTML
     os.makedirs(TEMP_DIR, exist_ok=True)
     pdf_path = os.path.join(TEMP_DIR, f"vis_{datetime.now().strftime('%H%M%S%f')}.pdf")
@@ -260,31 +295,45 @@ def html_a_pdf(html_content: str) -> str:
     return pdf_path
 
 
-def procesar_con_plantilla_excel(excel_bytes: bytes, datos_dict: dict) -> str:
+def procesar_con_plantilla_excel(excel_bytes: bytes, datos_dict: dict, config: dict = None) -> str:
+    """Fill Excel template with data, replacing {{tags}} with values + ticket aggregates."""
     os.makedirs(TEMP_DIR, exist_ok=True)
     tmp_in = os.path.join(TEMP_DIR, f"tpl_{datetime.now().strftime('%H%M%S%f')}.xlsx")
     with open(tmp_in, "wb") as f:
         f.write(excel_bytes)
     wb = openpyxl.load_workbook(tmp_in)
-    # Generic tag replacement on all sheets
-    tags = {}
-    for k, v in datos_dict.items():
-        if isinstance(v, str):
-            tags[f"{{{{{k}}}}}"] = v
-        elif isinstance(v, (int, float)):
-            tags[f"{{{{{k}}}}}"] = str(v)
+
+    # Build comprehensive tag map
+    tags = flatten_tickets_to_tags(datos_dict, config or {})
+
+    # Replace tags in all sheets
     for ws in wb.worksheets:
         rellenar_tags_hoja(ws, tags)
+
+    # If there are tickets and a template has a second sheet, duplicate it per ticket
+    tickets = datos_dict.get("tickets", [])
+    det = (config or {}).get("hoja_detalle", {})
+    if det.get("activar") and tickets and len(wb.worksheets) > 1:
+        ws_ticket_tpl = wb.worksheets[1]
+        ticket_campos = det.get("campos", [])
+        for i, ticket in enumerate(tickets):
+            ws = ws_ticket_tpl if i == 0 else wb.copy_worksheet(ws_ticket_tpl)
+            ws.title = f"{det.get('titulo', 'Ticket')}_{i+1}"
+            # Replace ticket-specific tags
+            ticket_tags = {f"{{{{{c['campo']}}}}}": str(ticket.get(c["campo"], "")) for c in ticket_campos if c.get("campo")}
+            ticket_tags["{{ticket_num}}"] = str(i + 1)
+            rellenar_tags_hoja(ws, ticket_tags)
+
     out_path = os.path.join(TEMP_DIR, f"gen_{datetime.now().strftime('%H%M%S%f')}.xlsx")
     wb.save(out_path)
     return out_path
 
 
-# ─── GENERACIÓN DE EXCEL (PLANTILLA ORIGINAL) ────────────────────────────────
+# ─── LEGACY: ORIGINAL TAXI EXCEL ─────────────────────────────────────────
 def crear_excel(datos_dict, nombre_base):
     template_path = os.path.join(BASE_DIR, "plantilla.xlsm")
     if not os.path.exists(template_path):
-        raise HTTPException(status_code=410, detail="La plantilla original (.xlsm) ya no está disponible. Use el sistema de plantillas personalizadas.")
+        raise HTTPException(status_code=410, detail="La plantilla original (.xlsm) ya no está disponible.")
     os.makedirs(TEMP_DIR, exist_ok=True)
     name_xlsm = f"{nombre_base}.xlsm"
     path_salida = os.path.join(TEMP_DIR, name_xlsm)
@@ -325,20 +374,6 @@ def crear_excel(datos_dict, nombre_base):
     esc(ws_factura, "F39", round(iva, 2))
     esc(ws_factura, "F40", round(total_importe, 2))
 
-    MAPA_RECOGIDA = [
-        ("o_aeropuerto", "C26", None), ("o_buque", "C27", None),
-        ("o_hotel", "C28", ("o_hotel_texto", "E28")),
-        ("o_otros", "C29", ("o_otros_texto", "D30")),
-    ]
-    MAPA_DESTINO = [
-        ("d_aeropuerto", "C33", None), ("d_buque", "C34", None),
-        ("d_hotel", "C35", ("d_hotel_texto", "E35")),
-        ("d_hospital", "C36", ("d_hospital_texto", "E36")),
-        ("d_clinica", "C37", ("d_clinica_texto", "E37")),
-        ("d_inmigracion", "C38", None),
-        ("d_otros", "C39", ("d_otros_texto", "D40")),
-    ]
-
     if ws_template_bono and tickets:
         for i, t in enumerate(tickets):
             ws = ws_template_bono if i == 0 else wb.copy_worksheet(ws_template_bono)
@@ -349,12 +384,6 @@ def crear_excel(datos_dict, nombre_base):
             esc(ws, "C14", ", ".join(formatear_fechas(t.get("fechas_servicio", []))))
             esc(ws, "C16", barco)
             esc(ws, "B19", ", ".join(t.get("pasajeros", [])))
-            for campo, celda, texto_info in MAPA_RECOGIDA + MAPA_DESTINO:
-                if t.get(campo):
-                    esc(ws, celda, "X")
-                    if texto_info:
-                        esc(ws, texto_info[1], t.get(texto_info[0], ""))
-            esc(ws, "C43" if t.get("ida_vuelta") else "D43", "X")
             esc(ws, "B46", t.get("comentarios", ""))
             esc(ws, "E51", float(t.get("importe", 0)))
 

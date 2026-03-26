@@ -137,3 +137,80 @@ def aplicar_formulas(lineas: list, columnas: list) -> list:
                 ln[col["campo"]] = evaluar_formula(col["formula"], ln)
         resultado.append(ln)
     return resultado
+
+
+def build_formula_context(subtotal, tickets, ticket_campos):
+    """Build context dict with aggregated variables from lines and tickets."""
+    ctx = {"subtotal": subtotal or 0}
+    tix = tickets or []
+    ctx["tickets_count"] = len(tix)
+    for c in (ticket_campos or []):
+        campo = c.get("campo", "")
+        tipo = c.get("tipo", "texto")
+        if not campo:
+            continue
+        if tipo in ("moneda", "numero"):
+            vals = [float(t.get(campo, 0) or 0) for t in tix]
+            ctx[f"tickets_sum_{campo}"] = sum(vals)
+            ctx[f"tickets_avg_{campo}"] = sum(vals) / len(vals) if vals else 0
+            ctx[f"tickets_min_{campo}"] = min(vals) if vals else 0
+            ctx[f"tickets_max_{campo}"] = max(vals) if vals else 0
+        elif tipo == "fecha":
+            dates = sorted([t.get(campo, "") for t in tix if t.get(campo)])
+            ctx[f"tickets_min_{campo}"] = dates[0] if dates else ""
+            ctx[f"tickets_max_{campo}"] = dates[-1] if dates else ""
+    return ctx
+
+
+def evaluar_con_contexto(formula, ctx):
+    """Evaluate a formula using named variables from context."""
+    if not formula or not str(formula).startswith("="):
+        return None
+    expr = str(formula)[1:].strip()
+    for key in sorted(ctx.keys(), key=lambda k: -len(k)):
+        expr = expr.replace(key, str(ctx.get(key, 0)))
+    if re.match(r'^[\d\s\.\+\-\*\/\(\)]+$', expr):
+        try:
+            return eval(expr)
+        except Exception:
+            return 0
+    return 0
+
+
+def resolver_variable(formula, ctx):
+    """Resolve a simple variable reference (e.g. =tickets_max_fecha)."""
+    if not formula or not str(formula).startswith("="):
+        return formula
+    key = str(formula)[1:].strip()
+    return ctx.get(key, formula)
+
+
+def flatten_tickets_to_tags(datos_dict, config):
+    """Flatten ticket data into {{tag}} replacements for Excel templates."""
+    tags = {}
+    # Basic fields
+    for k, v in datos_dict.items():
+        if isinstance(v, str):
+            tags[f"{{{{{k}}}}}"] = v
+        elif isinstance(v, (int, float)):
+            tags[f"{{{{{k}}}}}"] = str(v)
+    # Client
+    cliente = datos_dict.get("cliente", {})
+    for k, v in cliente.items():
+        tags[f"{{{{cliente_{k}}}}}"] = str(v)
+    # Totals
+    totales = datos_dict.get("totales", {})
+    for k, v in totales.items():
+        if isinstance(v, (int, float)):
+            tags[f"{{{{total_{k}}}}}"] = f"{v:.2f}"
+    # Context variables (ticket aggregates)
+    ticket_campos = config.get("hoja_detalle", {}).get("campos", [])
+    tickets = datos_dict.get("tickets", [])
+    lineas = datos_dict.get("lineas", [])
+    subtotal = totales.get("subtotal", 0) if totales else sum(
+        float(l.get("importe", 0) or 0) for l in lineas
+    )
+    ctx = build_formula_context(subtotal, tickets, ticket_campos)
+    for k, v in ctx.items():
+        tags[f"{{{{{k}}}}}"] = str(v) if not isinstance(v, float) else f"{v:.2f}"
+    return tags

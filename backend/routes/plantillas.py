@@ -166,12 +166,18 @@ async def guardar_con_plantilla(datos: DatosFacturaGenerica, plantilla_id: Optio
             if c.get("tipo") in ("moneda", "numero", "formula"):
                 col_importe = c["campo"]
                 break
-    importe_total = 0
-    for linea in datos.lineas:
-        try:
-            importe_total += float(linea.get(col_importe, 0))
-        except (ValueError, TypeError):
-            pass
+
+    # Use pre-computed totals from frontend if available, otherwise calculate
+    totales = datos.dict().get("totales", {})
+    if totales and totales.get("total"):
+        importe_total = float(totales["total"])
+    else:
+        importe_total = 0
+        for linea in datos.lineas:
+            try:
+                importe_total += float(linea.get(col_importe, 0))
+            except (ValueError, TypeError):
+                pass
 
     registro = {
         "user_id": user.id,
@@ -220,7 +226,8 @@ async def generar_con_plantilla(datos: DatosFacturaGenerica, formato: str = "pdf
         if not p.get("excel_path"):
             raise HTTPException(status_code=400)
         excel_bytes = supabase.storage.from_("plantillas").download(p["excel_path"])
-        out = procesar_con_plantilla_excel(excel_bytes, datos.dict())
+        config_excel = json.loads(p.get("config_json", "{}"))
+        out = procesar_con_plantilla_excel(excel_bytes, datos.dict(), config_excel)
         xlsx_name = f"{nombre_base}.xlsx"
         final_path = os.path.join(TEMP_DIR, xlsx_name)
         shutil.move(out, final_path)
