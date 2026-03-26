@@ -13,8 +13,7 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
   const [selectedId, setSelectedId] = useState(null);
   const [config, setConfig] = useState(null);
   const [nombre, setNombre] = useState('');
-  const [form, setForm] = useState({ numero_factura: '', fecha: '', referencia: '', notas: '' });
-  const [cliente, setCliente] = useState({ nombre: '', cif: '', direccion: '', email: '', telefono: '' });
+  const [formData, setFormData] = useState({});
   const [lineas, setLineas] = useState([{}]);
   const [tickets, setTickets] = useState([]);
   const [step, setStep] = useState('selector');
@@ -39,9 +38,8 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
         const data = await r.json();
         let datos = data;
         if (data.datos_json_cifrado) { const { descifrar } = await import('../utils/crypto'); datos = JSON.parse(await descifrar(data.datos_json_cifrado)); }
-        if (!datos.numero_factura && !datos.lineas) { toast('Formato legacy', 'info'); return; }
-        setForm({ numero_factura: datos.numero_factura || '', fecha: datos.fecha || '', referencia: datos.referencia || '', notas: datos.notas || '' });
-        setCliente(datos.cliente || {}); setLineas(datos.lineas?.length ? datos.lineas : [{}]);
+        setFormData(datos);
+        if (datos.lineas?.length) setLineas(datos.lineas);
         if (datos.tickets?.length) setTickets(datos.tickets);
         const match = plantillas.find(p => p.nombre === (meta?.plantilla_nombre || meta?.barco)) || plantillas[0];
         if (match) { await seleccionar(match); toast('Factura cargada', 'success'); }
@@ -55,20 +53,19 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
     setStep('form');
   };
 
-  // Derived from config
-  const cols = config?.columnas || COL_PRESETS.simple;
-  const visCols = cols.filter(c => !c.oculta);
-  const showCli = config?.cliente?.mostrar !== false;
+  // Derive structure from config
+  const mainBloques = config?.bloques || [];
   const ticketCfg = config?.hoja_detalle;
   const hasTickets = ticketCfg?.activar && ticketCfg?.campos?.length;
+  const cols = config?.columnas || COL_PRESETS?.simple || [];
+  const visCols = cols.filter(c => !c.oculta);
   const impuestos = config?.impuestos || [{ nombre: 'IVA', porcentaje: 21 }];
   const moneda = config?.moneda || '€';
-  const showDesglose = config?.mostrar_desglose !== false;
 
-  // ── Auto-calculate ──
+  // Auto-calculate
   const computedLineas = useMemo(() => computeLineas(lineas, cols), [lineas, cols]);
   const subtotalLineas = useMemo(() => calcSubtotal(computedLineas, cols), [computedLineas, cols]);
-  const { ctx: formulaCtx, variables: formulaVars } = useMemo(
+  const { ctx: formulaCtx } = useMemo(
     () => buildFormulaContext(subtotalLineas, tickets, ticketCfg?.campos, computedLineas, cols),
     [subtotalLineas, tickets, ticketCfg?.campos, computedLineas, cols]
   );
@@ -77,22 +74,25 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
   const ticketTotal = useMemo(() => Object.values(ticketSummary.sumas).reduce((s, v) => s + v.total, 0), [ticketSummary]);
   const grandTotal = totalesLineas.total + ticketTotal;
 
+  const updateField = (campo, valor) => setFormData(prev => ({ ...prev, [campo]: valor }));
   const updateLinea = (idx, campo, valor) => {
     const n = [...lineas]; n[idx] = { ...n[idx], [campo]: valor };
     cols.filter(c => c.tipo === 'formula' && c.formula).forEach(c => { n[idx][c.campo] = evalFormulaClient(c.formula, n[idx]); });
     setLineas(n);
   };
-
   const addTicket = () => { const empty = {}; (ticketCfg?.campos || []).forEach(c => { empty[c.campo] = ''; }); setTickets([...tickets, empty]); };
   const removeTicket = (idx) => setTickets(tickets.filter((_, i) => i !== idx));
   const updateTicket = (idx, campo, valor) => { const n = [...tickets]; n[idx] = { ...n[idx], [campo]: valor }; setTickets(n); };
 
   const recogerDatos = () => {
-    const data = { ...form, cliente, lineas: computedLineas.filter(l => Object.values(l).some(v => v)),
+    const data = {
+      ...formData,
+      numero_factura: formData.numero_factura || '',
+      lineas: computedLineas.filter(l => Object.values(l).some(v => v)),
       tickets: hasTickets ? tickets.filter(t => Object.values(t).some(v => v)) : [],
-      totales: { subtotal: totalesLineas.subtotal, impuestos: totalesLineas.taxes, total: grandTotal } };
+      totales: { subtotal: totalesLineas.subtotal, impuestos: totalesLineas.taxes, total: grandTotal },
+    };
     if (!data.numero_factura) { toast('Nº factura requerido', 'warn'); return null; }
-    if (!data.lineas.length && !data.tickets.length) { toast('Añade datos', 'warn'); return null; }
     return data;
   };
 
@@ -139,7 +139,10 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
     </div>
   );
 
-  // ── FORM ──
+  // ── FORM: dynamic from config.bloques ──
+  // Determine which fields to show. If no bloques, show legacy hardcoded form.
+  const hasCustomBloques = mainBloques.length > 0;
+
   return (
     <div className="animate-fadeIn w-full max-w-[1400px]">
       <DownloadModal open={showDownload} onClose={() => { setShowDownload(false); setDownloading(false); }} onSelect={descargar} loading={downloading} />
@@ -154,73 +157,80 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
         <span className="text-sm font-semibold text-violet-700">{nombre}</span>
       </div>
 
-      {/* Detalles */}
-      <Section icon="info" title="Detalles">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <Field label="Nº Factura" value={form.numero_factura} onChange={v => setForm({...form, numero_factura: v})} placeholder="2026-0001" />
-          <div><label className="text-sm font-semibold text-slate-600 block mb-1">Fecha</label>
-            <input type="date" value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary" /></div>
-        </div>
-        <Field label="Referencia" value={form.referencia} onChange={v => setForm({...form, referencia: v})} placeholder="Proyecto Alpha" className="mt-4" />
-      </Section>
-
-      {/* Cliente */}
-      {showCli && (
-        <Section icon="person" title="Cliente">
+      {/* ── Dynamic fields from config.bloques ── */}
+      {hasCustomBloques && (
+        <Section icon="description" title="Datos de factura">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[['nombre','Nombre'],['cif','CIF'],['direccion','Dirección'],['email','Email'],['telefono','Teléfono']].map(([k,l]) => (
-              <Field key={k} label={l} value={cliente[k]||''} onChange={v => setCliente({...cliente, [k]: v})} />
+            {mainBloques.filter(b => ['text_field','number_field','currency_field','date_field','dropdown','checkbox'].includes(b.type)).map((b, i) => (
+              <DynField key={i} block={b} value={formData[b.config?.campo]} onChange={v => updateField(b.config?.campo, v)} />
             ))}
           </div>
         </Section>
       )}
 
-      {/* Líneas */}
-      <Section icon="list" title="Líneas">
-        <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: visCols.map(c => c.tipo === 'texto' ? '2fr' : '1fr').join(' ') + ' 36px' }}>
-          {visCols.map(c => <span key={c.campo} className="text-[10px] font-bold text-slate-400 uppercase px-1">{c.nombre}{c.tipo === 'formula' ? ' ƒx' : ''}</span>)}
-          <span />
-        </div>
-        {lineas.map((linea, idx) => (
-          <div key={idx} className="grid gap-2 mb-2" style={{ gridTemplateColumns: visCols.map(c => c.tipo === 'texto' ? '2fr' : '1fr').join(' ') + ' 36px' }}>
-            {visCols.map(c => (
-              <input key={c.campo} type="text" value={computedLineas[idx]?.[c.campo] || linea[c.campo] || ''} readOnly={c.tipo === 'formula'}
-                onChange={e => updateLinea(idx, c.campo, e.target.value)}
-                className={`rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm ${c.tipo === 'formula' ? 'bg-violet-50 text-violet-700 font-mono font-bold' : ''}`}
-                placeholder={c.tipo === 'formula' ? 'auto' : c.nombre} />
-            ))}
-            <button onClick={() => setLineas(lineas.filter((_, i) => i !== idx))} className="text-slate-300 hover:text-red-500 flex items-center justify-center">
-              <span className="material-symbols-outlined text-base">close</span></button>
-          </div>
-        ))}
-        <button onClick={() => setLineas([...lineas, {}])} className="mt-2 w-full flex items-center justify-center gap-1 py-2 border-2 border-dashed border-slate-200 rounded-lg text-xs font-bold text-slate-400 hover:border-primary hover:text-primary transition-colors">
-          <span className="material-symbols-outlined text-sm">add</span> Añadir línea
-        </button>
-
-        {/* ── Live totals ── */}
-        <div className="mt-4 pt-4 border-t border-slate-200">
-          <div className="flex flex-col items-end gap-1">
-            {showDesglose && <>
-              <div className="flex items-center gap-6 text-sm">
-                <span className="text-slate-400">Subtotal</span>
-                <span className="font-bold text-slate-700 w-28 text-right">{fmt(totalesLineas.subtotal, moneda)}</span>
+      {/* ── Legacy: hardcoded fields if no bloques ── */}
+      {!hasCustomBloques && (
+        <>
+          <Section icon="info" title="Detalles">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <Field label="Nº Factura" value={formData.numero_factura} onChange={v => updateField('numero_factura', v)} placeholder="2026-0001" />
+              <div><label className="text-sm font-semibold text-slate-600 block mb-1">Fecha</label>
+                <input type="date" value={formData.fecha || ''} onChange={e => updateField('fecha', e.target.value)} className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:ring-primary" /></div>
+            </div>
+          </Section>
+          {config?.cliente?.mostrar !== false && (
+            <Section icon="person" title="Cliente">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[['nombre','Nombre'],['cif','CIF'],['direccion','Dirección'],['email','Email'],['telefono','Teléfono']].map(([k,l]) => (
+                  <Field key={k} label={l} value={(formData.cliente||{})[k]||''} onChange={v => setFormData(prev => ({...prev, cliente: {...(prev.cliente||{}), [k]: v}}))} />
+                ))}
               </div>
+            </Section>
+          )}
+          {/* Lines */}
+          <Section icon="list" title="Líneas">
+            <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: visCols.map(c => c.tipo === 'texto' ? '2fr' : '1fr').join(' ') + ' 36px' }}>
+              {visCols.map(c => <span key={c.campo} className="text-[10px] font-bold text-slate-400 uppercase px-1">{c.nombre}</span>)}
+              <span />
+            </div>
+            {lineas.map((linea, idx) => (
+              <div key={idx} className="grid gap-2 mb-2" style={{ gridTemplateColumns: visCols.map(c => c.tipo === 'texto' ? '2fr' : '1fr').join(' ') + ' 36px' }}>
+                {visCols.map(c => (
+                  <input key={c.campo} type="text" value={computedLineas[idx]?.[c.campo] || linea[c.campo] || ''} readOnly={c.tipo === 'formula'}
+                    onChange={e => updateLinea(idx, c.campo, e.target.value)}
+                    className={`rounded-lg border-slate-200 bg-slate-50 px-3 py-2 text-sm ${c.tipo === 'formula' ? 'bg-violet-50 text-violet-700 font-mono font-bold' : ''}`}
+                    placeholder={c.tipo === 'formula' ? 'auto' : c.nombre} />
+                ))}
+                <button onClick={() => setLineas(lineas.filter((_, i) => i !== idx))} className="text-slate-300 hover:text-red-500 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-base">close</span></button>
+              </div>
+            ))}
+            <button onClick={() => setLineas([...lineas, {}])} className="mt-2 w-full flex items-center justify-center gap-1 py-2 border-2 border-dashed border-slate-200 rounded-lg text-xs font-bold text-slate-400 hover:border-primary hover:text-primary transition-colors">
+              <span className="material-symbols-outlined text-sm">add</span> Añadir línea
+            </button>
+          </Section>
+        </>
+      )}
+
+      {/* ── Live totals ── */}
+      {(subtotalLineas > 0 || !hasCustomBloques) && (
+        <Section icon="functions" title="Totales">
+          <div className="flex flex-col items-end gap-1">
+            {config?.mostrar_desglose !== false && <>
+              <div className="flex items-center gap-6 text-sm"><span className="text-slate-400">Subtotal</span><span className="font-bold text-slate-700 w-28 text-right">{fmt(totalesLineas.subtotal, moneda)}</span></div>
               {totalesLineas.taxes.map((t, i) => (
-                <div key={i} className="flex items-center gap-6 text-sm">
-                  <span className="text-slate-400">{t.nombre} ({t.porcentaje}%)</span>
-                  <span className="font-bold text-slate-700 w-28 text-right">{fmt(t.monto, moneda)}</span>
-                </div>
+                <div key={i} className="flex items-center gap-6 text-sm"><span className="text-slate-400">{t.nombre} ({t.porcentaje}%)</span><span className="font-bold text-slate-700 w-28 text-right">{fmt(t.monto, moneda)}</span></div>
               ))}
             </>}
             <div className="flex items-center gap-6 text-base pt-2 mt-1 border-t-2 border-slate-800">
-              <span className="font-black text-slate-800">TOTAL LÍNEAS</span>
+              <span className="font-black text-slate-800">TOTAL</span>
               <span className="font-black text-slate-900 w-28 text-right">{fmt(totalesLineas.total, moneda)}</span>
             </div>
           </div>
-        </div>
-      </Section>
+        </Section>
+      )}
 
-      {/* Tickets */}
+      {/* ── Tickets ── */}
       {hasTickets && (
         <Section icon="auto_awesome" title={`${ticketCfg.titulo || 'Tickets'} (${tickets.length})`} color="violet">
           {tickets.map((ticket, ti) => (
@@ -273,16 +283,11 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
           <button onClick={addTicket} className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-violet-200 rounded-lg text-sm font-bold text-violet-400 hover:border-violet-400 hover:text-violet-600 transition-colors">
             <span className="material-symbols-outlined">add_circle</span> Añadir {ticketCfg.titulo || 'ticket'}
           </button>
-
-          {/* Ticket summary */}
           {ticketSummary.count > 0 && Object.keys(ticketSummary.sumas).length > 0 && (
             <div className="mt-4 pt-4 border-t border-violet-200">
               <div className="flex flex-col items-end gap-1">
                 {Object.values(ticketSummary.sumas).map(s => (
-                  <div key={s.nombre} className="flex items-center gap-6 text-sm">
-                    <span className="text-violet-400">Total {s.nombre}</span>
-                    <span className="font-bold text-violet-700 w-28 text-right">{fmt(s.total, moneda)}</span>
-                  </div>
+                  <div key={s.nombre} className="flex items-center gap-6 text-sm"><span className="text-violet-400">Total {s.nombre}</span><span className="font-bold text-violet-700 w-28 text-right">{fmt(s.total, moneda)}</span></div>
                 ))}
               </div>
             </div>
@@ -291,26 +296,14 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
       )}
 
       {/* Notas */}
-      <Section icon="sticky_note_2" title="Notas">
-        <textarea value={form.notas} onChange={e => setForm({...form, notas: e.target.value})} className="w-full rounded-lg border-slate-200 bg-slate-50 p-4 min-h-[80px] text-sm" placeholder="Condiciones de pago..." />
-      </Section>
-
-      {/* Grand total (if tickets add amount) */}
-      {hasTickets && ticketTotal > 0 && (
-        <div className="bg-slate-900 text-white rounded-xl p-5 mb-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-2xl">receipt_long</span>
-            <div>
-              <p className="text-xs text-slate-400">Total factura + tickets</p>
-              <p className="text-[10px] text-slate-500">Líneas {fmt(totalesLineas.total, moneda)} + Tickets {fmt(ticketTotal, moneda)}</p>
-            </div>
-          </div>
-          <span className="text-2xl font-black">{fmt(grandTotal, moneda)}</span>
-        </div>
+      {!hasCustomBloques && (
+        <Section icon="sticky_note_2" title="Notas">
+          <textarea value={formData.notas || ''} onChange={e => updateField('notas', e.target.value)} className="w-full rounded-lg border-slate-200 bg-slate-50 p-4 min-h-[80px] text-sm" placeholder="Condiciones de pago..." />
+        </Section>
       )}
 
       {/* Actions */}
-      <div className="flex flex-col md:flex-row gap-4 mt-2">
+      <div className="flex flex-col md:flex-row gap-4 mt-6">
         <button onClick={guardar} className="flex-1 flex items-center justify-center gap-2 px-8 py-3.5 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 shadow-lg transition-all">
           <span className="material-symbols-outlined">cloud_upload</span> GUARDAR EN NUBE
         </button>
@@ -320,6 +313,32 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
       </div>
     </div>
   );
+}
+
+// Dynamic field renderer based on block type
+function DynField({ block, value, onChange }) {
+  const cfg = block.config || {};
+  const label = cfg.label || cfg.campo || 'Campo';
+  switch (block.type) {
+    case 'date_field':
+      return (<div><label className="text-sm font-semibold text-slate-600 block mb-1">{label}</label>
+        <input type="date" value={value || ''} onChange={e => onChange(e.target.value)} className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:ring-primary" /></div>);
+    case 'currency_field':
+      return (<div><label className="text-sm font-semibold text-slate-600 block mb-1">{label}</label>
+        <input type="number" step="0.01" value={value || ''} onChange={e => onChange(e.target.value)} placeholder="0.00" className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:ring-primary" /></div>);
+    case 'number_field':
+      return (<div><label className="text-sm font-semibold text-slate-600 block mb-1">{label}</label>
+        <input type="number" value={value || ''} onChange={e => onChange(e.target.value)} placeholder="0" className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:ring-primary" /></div>);
+    case 'checkbox':
+      return (<div className="flex items-center"><label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={!!value} onChange={e => onChange(e.target.checked)} className="rounded text-primary" />{label}</label></div>);
+    case 'dropdown':
+      return (<div><label className="text-sm font-semibold text-slate-600 block mb-1">{label}</label>
+        <select value={value || ''} onChange={e => onChange(e.target.value)} className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+          <option value="">Seleccionar...</option>{(cfg.opciones || []).map(op => <option key={op} value={op}>{op}</option>)}</select></div>);
+    default:
+      return (<div><label className="text-sm font-semibold text-slate-600 block mb-1">{label}</label>
+        <input type="text" value={value || ''} onChange={e => onChange(e.target.value)} className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:ring-primary" /></div>);
+  }
 }
 
 function Section({ icon, title, children, color = 'primary' }) {

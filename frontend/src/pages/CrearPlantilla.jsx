@@ -435,54 +435,52 @@ function ExcelUpload({ token, toast, onBack, onImportBlocks }) {
 
   const tagsToBlocks = (tags) => {
     const blocks = [];
-    const chTags = tags.filter(t => t.tag.startsWith('ch_'));
-    const otherTags = tags.filter(t => !t.tag.startsWith('ch_'));
-    const textoTags = otherTags.filter(t => t.tag.endsWith('_texto'));
-    const dataTags = otherTags.filter(t => !t.tag.endsWith('_texto'));
+    const usedTags = new Set();
 
-    // Group ch_GROUP_OPTION
-    const groups = {};
-    const standalone = [];
-    chTags.forEach(t => {
+    // First pass: identify ch_ groups and _texto associations
+    const chGroups = {};
+    tags.filter(t => t.tag.startsWith('ch_')).forEach(t => {
       const rest = t.tag.replace('ch_', '');
       const parts = rest.split('_');
       if (parts.length >= 2) {
         const group = parts[0];
         const option = parts.slice(1).join('_');
-        if (!groups[group]) groups[group] = [];
-        const textoTag = textoTags.find(tx => tx.tag === `${group}_${option}_texto`);
-        groups[group].push({ id: t.tag, nombre: option.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), texto_campo: textoTag ? textoTag.tag : '' });
-      } else {
-        standalone.push(t);
+        if (!chGroups[group]) chGroups[group] = { options: [], firstIndex: tags.indexOf(t) };
+        const textoTag = tags.find(tx => tx.tag === `${group}_${option}_texto`);
+        chGroups[group].options.push({ id: t.tag, nombre: option.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), texto_campo: textoTag ? textoTag.tag : '' });
+        usedTags.add(t.tag);
+        if (textoTag) usedTags.add(textoTag.tag);
       }
     });
 
-    Object.entries(groups).forEach(([group, opciones]) => {
-      if (opciones.length > 1) {
-        const b = createBlock('checkbox_group');
-        if (b) { b.config.label = group.replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = group; b.config.opciones = opciones; blocks.push(b); }
-      } else {
-        const b = createBlock('checkbox');
-        if (b) { b.config.label = opciones[0].nombre; b.config.campo = opciones[0].id; blocks.push(b); }
+    // Build ordered list: process tags in Excel order, insert group at first ch_ occurrence
+    const groupsEmitted = new Set();
+    tags.forEach(t => {
+      if (usedTags.has(t.tag) && !t.tag.startsWith('ch_')) return; // skip consumed _texto
+      if (t.tag.startsWith('ch_')) {
+        const rest = t.tag.replace('ch_', '');
+        const parts = rest.split('_');
+        const group = parts.length >= 2 ? parts[0] : null;
+        if (group && chGroups[group] && !groupsEmitted.has(group)) {
+          groupsEmitted.add(group);
+          const g = chGroups[group];
+          if (g.options.length > 1) {
+            const b = createBlock('checkbox_group');
+            if (b) { b.config.label = group.replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = group; b.config.opciones = g.options; blocks.push(b); }
+          } else {
+            const b = createBlock('checkbox');
+            if (b) { b.config.label = g.options[0].nombre; b.config.campo = g.options[0].id; blocks.push(b); }
+          }
+        } else if (!group) {
+          // Standalone ch_ checkbox
+          const b = createBlock('checkbox');
+          if (b) { b.config.label = t.tag.replace('ch_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; blocks.push(b); }
+        }
+        return;
       }
-    });
-
-    standalone.forEach(t => {
-      const b = createBlock('checkbox');
-      if (b) { b.config.label = t.tag.replace('ch_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; blocks.push(b); }
-    });
-
-    const usedTextos = new Set();
-    Object.values(groups).flat().forEach(o => { if (o.texto_campo) usedTextos.add(o.texto_campo); });
-
-    dataTags.forEach(t => {
+      // Regular data tag
       const type = guessType(t.tag);
       const b = createBlock(type);
-      if (b) { b.config.label = t.tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; blocks.push(b); }
-    });
-
-    textoTags.filter(t => !usedTextos.has(t.tag)).forEach(t => {
-      const b = createBlock('text_field');
       if (b) { b.config.label = t.tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; blocks.push(b); }
     });
 
