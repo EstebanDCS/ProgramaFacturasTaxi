@@ -15,7 +15,7 @@ from utils import (
     aplicar_formulas, escribir_celda, formatear_fechas,
     limpiar_temp, rellenar_tags_hoja, escanear_tags_excel,
     build_formula_context, evaluar_con_contexto, resolver_variable,
-    flatten_tickets_to_tags
+    flatten_tickets_to_tags, flatten_ticket_to_tags
 )
 
 
@@ -319,9 +319,8 @@ def procesar_con_plantilla_excel(excel_bytes: bytes, datos_dict: dict, config: d
         for i, ticket in enumerate(tickets):
             ws = ws_ticket_tpl if i == 0 else wb.copy_worksheet(ws_ticket_tpl)
             ws.title = f"{det.get('titulo', 'Ticket')}_{i+1}"
-            # Replace ticket-specific tags
-            ticket_tags = {f"{{{{{c['campo']}}}}}": str(ticket.get(c["campo"], "")) for c in ticket_campos if c.get("campo")}
-            ticket_tags["{{ticket_num}}"] = str(i + 1)
+            ticket["_index"] = i + 1
+            ticket_tags = flatten_ticket_to_tags(ticket, ticket_campos)
             rellenar_tags_hoja(ws, ticket_tags)
 
     out_path = os.path.join(TEMP_DIR, f"gen_{datetime.now().strftime('%H%M%S%f')}.xlsx")

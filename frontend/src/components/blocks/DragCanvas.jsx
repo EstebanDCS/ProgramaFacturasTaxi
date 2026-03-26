@@ -149,6 +149,21 @@ function BlockVisual({ block, estilo }) {
           <span className="text-[9px] font-semibold text-slate-600">{cfg.label || 'Casilla'}</span>
         </div>
       );
+    case 'checkbox_group':
+      return (
+        <div className="py-1">
+          <span className="text-[9px] font-bold text-slate-500 block mb-1">{cfg.label || 'Opciones'}</span>
+          <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+            {(cfg.opciones || []).slice(0, 6).map((op, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <div className="w-3 h-3 border-2 border-slate-300 rounded-sm" />
+                <span className="text-[8px] text-slate-500">{op.nombre}</span>
+              </div>
+            ))}
+            {(cfg.opciones || []).length > 6 && <span className="text-[8px] text-slate-400">+{cfg.opciones.length - 6} más</span>}
+          </div>
+        </div>
+      );
     case 'image_field':
       return (
         <div className="flex items-center gap-3 py-1">

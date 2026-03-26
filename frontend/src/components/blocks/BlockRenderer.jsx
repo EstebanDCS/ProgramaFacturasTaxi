@@ -96,6 +96,9 @@ export default function BlockRenderer({ block, onChange, formulaVariables }) {
         </div>
       );
 
+    case 'checkbox_group':
+      return <CheckboxGroupEditor config={config} update={update} />;
+
     case 'image_field':
       return (
         <div className="grid grid-cols-2 gap-3">
@@ -238,6 +241,54 @@ function ColumnsEditor({ columnas, onChange, variables }) {
       <button onClick={addCol} className="mt-1 w-full flex items-center justify-center gap-1 py-2 border-2 border-dashed border-slate-200 rounded-lg text-xs font-bold text-slate-400 hover:border-primary hover:text-primary transition-colors">
         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span> Columna
       </button>
+    </div>
+  );
+}
+
+
+function CheckboxGroupEditor({ config, update }) {
+  const opciones = config.opciones || [];
+  const updateOp = (i, field, val) => { const n = [...opciones]; n[i] = { ...n[i], [field]: val }; update('opciones', n); };
+  const addOp = () => update('opciones', [...opciones, { id: `ch_${config.campo || 'grupo'}_nueva`, nombre: 'Nueva opción', texto_campo: '' }]);
+  const removeOp = (i) => update('opciones', opciones.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <Inp label="Etiqueta del grupo" value={config.label} onChange={v => update('label', v)} placeholder="Recogida, Destino..." />
+        <Inp label="ID grupo" value={config.campo} onChange={v => update('campo', v)} placeholder="recogida" />
+      </div>
+
+      <div>
+        <label className="text-[11px] font-semibold text-slate-500 block mb-2">Opciones</label>
+        {opciones.map((op, i) => (
+          <div key={i} className="bg-slate-50 rounded-lg p-2.5 mb-2 relative group">
+            <button onClick={() => removeOp(i)} className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-opacity">
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+            </button>
+            <div className="grid grid-cols-2 gap-2 mb-1.5">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[9px] font-bold text-slate-400 uppercase">Nombre visible</span>
+                <input value={op.nombre} onChange={e => updateOp(i, 'nombre', e.target.value)} placeholder="Aeropuerto"
+                  className="rounded-md border-slate-200 bg-white px-2 py-1.5 text-xs" />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[9px] font-bold text-slate-400 uppercase">ID tag (ch_...)</span>
+                <input value={op.id} onChange={e => updateOp(i, 'id', e.target.value)} placeholder="ch_recogida_aeropuerto"
+                  className="rounded-md border-slate-200 bg-white px-2 py-1.5 text-xs font-mono text-slate-500" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9px] font-bold text-slate-400 uppercase">Campo texto asociado (opcional)</span>
+              <input value={op.texto_campo || ''} onChange={e => updateOp(i, 'texto_campo', e.target.value)} placeholder="recogida_hotel_texto"
+                className="rounded-md border-slate-200 bg-white px-2 py-1.5 text-xs font-mono text-slate-400" />
+            </div>
+          </div>
+        ))}
+        <button onClick={addOp} className="w-full flex items-center justify-center gap-1 py-1.5 border-2 border-dashed border-slate-200 rounded-lg text-xs font-bold text-slate-400 hover:border-emerald-400 hover:text-emerald-600 transition-colors">
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span> Opción
+        </button>
+      </div>
     </div>
   );
 }

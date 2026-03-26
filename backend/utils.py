@@ -214,3 +214,25 @@ def flatten_tickets_to_tags(datos_dict, config):
     for k, v in ctx.items():
         tags[f"{{{{{k}}}}}"] = str(v) if not isinstance(v, float) else f"{v:.2f}"
     return tags
+
+
+def flatten_ticket_to_tags(ticket, ticket_campos):
+    """Flatten a single ticket's data into {{tag}} replacements, expanding checkbox_groups."""
+    tags = {}
+    for campo in ticket_campos:
+        campo_id = campo.get("campo", "")
+        tipo = campo.get("tipo", "texto")
+        if tipo == "checkbox_group":
+            # Expand each option: {{ch_group_option}} = "X" or ""
+            for op in campo.get("opciones", []):
+                val = ticket.get(op.get("id", ""), False)
+                tags[f"{{{{{op['id']}}}}}"] = "X" if val else ""
+                # Associated text field
+                if op.get("texto_campo"):
+                    tags[f"{{{{{op['texto_campo']}}}}}"] = str(ticket.get(op["texto_campo"], ""))
+        elif tipo == "checkbox":
+            tags[f"{{{{{campo_id}}}}}"] = "X" if ticket.get(campo_id) else ""
+        else:
+            tags[f"{{{{{campo_id}}}}}"] = str(ticket.get(campo_id, ""))
+    tags["{{ticket_num}}"] = str(ticket.get("_index", ""))
+    return tags

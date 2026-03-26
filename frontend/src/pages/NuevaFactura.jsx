@@ -231,9 +231,26 @@ export default function NuevaFactura({ editingId, onClearEdit }) {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {(ticketCfg.campos || []).map(campo => (
-                  <div key={campo.campo}>
+                  <div key={campo.campo} className={campo.tipo === 'checkbox_group' ? 'md:col-span-2' : ''}>
                     <label className="text-xs font-semibold text-violet-600 block mb-1">{campo.nombre}</label>
-                    {campo.tipo === 'checkbox' ? (
+                    {campo.tipo === 'checkbox_group' ? (
+                      <div className="bg-white border border-violet-100 rounded-lg p-3">
+                        <div className="flex flex-wrap gap-3">
+                          {(campo.opciones || []).map(op => (
+                            <div key={op.id} className="flex items-center gap-3">
+                              <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                                <input type="checkbox" checked={!!ticket[op.id]} onChange={e => updateTicket(ti, op.id, e.target.checked)} className="rounded text-violet-600" />
+                                <span>{op.nombre}</span>
+                              </label>
+                              {op.texto_campo && ticket[op.id] && (
+                                <input type="text" value={ticket[op.texto_campo] || ''} onChange={e => updateTicket(ti, op.texto_campo, e.target.value)}
+                                  placeholder="Especificar..." className="rounded-md border-violet-200 bg-violet-50 px-2 py-1 text-xs w-32" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : campo.tipo === 'checkbox' ? (
                       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!ticket[campo.campo]} onChange={e => updateTicket(ti, campo.campo, e.target.checked)} className="rounded text-violet-600" /> {campo.nombre}</label>
                     ) : campo.tipo === 'dropdown' ? (
                       <select value={ticket[campo.campo] || ''} onChange={e => updateTicket(ti, campo.campo, e.target.value)} className="w-full rounded-lg border-violet-200 bg-white px-3 py-2 text-sm">

@@ -81,11 +81,19 @@ export default function CrearPlantilla({ editingId, onBack }) {
       cfg.hoja_detalle = {
         activar: true, titulo: ticketNombre,
         bloques: ticketBlocks.map(b => ({ type: b.type, config: b.config })),
-        campos: ticketBlocks.filter(b => ['text_field','number_field','currency_field','date_field','dropdown','checkbox'].includes(b.type)).map(b => ({
-          nombre: b.config.label || '', campo: b.config.campo || '',
-          tipo: b.type === 'currency_field' ? 'moneda' : b.type === 'number_field' ? 'numero' : b.type === 'date_field' ? 'fecha' : b.type === 'dropdown' ? 'dropdown' : b.type === 'checkbox' ? 'checkbox' : 'texto',
-          opciones: b.config.opciones,
-        })),
+        campos: ticketBlocks.filter(b => ['text_field','number_field','currency_field','date_field','dropdown','checkbox','checkbox_group'].includes(b.type)).map(b => {
+          if (b.type === 'checkbox_group') {
+            return {
+              nombre: b.config.label || '', campo: b.config.campo || '', tipo: 'checkbox_group',
+              opciones: b.config.opciones || [],
+            };
+          }
+          return {
+            nombre: b.config.label || '', campo: b.config.campo || '',
+            tipo: b.type === 'currency_field' ? 'moneda' : b.type === 'number_field' ? 'numero' : b.type === 'date_field' ? 'fecha' : b.type === 'dropdown' ? 'dropdown' : b.type === 'checkbox' ? 'checkbox' : 'texto',
+            opciones: b.config.opciones,
+          };
+        }),
       };
     }
     // Tag mapping for Excel (campo → {{campo}})
@@ -382,25 +390,83 @@ function ExcelUpload({ token, toast, onBack, onImportBlocks }) {
 
   const guessType = (tag) => {
     const t = tag.toLowerCase();
+    if (t.startsWith('ch_')) return 'checkbox';
     if (t.includes('fecha') || t.includes('date')) return 'date_field';
     if (t.includes('importe') || t.includes('total') || t.includes('precio') || t.includes('amount') || t.includes('eur') || t.includes('coste') || t.includes('base_imponible') || t.includes('iva')) return 'currency_field';
     if (t.includes('cantidad') || t.includes('horas') || t.includes('km')) return 'number_field';
-    // Checkbox: o_X / d_X (origin/destination) but NOT _texto, also ida_vuelta, si_no, activo, check
-    if (t === 'ida_vuelta' || t.includes('check') || t.includes('si_no') || t.includes('activo')) return 'checkbox';
-    if (/^[od]_/.test(t) && !t.endsWith('_texto')) return 'checkbox';
     return 'text_field';
   };
 
   const importAsBlocks = () => {
     if (!tagResult?.tags?.length || !onImportBlocks) return;
-    const newBlocks = tagResult.tags.map(t => {
+    const tags = tagResult.tags;
+    const newBlocks = [];
+
+    // Group ch_GROUP_OPTION tags into checkbox_group blocks
+    const chTags = tags.filter(t => t.tag.startsWith('ch_'));
+    const otherTags = tags.filter(t => !t.tag.startsWith('ch_'));
+    const textoTags = otherTags.filter(t => t.tag.endsWith('_texto'));
+    const dataTags = otherTags.filter(t => !t.tag.endsWith('_texto'));
+
+    // Detect groups: ch_GROUP_OPTION → group by GROUP
+    const groups = {};
+    const standalone = [];
+    chTags.forEach(t => {
+      const rest = t.tag.replace('ch_', '');
+      const parts = rest.split('_');
+      if (parts.length >= 2) {
+        const group = parts[0];
+        const option = parts.slice(1).join('_');
+        if (!groups[group]) groups[group] = [];
+        // Find associated _texto tag
+        const textoTag = textoTags.find(tx => tx.tag === `${group}_${option}_texto`);
+        groups[group].push({ id: t.tag, nombre: option.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), texto_campo: textoTag ? textoTag.tag : '' });
+      } else {
+        standalone.push(t);
+      }
+    });
+
+    // Create checkbox_group blocks
+    Object.entries(groups).forEach(([group, opciones]) => {
+      if (opciones.length > 1) {
+        const b = createBlock('checkbox_group');
+        if (b) {
+          b.config.label = group.replace(/\b\w/g, c => c.toUpperCase());
+          b.config.campo = group;
+          b.config.opciones = opciones;
+          newBlocks.push(b);
+        }
+      } else {
+        // Single option in group → standalone checkbox
+        const b = createBlock('checkbox');
+        if (b) { b.config.label = opciones[0].nombre; b.config.campo = opciones[0].id; newBlocks.push(b); }
+      }
+    });
+
+    // Standalone ch_ checkboxes
+    standalone.forEach(t => {
+      const b = createBlock('checkbox');
+      if (b) { b.config.label = t.tag.replace('ch_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; newBlocks.push(b); }
+    });
+
+    // Regular data tags (skip _texto tags that are associated with checkbox groups)
+    const usedTextos = new Set();
+    Object.values(groups).flat().forEach(o => { if (o.texto_campo) usedTextos.add(o.texto_campo); });
+
+    dataTags.forEach(t => {
       const type = guessType(t.tag);
       const b = createBlock(type);
-      if (b) { b.config.label = t.tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; }
-      return b;
-    }).filter(Boolean);
+      if (b) { b.config.label = t.tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; newBlocks.push(b); }
+    });
+
+    // Remaining _texto tags not consumed by groups
+    textoTags.filter(t => !usedTextos.has(t.tag)).forEach(t => {
+      const b = createBlock('text_field');
+      if (b) { b.config.label = t.tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; newBlocks.push(b); }
+    });
+
     onImportBlocks(newBlocks, nombre);
-    toast(`${newBlocks.length} bloques creados desde Excel`, 'success');
+    toast(`${newBlocks.length} bloques creados (${Object.keys(groups).length} grupos)`, 'success');
   };
 
   const subir = async () => {

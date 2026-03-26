@@ -108,6 +108,19 @@ export const BLOCK_TYPES = {
     color: 'emerald',
     defaultConfig: { label: 'Activar', campo: '' },
   },
+  checkbox_group: {
+    category: 'interactive',
+    icon: 'checklist',
+    label: 'Grupo de opciones',
+    color: 'emerald',
+    defaultConfig: {
+      label: 'Opciones',
+      campo: '',
+      opciones: [
+        { id: 'opcion_1', nombre: 'Opción 1', texto_campo: '' },
+      ],
+    },
+  },
   image_field: {
     category: 'interactive',
     icon: 'image',
