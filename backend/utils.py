@@ -182,22 +182,31 @@ def evaluar_con_contexto(formula, ctx):
 
 
 def resolver_variable(formula, ctx):
-    """Resolve a simple variable reference (e.g. =tickets_max_fecha)."""
+    """Resolve a formula/variable reference. Tries direct lookup then math eval."""
     if not formula or not str(formula).startswith("="):
         return formula
     key = str(formula)[1:].strip()
-    return ctx.get(key, formula)
+    # Direct lookup (dates, text joins)
+    if key in ctx:
+        return ctx[key]
+    # Try math evaluation
+    result = evaluar_con_contexto(formula, ctx)
+    if result is not None:
+        return result
+    return formula
 
 
 def flatten_tickets_to_tags(datos_dict, config):
-    """Flatten ticket data into {{tag}} replacements for Excel templates."""
+    """Flatten all data into {{tag}} replacements for Excel templates."""
     tags = {}
-    # Basic fields
+    # Basic fields — all top-level string/number values
     for k, v in datos_dict.items():
+        if k in ('tickets', 'lineas', 'totales', 'cliente') or k.startswith('_'):
+            continue
         if isinstance(v, str):
             tags[f"{{{{{k}}}}}"] = v
         elif isinstance(v, (int, float)):
-            tags[f"{{{{{k}}}}}"] = str(v)
+            tags[f"{{{{{k}}}}}"] = f"{v:.2f}" if isinstance(v, float) else str(v)
     # Client
     cliente = datos_dict.get("cliente", {})
     for k, v in cliente.items():
@@ -207,7 +216,8 @@ def flatten_tickets_to_tags(datos_dict, config):
     for k, v in totales.items():
         if isinstance(v, (int, float)):
             tags[f"{{{{total_{k}}}}}"] = f"{v:.2f}"
-    # Context variables (ticket aggregates)
+
+    # Build formula context for aggregates
     ticket_campos = config.get("hoja_detalle", {}).get("campos", [])
     tickets = datos_dict.get("tickets", [])
     lineas = datos_dict.get("lineas", [])
@@ -217,6 +227,19 @@ def flatten_tickets_to_tags(datos_dict, config):
     ctx = build_formula_context(subtotal, tickets, ticket_campos)
     for k, v in ctx.items():
         tags[f"{{{{{k}}}}}"] = str(v) if not isinstance(v, float) else f"{v:.2f}"
+
+    # Resolve autoFill formulas from config bloques
+    for bloque in config.get("bloques", []):
+        auto = bloque.get("config", {}).get("autoFill", "")
+        campo = bloque.get("config", {}).get("campo", "")
+        if auto and campo and f"{{{{{campo}}}}}" not in tags:
+            resolved = resolver_variable(auto, ctx)
+            if resolved and resolved != auto:
+                if isinstance(resolved, float):
+                    tags[f"{{{{{campo}}}}}"] = f"{resolved:.2f}"
+                else:
+                    tags[f"{{{{{campo}}}}}"] = str(resolved)
+
     return tags
 
 

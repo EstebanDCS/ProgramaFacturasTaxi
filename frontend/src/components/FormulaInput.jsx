@@ -95,7 +95,7 @@ export default function FormulaInput({ value, onChange, variables, ticketFields,
                 <option value="">Seleccionar...</option>
                 {fields.map(f => (
                   <option key={f.campo} value={f.campo}>
-                    {f.label || f.campo} ({f.tipo})
+                    {f.label || f.campo}
                   </option>
                 ))}
               </select>

@@ -186,11 +186,13 @@ export default function CrearPlantilla({ editingId, onBack }) {
 
   // Ticket field list for FormulaInput visual mode
   const ticketFieldList = useMemo(() => {
-    return ticketBlocks.filter(b => b.config?.campo).map(b => ({
-      campo: b.config.campo,
-      label: b.config.label || b.config.campo,
-      tipo: b.type,
-    }));
+    return ticketBlocks
+      .filter(b => b.config?.campo && !['checkbox', 'checkbox_group'].includes(b.type))
+      .map(b => ({
+        campo: b.config.campo,
+        label: b.config.label || b.config.campo,
+        tipo: b.type,
+      }));
   }, [ticketBlocks]);
 
   const addBlock = (typeKey) => {
