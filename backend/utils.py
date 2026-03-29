@@ -250,15 +250,29 @@ def flatten_ticket_to_tags(ticket, ticket_campos):
         campo_id = campo.get("campo", "")
         tipo = campo.get("tipo", "texto")
         if tipo == "checkbox_group":
-            # Expand each option: {{ch_group_option}} = "X" or ""
             for op in campo.get("opciones", []):
-                val = ticket.get(op.get("id", ""), False)
-                tags[f"{{{{{op['id']}}}}}"] = "X" if val else ""
-                # Associated text field
+                op_id = op.get("id", "")
+                val = ticket.get(op_id, False)
+                tags[f"{{{{{op_id}}}}}"] = "X" if val else ""
+                # _si / _no pair: if tag ends with _si, also generate _no with inverse
+                if op_id.endswith("_si"):
+                    no_id = op_id[:-3] + "_no"
+                    tags[f"{{{{{no_id}}}}}"] = "" if val else "X"
+                elif op_id.endswith("_no"):
+                    si_id = op_id[:-3] + "_si"
+                    tags[f"{{{{{si_id}}}}}"] = "" if val else "X"
                 if op.get("texto_campo"):
                     tags[f"{{{{{op['texto_campo']}}}}}"] = str(ticket.get(op["texto_campo"], ""))
         elif tipo == "checkbox":
-            tags[f"{{{{{campo_id}}}}}"] = "X" if ticket.get(campo_id) else ""
+            val = ticket.get(campo_id)
+            tags[f"{{{{{campo_id}}}}}"] = "X" if val else ""
+            # _si / _no pair
+            if campo_id.endswith("_si"):
+                no_id = campo_id[:-3] + "_no"
+                tags[f"{{{{{no_id}}}}}"] = "" if val else "X"
+            elif campo_id.endswith("_no"):
+                si_id = campo_id[:-3] + "_si"
+                tags[f"{{{{{si_id}}}}}"] = "" if val else "X"
         else:
             tags[f"{{{{{campo_id}}}}}"] = str(ticket.get(campo_id, ""))
     tags["{{ticket_num}}"] = str(ticket.get("_index", ""))

@@ -450,17 +450,34 @@ function ExcelUpload({ token, toast, onBack, onImportBlocks }) {
     const blocks = [];
     const usedTags = new Set();
 
+    // Pre-pass: identify _si/_no pairs — _no is consumed, only _si creates the checkbox
+    const siNoMap = new Map(); // base → si_tag
+    tags.filter(t => t.tag.startsWith('ch_') && t.tag.endsWith('_si')).forEach(t => {
+      const base = t.tag.slice(0, -3); // remove _si
+      const noTag = tags.find(x => x.tag === base + '_no');
+      if (noTag) {
+        siNoMap.set(base, t.tag);
+        usedTags.add(noTag.tag); // consume the _no tag
+      }
+    });
+
     // First pass: identify ch_ groups and _texto associations
     const chGroups = {};
-    tags.filter(t => t.tag.startsWith('ch_')).forEach(t => {
+    tags.filter(t => t.tag.startsWith('ch_') && !usedTags.has(t.tag)).forEach(t => {
       const rest = t.tag.replace('ch_', '');
-      const parts = rest.split('_');
+      // For _si tags, use base name for grouping
+      const cleanRest = rest.endsWith('_si') ? rest.slice(0, -3) : rest;
+      const parts = cleanRest.split('_');
       if (parts.length >= 2) {
         const group = parts[0];
         const option = parts.slice(1).join('_');
         if (!chGroups[group]) chGroups[group] = { options: [], firstIndex: tags.indexOf(t) };
         const textoTag = tags.find(tx => tx.tag === `${group}_${option}_texto`);
-        chGroups[group].options.push({ id: t.tag, nombre: option.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), texto_campo: textoTag ? textoTag.tag : '' });
+        chGroups[group].options.push({
+          id: t.tag,
+          nombre: option.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          texto_campo: textoTag ? textoTag.tag : '',
+        });
         usedTags.add(t.tag);
         if (textoTag) usedTags.add(textoTag.tag);
       }
@@ -469,10 +486,12 @@ function ExcelUpload({ token, toast, onBack, onImportBlocks }) {
     // Build ordered list: process tags in Excel order, insert group at first ch_ occurrence
     const groupsEmitted = new Set();
     tags.forEach(t => {
-      if (usedTags.has(t.tag) && !t.tag.startsWith('ch_')) return; // skip consumed _texto
+      if (usedTags.has(t.tag) && !t.tag.startsWith('ch_')) return;
       if (t.tag.startsWith('ch_')) {
+        if (usedTags.has(t.tag) && !t.tag.endsWith('_si') && !Object.keys(chGroups).some(g => t.tag.includes(`ch_${g}_`))) return;
         const rest = t.tag.replace('ch_', '');
-        const parts = rest.split('_');
+        const cleanRest = rest.endsWith('_si') ? rest.slice(0, -3) : rest;
+        const parts = cleanRest.split('_');
         const group = parts.length >= 2 ? parts[0] : null;
         if (group && chGroups[group] && !groupsEmitted.has(group)) {
           groupsEmitted.add(group);
@@ -481,17 +500,17 @@ function ExcelUpload({ token, toast, onBack, onImportBlocks }) {
             const b = createBlock('checkbox_group');
             if (b) { b.config.label = group.replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = group; b.config.opciones = g.options; blocks.push(b); }
           } else {
+            // Single checkbox (possibly from _si/_no pair)
             const b = createBlock('checkbox');
-            if (b) { b.config.label = g.options[0].nombre; b.config.campo = g.options[0].id; blocks.push(b); }
+            const label = g.options[0].nombre;
+            if (b) { b.config.label = label; b.config.campo = g.options[0].id; blocks.push(b); }
           }
-        } else if (!group) {
-          // Standalone ch_ checkbox
+        } else if (!group && !usedTags.has(t.tag)) {
           const b = createBlock('checkbox');
-          if (b) { b.config.label = t.tag.replace('ch_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; blocks.push(b); }
+          if (b) { b.config.label = t.tag.replace('ch_', '').replace(/_si$/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; blocks.push(b); }
         }
         return;
       }
-      // Regular data tag
       const type = guessType(t.tag);
       const b = createBlock(type);
       if (b) { b.config.label = t.tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); b.config.campo = t.tag; blocks.push(b); }
