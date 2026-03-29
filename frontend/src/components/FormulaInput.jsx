@@ -35,8 +35,26 @@ export default function FormulaInput({ value, onChange, variables, ticketFields,
   }, [open]);
 
   const setVisual = (fn, campo) => {
-    if (!fn || !campo) { onChange(''); return; }
+    // Auto-pick function if user selects campo first
+    if (!fn && campo) {
+      const field = fields.find(f => f.campo === campo);
+      if (field) {
+        const t = field.tipo;
+        if (t === 'date_field') fn = 'max';
+        else if (t === 'currency_field' || t === 'number_field') fn = 'sum';
+        else fn = 'join';
+      }
+    }
+    // Auto-pick campo if user selects function first and there's only one compatible field
+    if (fn && !campo) {
+      const compat = fields.filter(f => {
+        const fnDef = FUNCTIONS.find(x => x.id === fn);
+        return fnDef && (fnDef.types.includes('_all') || fnDef.types.includes(f.tipo));
+      });
+      if (compat.length === 1) campo = compat[0].campo;
+    }
     if (fn === 'count') { onChange('=tickets_count'); return; }
+    if (!fn || !campo) { onChange(''); return; }
     onChange(`=tickets_${fn}_${campo}`);
   };
 
